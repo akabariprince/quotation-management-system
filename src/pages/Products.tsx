@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, Trash2, Eye, Image as ImageIcon, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData, Product } from '@/contexts/DataContext';
@@ -12,6 +12,7 @@ const Products: React.FC = () => {
   const { products, categories, productTypes, deleteProduct } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const navigate = useNavigate();
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -52,12 +53,10 @@ const Products: React.FC = () => {
           </p>
         </div>
         {hasPermission('edit_masters') && (
-          <Link to="/products/new">
-            <Button className="btn-accent gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Product</span>
-            </Button>
-          </Link>
+          <Button className="btn-accent gap-2" onClick={() => navigate('/masters?tab=product')}>
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Product</span>
+          </Button>
         )}
       </div>
 
