@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Send, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,12 +17,6 @@ const QuotationForm: React.FC = () => {
   const { 
     customers, 
     products, 
-    categories, 
-    productTypes, 
-    productModels,
-    woods,
-    polishes,
-    fabrics,
     salesManagers,
     quotations,
     addQuotation,
@@ -37,14 +31,9 @@ const QuotationForm: React.FC = () => {
   const [salesManager, setSalesManager] = useState(existingQuotation?.salesManager || salesManagers[0]);
   const [items, setItems] = useState<QuotationItem[]>(existingQuotation?.items || []);
   
-  // Product selection state
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedProductType, setSelectedProductType] = useState('');
-  const [selectedProductModel, setSelectedProductModel] = useState('');
-  const [selectedWood, setSelectedWood] = useState('');
-  const [selectedPolish, setSelectedPolish] = useState('');
-  const [selectedFabric, setSelectedFabric] = useState('');
+  // Product selection state - simplified to only product selection
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   // OTP Modal
   const [showOTPModal, setShowOTPModal] = useState(false);
@@ -56,14 +45,12 @@ const QuotationForm: React.FC = () => {
 
   const selectedCustomer = customers.find(c => c.id === customerId);
 
-  // Filtered options based on selections
-  const filteredProductTypes = productTypes.filter(pt => pt.categoryId === selectedCategory && pt.status === 'active');
-  const filteredProductModels = productModels.filter(pm => pm.productTypeId === selectedProductType && pm.status === 'active');
+  // Filter only active products - search by name or part code
   const filteredProducts = products.filter(p => 
     p.status === 'active' &&
-    (!selectedCategory || p.categoryId === selectedCategory) &&
-    (!selectedProductType || p.productTypeId === selectedProductType) &&
-    (!selectedProductModel || p.productModelId === selectedProductModel)
+    (productSearchTerm === '' || 
+     p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+     p.partCode.toLowerCase().includes(productSearchTerm.toLowerCase()))
   );
 
   const handleAddProduct = () => {
@@ -75,9 +62,18 @@ const QuotationForm: React.FC = () => {
     const product = products.find(p => p.id === selectedProductId);
     if (!product) return;
 
+    // Check if product already in quotation
+    const existingItem = items.find(item => item.productId === product.id);
+    if (existingItem) {
+      toast.error('Product already added to quotation. Update quantity instead.');
+      return;
+    }
+
+    // Calculation: Price - Discount = Final Price, then add GST
     const discountAmount = (product.basePrice * product.defaultDiscount) / 100;
     const finalPrice = product.basePrice - discountAmount;
-    const gstAmount = (finalPrice * product.gstPercent) / 100;
+    const total = finalPrice * 1; // quantity = 1 initially
+    const gstAmount = (total * product.gstPercent) / 100;
 
     const newItem: QuotationItem = {
       id: Date.now().toString(),
@@ -91,25 +87,20 @@ const QuotationForm: React.FC = () => {
       discountAmount,
       finalPrice,
       quantity: 1,
-      total: finalPrice,
+      total,
       gstPercent: product.gstPercent,
       igst: 0,
       cgst: gstAmount / 2,
       sgst: gstAmount / 2,
-      totalWithGst: finalPrice + gstAmount,
+      totalWithGst: total + gstAmount,
       notes: product.description.split('. '),
     };
 
     setItems(prev => [...prev, newItem]);
     
-    // Reset selections
-    setSelectedCategory('');
-    setSelectedProductType('');
-    setSelectedProductModel('');
-    setSelectedWood('');
-    setSelectedPolish('');
-    setSelectedFabric('');
+    // Reset product selection
     setSelectedProductId('');
+    setProductSearchTerm('');
     
     toast.success('Product added to quotation');
   };
@@ -136,11 +127,18 @@ const QuotationForm: React.FC = () => {
   };
 
   const handleDiscountChange = (itemId: string, newDiscount: number) => {
-    if (hasPermission('edit_discount') && user?.role !== 'admin') {
-      // Requires OTP for non-admin users
+    // Data Entry users cannot edit discount at all
+    if (!hasPermission('edit_discount')) {
+      toast.error('You do not have permission to edit discount');
+      return;
+    }
+    
+    // Non-admin users with edit_discount permission require OTP
+    if (user?.role !== 'admin') {
       setPendingDiscountEdit({ itemId, newDiscount });
       setShowOTPModal(true);
     } else {
+      // Admin can edit directly
       updateItem(itemId, 'discountPercent', newDiscount);
     }
   };
@@ -320,76 +318,69 @@ const QuotationForm: React.FC = () => {
             )}
           </div>
 
-          {/* Product Selection */}
+          {/* Product Selection - Simplified (only product selection, no category/type/model) */}
           <div className="form-section">
             <h2 className="text-lg font-semibold mb-4">Add Products</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={selectedCategory} onValueChange={(v) => {
-                  setSelectedCategory(v);
-                  setSelectedProductType('');
-                  setSelectedProductModel('');
-                  setSelectedProductId('');
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.filter(c => c.status === 'active').map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Search Product</Label>
+                <Input
+                  placeholder="Search by product name or code..."
+                  value={productSearchTerm}
+                  onChange={(e) => setProductSearchTerm(e.target.value)}
+                  className="h-11"
+                />
               </div>
               <div className="space-y-2">
-                <Label>Product Type</Label>
-                <Select value={selectedProductType} onValueChange={(v) => {
-                  setSelectedProductType(v);
-                  setSelectedProductModel('');
-                  setSelectedProductId('');
-                }} disabled={!selectedCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredProductTypes.map(pt => (
-                      <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Product Model</Label>
-                <Select value={selectedProductModel} onValueChange={(v) => {
-                  setSelectedProductModel(v);
-                  setSelectedProductId('');
-                }} disabled={!selectedProductType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredProductModels.map(pm => (
-                      <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 col-span-2 lg:col-span-3">
-                <Label>Select Product</Label>
+                <Label>Select Product *</Label>
                 <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select a product to add" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredProducts.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.partCode} - {product.name} ({formatCurrency(product.basePrice)})
-                      </SelectItem>
-                    ))}
+                    {filteredProducts.length === 0 ? (
+                      <div className="py-4 text-center text-sm text-muted-foreground">
+                        No products found
+                      </div>
+                    ) : (
+                      filteredProducts.map(product => (
+                        <SelectItem key={product.id} value={product.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{product.partCode} - {product.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatCurrency(product.basePrice)} | Discount: {product.defaultDiscount}%
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Selected product preview */}
+              {selectedProductId && (() => {
+                const product = products.find(p => p.id === selectedProductId);
+                if (!product) return null;
+                return (
+                  <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                    <div className="flex gap-4">
+                      {product.images[0] && (
+                        <img src={product.images[0]} alt={product.name} className="w-16 h-16 rounded object-cover" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-semibold">{product.name}</p>
+                        <p className="text-muted-foreground font-mono text-xs">{product.partCode}</p>
+                        <div className="flex gap-4 mt-2 text-xs">
+                          <span>Price: {formatCurrency(product.basePrice)}</span>
+                          <span>Discount: {product.defaultDiscount}%</span>
+                          <span>GST: {product.gstPercent}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <Button onClick={handleAddProduct} className="mt-4 btn-accent" disabled={!selectedProductId}>
               <Plus className="h-4 w-4 mr-2" />
@@ -442,6 +433,8 @@ const QuotationForm: React.FC = () => {
                             className="w-16 text-center"
                             min={0}
                             max={100}
+                            disabled={!hasPermission('edit_discount')}
+                            title={!hasPermission('edit_discount') ? 'You do not have permission to edit discount' : ''}
                           />
                         </td>
                         <td>{formatCurrency(item.finalPrice)}</td>
