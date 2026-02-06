@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, FileText, Send, Download } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, FileText, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ const Quotations: React.FC = () => {
       case 'expired':
         return 'badge-error';
       default:
-        return 'bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full text-xs font-medium';
+        return 'badge-default';
     }
   };
 
@@ -69,9 +69,9 @@ const Quotations: React.FC = () => {
         </div>
         {hasPermission('create_quotation') && (
           <Link to="/quotations/new">
-            <Button className="btn-accent">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Quotation
+            <Button className="btn-accent gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Create Quotation</span>
             </Button>
           </Link>
         )}
@@ -85,99 +85,104 @@ const Quotations: React.FC = () => {
             placeholder="Search by quotation number or customer name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11"
           />
         </div>
       </div>
 
       {/* Quotations Table */}
       <div className="enterprise-card overflow-hidden">
-        <table className="enterprise-table">
-          <thead>
-            <tr>
-              <th>Quotation No</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Items</th>
-              <th>Total Value</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredQuotations.length === 0 ? (
+        <div className="table-container">
+          <table className="enterprise-table">
+            <thead>
               <tr>
-                <td colSpan={7} className="text-center text-muted-foreground py-8">
-                  {searchTerm ? 'No quotations found matching your search.' : 'No quotations yet. Create your first quotation.'}
-                </td>
+                <th>Quotation No</th>
+                <th className="hidden sm:table-cell">Customer</th>
+                <th className="hidden md:table-cell">Date</th>
+                <th className="hidden lg:table-cell">Items</th>
+                <th>Total Value</th>
+                <th className="hidden sm:table-cell">Status</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              filteredQuotations.map((quotation) => {
-                const customer = customers.find(c => c.id === quotation.customerId);
-                return (
-                  <tr key={quotation.id}>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{quotation.quotationNo}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div>
-                        <p className="font-medium">{customer?.name || 'Unknown'}</p>
-                        <p className="text-xs text-muted-foreground">{customer?.mobile}</p>
-                      </div>
-                    </td>
-                    <td>{formatDate(quotation.date)}</td>
-                    <td>{quotation.items.length} items</td>
-                    <td className="font-semibold">{formatCurrency(quotation.grandTotalWithGst)}</td>
-                    <td>
-                      <span className={getStatusBadge(quotation.status)}>
-                        {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => navigate(`/quotations/${quotation.id}`)}
-                          className="p-2 hover:bg-muted rounded-md transition-colors"
-                          title="View"
-                        >
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/quotations/${quotation.id}/pdf`)}
-                          className="p-2 hover:bg-muted rounded-md transition-colors"
-                          title="Generate PDF"
-                        >
-                          <Download className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                        {hasPermission('edit_quotation') && (
+            </thead>
+            <tbody>
+              {filteredQuotations.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center text-muted-foreground py-12">
+                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    {searchTerm ? 'No quotations found matching your search.' : 'No quotations yet. Create your first quotation.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredQuotations.map((quotation) => {
+                  const customer = customers.find(c => c.id === quotation.customerId);
+                  return (
+                    <tr key={quotation.id}>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-accent flex-shrink-0" />
+                          <span className="font-medium">{quotation.quotationNo}</span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell">
+                        <div>
+                          <p className="font-medium">{customer?.name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground">{customer?.mobile}</p>
+                        </div>
+                      </td>
+                      <td className="hidden md:table-cell text-muted-foreground">{formatDate(quotation.date)}</td>
+                      <td className="hidden lg:table-cell">
+                        <span className="bg-muted px-2 py-1 rounded text-xs font-medium">{quotation.items.length} items</span>
+                      </td>
+                      <td className="font-semibold">{formatCurrency(quotation.grandTotalWithGst)}</td>
+                      <td className="hidden sm:table-cell">
+                        <span className={getStatusBadge(quotation.status)}>
+                          {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1">
                           <button
-                            onClick={() => navigate(`/quotations/edit/${quotation.id}`)}
-                            className="p-2 hover:bg-muted rounded-md transition-colors"
-                            title="Edit"
+                            onClick={() => navigate(`/quotations/${quotation.id}`)}
+                            className="action-btn"
+                            title="View"
                           >
-                            <Edit className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-4 w-4 text-muted-foreground" />
                           </button>
-                        )}
-                        {hasPermission('create_quotation') && (
                           <button
-                            onClick={() => handleDelete(quotation.id)}
-                            className="p-2 hover:bg-destructive/10 rounded-md transition-colors"
-                            title="Delete"
+                            onClick={() => navigate(`/quotations/${quotation.id}/pdf`)}
+                            className="action-btn"
+                            title="Generate PDF"
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Download className="h-4 w-4 text-muted-foreground" />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                          {hasPermission('edit_quotation') && (
+                            <button
+                              onClick={() => navigate(`/quotations/edit/${quotation.id}`)}
+                              className="action-btn"
+                              title="Edit"
+                            >
+                              <Edit className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          )}
+                          {hasPermission('create_quotation') && (
+                            <button
+                              onClick={() => handleDelete(quotation.id)}
+                              className="action-btn action-btn-danger"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, MapPin } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, MapPin, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData, Customer } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -40,9 +40,9 @@ const Customers: React.FC = () => {
         </div>
         {hasPermission('add_customer') && (
           <Link to="/customers/new">
-            <Button className="btn-accent">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
+            <Button className="btn-accent gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Customer</span>
             </Button>
           </Link>
         )}
@@ -56,139 +56,144 @@ const Customers: React.FC = () => {
             placeholder="Search by name, mobile, email, or city..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11"
           />
         </div>
       </div>
 
       {/* Customer List */}
       <div className="enterprise-card overflow-hidden">
-        <table className="enterprise-table">
-          <thead>
-            <tr>
-              <th>Customer Name</th>
-              <th>Contact</th>
-              <th>Location</th>
-              <th>GSTIN</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCustomers.length === 0 ? (
+        <div className="table-container">
+          <table className="enterprise-table">
+            <thead>
               <tr>
-                <td colSpan={5} className="text-center text-muted-foreground py-8">
-                  {searchTerm ? 'No customers found matching your search.' : 'No customers yet. Add your first customer.'}
-                </td>
+                <th>Customer Name</th>
+                <th className="hidden md:table-cell">Contact</th>
+                <th className="hidden lg:table-cell">Location</th>
+                <th className="hidden xl:table-cell">GSTIN</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              filteredCustomers.map((customer) => (
-                <tr key={customer.id}>
-                  <td>
-                    <div>
-                      <p className="font-medium">{customer.name}</p>
-                      <p className="text-xs text-muted-foreground">{customer.contactPerson}</p>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="space-y-1">
-                      <p className="flex items-center gap-2 text-sm">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        {customer.mobile}
-                      </p>
-                      <p className="flex items-center gap-2 text-sm">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        {customer.email}
-                      </p>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <span>{customer.city}, {customer.state}</span>
-                    </div>
-                  </td>
-                  <td className="font-mono text-xs">{customer.gstin}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setSelectedCustomer(customer)}
-                        className="p-2 hover:bg-muted rounded-md transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                      {hasPermission('add_customer') && (
-                        <>
-                          <button
-                            onClick={() => navigate(`/customers/edit/${customer.id}`)}
-                            className="p-2 hover:bg-muted rounded-md transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(customer.id)}
-                            className="p-2 hover:bg-destructive/10 rounded-md transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </button>
-                        </>
-                      )}
-                    </div>
+            </thead>
+            <tbody>
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center text-muted-foreground py-12">
+                    {searchTerm ? 'No customers found matching your search.' : 'No customers yet. Add your first customer.'}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <tr key={customer.id}>
+                    <td>
+                      <div>
+                        <p className="font-medium text-foreground">{customer.name}</p>
+                        <p className="text-xs text-muted-foreground">{customer.contactPerson}</p>
+                      </div>
+                    </td>
+                    <td className="hidden md:table-cell">
+                      <div className="space-y-1">
+                        <p className="flex items-center gap-2 text-sm">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          {customer.mobile}
+                        </p>
+                        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5" />
+                          {customer.email}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span>{customer.city}, {customer.state}</span>
+                      </div>
+                    </td>
+                    <td className="hidden xl:table-cell">
+                      <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{customer.gstin}</span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setSelectedCustomer(customer)}
+                          className="action-btn"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        {hasPermission('add_customer') && (
+                          <>
+                            <button
+                              onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                              className="action-btn"
+                              title="Edit"
+                            >
+                              <Edit className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(customer.id)}
+                              className="action-btn action-btn-danger"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Customer Detail Modal */}
       {selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setSelectedCustomer(null)} />
-          <div className="relative bg-card rounded-lg shadow-xl w-full max-w-lg p-6 animate-fade-in">
-            <button
-              onClick={() => setSelectedCustomer(null)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-            >
-              ×
-            </button>
-            <h2 className="text-xl font-semibold mb-4">{selectedCustomer.name}</h2>
-            <div className="space-y-4">
+        <div className="modal-backdrop" onClick={() => setSelectedCustomer(null)}>
+          <div className="modal-content p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">{selectedCustomer.name}</h2>
+              <button
+                onClick={() => setSelectedCustomer(null)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Contact Person</p>
                   <p className="font-medium">{selectedCustomer.contactPerson}</p>
                 </div>
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Mobile</p>
                   <p className="font-medium">{selectedCustomer.mobile}</p>
                 </div>
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium">{selectedCustomer.email}</p>
                 </div>
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">GSTIN</p>
-                  <p className="font-medium font-mono text-sm">{selectedCustomer.gstin}</p>
+                  <p className="font-medium font-mono text-sm bg-muted px-2 py-1 rounded inline-block">{selectedCustomer.gstin}</p>
                 </div>
               </div>
-              <div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Address</p>
                 <p className="font-medium">{selectedCustomer.address}</p>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">City</p>
                   <p className="font-medium">{selectedCustomer.city}</p>
                 </div>
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">State</p>
                   <p className="font-medium">{selectedCustomer.state}</p>
                 </div>
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Region</p>
                   <p className="font-medium">{selectedCustomer.region}</p>
                 </div>

@@ -58,17 +58,17 @@ const Dashboard: React.FC = () => {
         <div className="flex gap-3">
           {hasPermission('add_customer') && (
             <Link to="/customers/new">
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Customer
+              <Button variant="outline" size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Customer</span>
               </Button>
             </Link>
           )}
           {hasPermission('create_quotation') && (
             <Link to="/quotations/new">
-              <Button className="btn-accent" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Quotation
+              <Button className="btn-accent gap-2" size="sm">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Create Quotation</span>
               </Button>
             </Link>
           )}
@@ -76,10 +76,10 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <div className="stat-card">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="p-2.5 bg-primary/10 rounded-lg">
               <FileText className="h-5 w-5 text-primary" />
             </div>
             <TrendingUp className="h-4 w-4 text-success" />
@@ -90,22 +90,22 @@ const Dashboard: React.FC = () => {
 
         <div className="stat-card">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-accent/10 rounded-lg">
+            <div className="p-2.5 bg-accent/10 rounded-lg">
               <DollarSign className="h-5 w-5 text-accent" />
             </div>
             <TrendingUp className="h-4 w-4 text-success" />
           </div>
-          <p className="stat-value">{formatCurrency(totalValue)}</p>
+          <p className="stat-value text-2xl lg:text-3xl">{formatCurrency(totalValue)}</p>
           <p className="stat-label">Total Quotation Value</p>
         </div>
 
         <div className="stat-card">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-warning/10 rounded-lg">
+            <div className="p-2.5 bg-warning/10 rounded-lg">
               <AlertCircle className="h-5 w-5 text-warning" />
             </div>
             {pendingOtpApprovals > 0 && (
-              <span className="badge-warning">{pendingOtpApprovals} pending</span>
+              <span className="badge-warning">{pendingOtpApprovals}</span>
             )}
           </div>
           <p className="stat-value">{pendingOtpApprovals}</p>
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
 
         <div className="stat-card">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-success/10 rounded-lg">
+            <div className="p-2.5 bg-success/10 rounded-lg">
               <Users className="h-5 w-5 text-success" />
             </div>
           </div>
@@ -123,22 +123,22 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Recent Quotations */}
-        <div className="lg:col-span-2 enterprise-card">
-          <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="xl:col-span-2 enterprise-card overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-border flex items-center justify-between">
             <h2 className="font-semibold text-foreground">Recent Quotations</h2>
             <Link to="/quotations" className="text-sm text-accent hover:underline flex items-center gap-1">
               View All <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="overflow-x-auto">
+          <div className="table-container">
             <table className="enterprise-table">
               <thead>
                 <tr>
                   <th>Quotation No</th>
-                  <th>Customer</th>
-                  <th>Date</th>
+                  <th className="hidden sm:table-cell">Customer</th>
+                  <th className="hidden md:table-cell">Date</th>
                   <th>Amount</th>
                   <th>Status</th>
                 </tr>
@@ -146,7 +146,8 @@ const Dashboard: React.FC = () => {
               <tbody>
                 {recentQuotations.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center text-muted-foreground py-8">
+                    <td colSpan={5} className="text-center text-muted-foreground py-12">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       No quotations yet. Create your first quotation.
                     </td>
                   </tr>
@@ -156,15 +157,15 @@ const Dashboard: React.FC = () => {
                     return (
                       <tr key={quotation.id}>
                         <td className="font-medium">{quotation.quotationNo}</td>
-                        <td>{customer?.name || 'Unknown'}</td>
-                        <td>{formatDate(quotation.date)}</td>
-                        <td>{formatCurrency(quotation.grandTotalWithGst)}</td>
+                        <td className="hidden sm:table-cell">{customer?.name || 'Unknown'}</td>
+                        <td className="hidden md:table-cell text-muted-foreground">{formatDate(quotation.date)}</td>
+                        <td className="font-semibold">{formatCurrency(quotation.grandTotalWithGst)}</td>
                         <td>
                           <span className={
                             quotation.status === 'approved' ? 'badge-success' :
                             quotation.status === 'sent' ? 'badge-warning' :
                             quotation.status === 'expired' ? 'badge-error' :
-                            'bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs'
+                            'badge-default'
                           }>
                             {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
                           </span>
@@ -181,29 +182,29 @@ const Dashboard: React.FC = () => {
         {/* Quick Actions & Alerts */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          <div className="enterprise-card p-4">
+          <div className="enterprise-card p-5">
             <h2 className="font-semibold text-foreground mb-4">Quick Actions</h2>
             <div className="space-y-2">
               {hasPermission('create_quotation') && (
                 <Link to="/quotations/new" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <FileText className="h-4 w-4 mr-3" />
+                  <Button variant="outline" className="w-full justify-start gap-3 h-11">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                     Create Quotation
                   </Button>
                 </Link>
               )}
               {hasPermission('add_customer') && (
                 <Link to="/customers/new" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Users className="h-4 w-4 mr-3" />
+                  <Button variant="outline" className="w-full justify-start gap-3 h-11">
+                    <Users className="h-4 w-4 text-muted-foreground" />
                     Add Customer
                   </Button>
                 </Link>
               )}
               {hasPermission('edit_masters') && (
                 <Link to="/masters" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Plus className="h-4 w-4 mr-3" />
+                  <Button variant="outline" className="w-full justify-start gap-3 h-11">
+                    <Plus className="h-4 w-4 text-muted-foreground" />
                     Add Product
                   </Button>
                 </Link>
@@ -213,12 +214,12 @@ const Dashboard: React.FC = () => {
 
           {/* Pending Approvals */}
           {hasPermission('approve_otp') && pendingOtpApprovals > 0 && (
-            <div className="enterprise-card p-4 border-l-4 border-l-warning">
+            <div className="enterprise-card p-5 border-l-4 border-l-warning">
               <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-warning" />
                 Pending Approvals
               </h2>
-              <p className="text-sm text-muted-foreground mb-3">
+              <p className="text-sm text-muted-foreground mb-4">
                 You have {pendingOtpApprovals} pending OTP approval{pendingOtpApprovals > 1 ? 's' : ''}.
               </p>
               <Button variant="outline" size="sm" className="w-full">
@@ -228,28 +229,28 @@ const Dashboard: React.FC = () => {
           )}
 
           {/* System Info */}
-          <div className="enterprise-card p-4">
-            <h2 className="font-semibold text-foreground mb-3">Your Access</h2>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Role</span>
-                <span className="font-medium capitalize">{user?.role.replace('_', ' ')}</span>
+          <div className="enterprise-card p-5">
+            <h2 className="font-semibold text-foreground mb-4">Your Access</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-sm text-muted-foreground">Role</span>
+                <span className="text-sm font-medium capitalize bg-muted px-2.5 py-1 rounded-md">{user?.role.replace('_', ' ')}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Can Create Quotations</span>
-                <span className={hasPermission('create_quotation') ? 'text-success' : 'text-destructive'}>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-sm text-muted-foreground">Create Quotations</span>
+                <span className={`text-sm font-medium ${hasPermission('create_quotation') ? 'text-success' : 'text-destructive'}`}>
                   {hasPermission('create_quotation') ? 'Yes' : 'No'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Can Edit Masters</span>
-                <span className={hasPermission('edit_masters') ? 'text-success' : 'text-destructive'}>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-sm text-muted-foreground">Edit Masters</span>
+                <span className={`text-sm font-medium ${hasPermission('edit_masters') ? 'text-success' : 'text-destructive'}`}>
                   {hasPermission('edit_masters') ? 'Yes' : 'No'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Can Approve OTP</span>
-                <span className={hasPermission('approve_otp') ? 'text-success' : 'text-destructive'}>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-muted-foreground">Approve OTP</span>
+                <span className={`text-sm font-medium ${hasPermission('approve_otp') ? 'text-success' : 'text-destructive'}`}>
                   {hasPermission('approve_otp') ? 'Yes' : 'No'}
                 </span>
               </div>
