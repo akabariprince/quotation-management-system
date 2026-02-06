@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Check, Clock } from 'lucide-react';
+import { Plus, Trash2, Check, Clock, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,6 @@ const Masters: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState('category');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
   const [newItemName, setNewItemName] = useState('');
   const [selectedParent, setSelectedParent] = useState('');
   const [pendingItem, setPendingItem] = useState<any>(null);
@@ -129,72 +128,86 @@ const Masters: React.FC = () => {
 
   const renderTable = (items: any[], type: string, parentKey?: string) => (
     <div className="enterprise-card overflow-hidden">
-      <table className="enterprise-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            {parentKey && <th>Parent</th>}
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.length === 0 ? (
+      <div className="table-container">
+        <table className="enterprise-table">
+          <thead>
             <tr>
-              <td colSpan={parentKey ? 4 : 3} className="text-center text-muted-foreground py-8">
-                No items found. Add your first item.
-              </td>
+              <th>Name</th>
+              {parentKey && <th className="hidden sm:table-cell">Parent</th>}
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
-          ) : (
-            items.map((item) => (
-              <tr key={item.id}>
-                <td className="font-medium">{item.name}</td>
-                {parentKey && (
-                  <td>
-                    {type === 'productType' 
-                      ? categories.find(c => c.id === item.categoryId)?.name 
-                      : productTypes.find(p => p.id === item.productTypeId)?.name}
-                  </td>
-                )}
-                <td>
-                  <span className={item.status === 'active' ? 'badge-success' : 'badge-warning'}>
-                    {item.status === 'active' ? (
-                      <><Check className="h-3 w-3 mr-1" /> Active</>
-                    ) : (
-                      <><Clock className="h-3 w-3 mr-1" /> Pending</>
-                    )}
-                  </span>
-                </td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    {item.status === 'pending' && (
-                      <button
-                        onClick={() => {
-                          setPendingItem({ ...item, type });
-                          setShowOTPModal(true);
-                        }}
-                        className="text-xs text-accent hover:underline"
-                      >
-                        Activate
-                      </button>
-                    )}
-                    {hasPermission('edit_masters') && (
-                      <button
-                        onClick={() => handleDelete(item.id, type)}
-                        className="p-2 hover:bg-destructive/10 rounded-md transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    )}
-                  </div>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={parentKey ? 4 : 3} className="text-center text-muted-foreground py-12">
+                  No items found. Add your first item.
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              items.map((item) => (
+                <tr key={item.id}>
+                  <td className="font-medium">{item.name}</td>
+                  {parentKey && (
+                    <td className="hidden sm:table-cell text-muted-foreground">
+                      {type === 'productType' 
+                        ? categories.find(c => c.id === item.categoryId)?.name 
+                        : productTypes.find(p => p.id === item.productTypeId)?.name}
+                    </td>
+                  )}
+                  <td>
+                    <span className={item.status === 'active' ? 'badge-success' : 'badge-warning'}>
+                      {item.status === 'active' ? (
+                        <><Check className="h-3 w-3" /> Active</>
+                      ) : (
+                        <><Clock className="h-3 w-3" /> Pending</>
+                      )}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      {item.status === 'pending' && (
+                        <button
+                          onClick={() => {
+                            setPendingItem({ ...item, type });
+                            setShowOTPModal(true);
+                          }}
+                          className="text-xs text-accent hover:underline font-medium"
+                        >
+                          Activate
+                        </button>
+                      )}
+                      {hasPermission('edit_masters') && (
+                        <button
+                          onClick={() => handleDelete(item.id, type)}
+                          className="action-btn action-btn-danger"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+
+  const getTabLabel = (tab: string) => {
+    const labels: Record<string, string> = {
+      category: 'Category',
+      productType: 'Product Type',
+      productModel: 'Product Model',
+      wood: 'Wood',
+      polish: 'Polish',
+      fabric: 'Fabric',
+    };
+    return labels[tab] || tab;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -207,63 +220,72 @@ const Masters: React.FC = () => {
           </p>
         </div>
         {hasPermission('edit_masters') && (
-          <Button className="btn-accent" onClick={() => setShowAddModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add {activeTab.replace(/([A-Z])/g, ' $1').trim()}
+          <Button className="btn-accent gap-2" onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add {getTabLabel(activeTab)}</span>
           </Button>
         )}
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="category">Category</TabsTrigger>
-          <TabsTrigger value="productType">Product Type</TabsTrigger>
-          <TabsTrigger value="productModel">Product Model</TabsTrigger>
-          <TabsTrigger value="wood">Wood</TabsTrigger>
-          <TabsTrigger value="polish">Polish</TabsTrigger>
-          <TabsTrigger value="fabric">Fabric</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-auto">
+            <TabsTrigger value="category">Category</TabsTrigger>
+            <TabsTrigger value="productType">Type</TabsTrigger>
+            <TabsTrigger value="productModel">Model</TabsTrigger>
+            <TabsTrigger value="wood">Wood</TabsTrigger>
+            <TabsTrigger value="polish">Polish</TabsTrigger>
+            <TabsTrigger value="fabric">Fabric</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="category" className="mt-6">
+        <TabsContent value="category">
           {renderTable(categories, 'category')}
         </TabsContent>
 
-        <TabsContent value="productType" className="mt-6">
+        <TabsContent value="productType">
           {renderTable(productTypes, 'productType', 'categoryId')}
         </TabsContent>
 
-        <TabsContent value="productModel" className="mt-6">
+        <TabsContent value="productModel">
           {renderTable(productModels, 'productModel', 'productTypeId')}
         </TabsContent>
 
-        <TabsContent value="wood" className="mt-6">
+        <TabsContent value="wood">
           {renderTable(woods, 'wood')}
         </TabsContent>
 
-        <TabsContent value="polish" className="mt-6">
+        <TabsContent value="polish">
           {renderTable(polishes, 'polish')}
         </TabsContent>
 
-        <TabsContent value="fabric" className="mt-6">
+        <TabsContent value="fabric">
           {renderTable(fabrics, 'fabric')}
         </TabsContent>
       </Tabs>
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-card rounded-lg shadow-xl w-full max-w-md p-6 animate-fade-in">
-            <h2 className="text-xl font-semibold mb-4">
-              Add {activeTab.replace(/([A-Z])/g, ' $1').trim()}
-            </h2>
+        <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">
+                Add {getTabLabel(activeTab)}
+              </h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
             <div className="space-y-4">
               {(activeTab === 'productType') && (
                 <div className="space-y-2">
                   <Label>Select Category</Label>
                   <Select value={selectedParent} onValueChange={setSelectedParent}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -278,7 +300,7 @@ const Masters: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Select Product Type</Label>
                   <Select value={selectedParent} onValueChange={setSelectedParent}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select product type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -295,13 +317,14 @@ const Masters: React.FC = () => {
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   placeholder="Enter name"
+                  className="h-11"
                 />
               </div>
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setShowAddModal(false)} className="flex-1">
+                <Button variant="outline" onClick={() => setShowAddModal(false)} className="flex-1 h-11">
                   Cancel
                 </Button>
-                <Button onClick={handleAdd} className="flex-1 btn-accent">
+                <Button onClick={handleAdd} className="flex-1 h-11 btn-accent">
                   Add
                 </Button>
               </div>
