@@ -713,60 +713,7 @@ const Masters: React.FC = () => {
                 </div>
               </div>
 
-              {/* Materials */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-foreground border-b border-border pb-2">Materials</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Wood Type</Label>
-                    <Select 
-                      value={productForm.woodId} 
-                      onValueChange={(v) => setProductForm(prev => ({ ...prev, woodId: v }))}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select wood" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {woods.filter(w => w.status === 'active').map(wood => (
-                          <SelectItem key={wood.id} value={wood.id}>{wood.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Polish</Label>
-                    <Select 
-                      value={productForm.polishId} 
-                      onValueChange={(v) => setProductForm(prev => ({ ...prev, polishId: v }))}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select polish" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {polishes.filter(p => p.status === 'active').map(polish => (
-                          <SelectItem key={polish.id} value={polish.id}>{polish.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fabric</Label>
-                    <Select 
-                      value={productForm.fabricId} 
-                      onValueChange={(v) => setProductForm(prev => ({ ...prev, fabricId: v }))}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select fabric" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fabrics.filter(f => f.status === 'active').map(fabric => (
-                          <SelectItem key={fabric.id} value={fabric.id}>{fabric.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+              
 
               {/* Dimensions */}
               <div className="space-y-4">
