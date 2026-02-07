@@ -8,7 +8,10 @@ import {
   BarChart3,
   LogOut,
   Database,
-  X
+  X,
+  Shield,
+  Mail,
+  UserCog
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -27,6 +30,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { path: '/customers', label: 'Customers', icon: Users, show: true },
     { path: '/products', label: 'Products', icon: Package, show: true },
     { path: '/masters', label: 'Masters', icon: Database, show: hasPermission('edit_masters') || user?.role === 'admin' },
+    { path: '/approvals', label: 'Approvals', icon: Shield, show: user?.role === 'admin' },
+    { path: '/users', label: 'User Management', icon: UserCog, show: user?.role === 'admin' },
+    { path: '/email-logs', label: 'Email Logs', icon: Mail, show: user?.role === 'admin' },
     { path: '/reports', label: 'MIS Reports', icon: BarChart3, show: hasPermission('view_reports') || user?.role === 'admin' },
   ];
 
