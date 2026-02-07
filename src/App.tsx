@@ -16,6 +16,9 @@ import Quotations from "@/pages/Quotations";
 import QuotationForm from "@/pages/QuotationForm";
 import PDFPreview from "@/pages/PDFPreview";
 import Reports from "@/pages/Reports";
+import UserManagement from "@/pages/UserManagement";
+import ApprovalManagement from "@/pages/ApprovalManagement";
+import EmailLogs from "@/pages/EmailLogs";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,17 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 };
@@ -48,6 +62,9 @@ const AppRoutes = () => {
         <Route path="quotations/:id" element={<QuotationForm />} />
         <Route path="quotations/:id/pdf" element={<PDFPreview />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+        <Route path="approvals" element={<AdminRoute><ApprovalManagement /></AdminRoute>} />
+        <Route path="email-logs" element={<AdminRoute><EmailLogs /></AdminRoute>} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

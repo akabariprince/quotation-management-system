@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, FileText, Download } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, FileText, Download, Copy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const Quotations: React.FC = () => {
   const { hasPermission } = useAuth();
-  const { quotations, customers, deleteQuotation } = useData();
+  const { quotations, customers, deleteQuotation, addQuotation } = useData();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const filteredQuotations = quotations.filter(quotation => {
     const customer = customers.find(c => c.id === quotation.customerId);
-    return (
+    const matchesSearch = (
       quotation.quotationNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    const matchesStatus = statusFilter === 'all' || quotation.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const formatCurrency = (amount: number) => {
@@ -42,6 +46,25 @@ const Quotations: React.FC = () => {
       deleteQuotation(id);
       toast.success('Quotation deleted successfully');
     }
+  };
+
+  const handleDuplicate = (quotation: typeof quotations[0]) => {
+    const duplicatedQuotation = addQuotation({
+      date: new Date(),
+      customerId: quotation.customerId,
+      salesManager: quotation.salesManager,
+      items: quotation.items.map(item => ({ ...item, id: Date.now().toString() + Math.random() })),
+      subtotal: quotation.subtotal,
+      totalDiscount: quotation.totalDiscount,
+      igst: quotation.igst,
+      cgst: quotation.cgst,
+      sgst: quotation.sgst,
+      grandTotal: quotation.grandTotal,
+      grandTotalWithGst: quotation.grandTotalWithGst,
+      status: 'draft',
+    });
+    toast.success(`Quotation duplicated as ${duplicatedQuotation.quotationNo}`);
+    navigate(`/quotations/edit/${duplicatedQuotation.id}`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -79,14 +102,28 @@ const Quotations: React.FC = () => {
 
       {/* Search & Filters */}
       <div className="enterprise-card p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by quotation number or customer name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-11"
-          />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by quotation number or customer name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -140,7 +177,7 @@ const Quotations: React.FC = () => {
                           {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
                         </span>
                       </td>
-                      <td>
+                        <td>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => navigate(`/quotations/${quotation.id}`)}
@@ -156,6 +193,15 @@ const Quotations: React.FC = () => {
                           >
                             <Download className="h-4 w-4 text-muted-foreground" />
                           </button>
+                          {hasPermission('create_quotation') && (
+                            <button
+                              onClick={() => handleDuplicate(quotation)}
+                              className="action-btn"
+                              title="Duplicate"
+                            >
+                              <Copy className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          )}
                           {hasPermission('edit_quotation') && (
                             <button
                               onClick={() => navigate(`/quotations/edit/${quotation.id}`)}
