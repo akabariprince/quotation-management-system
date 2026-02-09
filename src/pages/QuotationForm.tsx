@@ -259,7 +259,7 @@ const QuotationForm: React.FC = () => {
       {step === 2 && (
         <>
           {/* Sticky Customer Info Bar */}
-          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm mb-6 -mx-1 px-1">
+          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm my-4 -mx-1 px-1">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-6 min-w-0 overflow-hidden">
                 <div className="min-w-0">
