@@ -41,6 +41,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ open, onOpenChange, e
   const [selectedWoodId, setSelectedWoodId] = useState('none');
   const [selectedPolishId, setSelectedPolishId] = useState('none');
   const [selectedFabricId, setSelectedFabricId] = useState('none');
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
 
   const activeWoods = woods.filter(w => w.status === 'active');
   const activePolishes = polishes.filter(p => p.status === 'active');
@@ -59,6 +60,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ open, onOpenChange, e
     setSelectedWoodId('none');
     setSelectedPolishId('none');
     setSelectedFabricId('none');
+    setDiscountPercent(0);
+  };
+
+  // When product changes, set default discount
+  const handleProductChange = (productId: string) => {
+    setSelectedProductId(productId);
+    const prod = products.find(p => p.id === productId);
+    if (prod) setDiscountPercent(prod.defaultDiscount);
   };
 
   const handleAdd = () => {
@@ -79,7 +88,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ open, onOpenChange, e
     const amount = product.basePrice * quantity;
     const gstAmount = (amount * product.gstPercent) / 100;
     const subtotalWithGst = amount + gstAmount;
-    const discountAmount = (amount * product.defaultDiscount) / 100;
+    const discountAmount = (amount * discountPercent) / 100;
     const grandTotalItem = subtotalWithGst - discountAmount;
 
     const woodIdResolved = resolveSelectValue(selectedWoodId);
@@ -98,7 +107,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ open, onOpenChange, e
       description: product.description,
       images: product.images,
       basePrice: product.basePrice,
-      discountPercent: product.defaultDiscount,
+      discountPercent,
       discountAmount,
       finalPrice: product.basePrice,
       quantity,
@@ -151,7 +160,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ open, onOpenChange, e
           {/* Select */}
           <div className="space-y-2">
             <Label>Select Product *</Label>
-            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+            <Select value={selectedProductId} onValueChange={handleProductChange}>
               <SelectTrigger className="h-11">
                 <SelectValue placeholder="Select a product to add" />
               </SelectTrigger>
@@ -188,6 +197,29 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ open, onOpenChange, e
                     <span>GST: {selectedProduct.gstPercent}%</span>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Discount */}
+          {selectedProductId && (
+            <div className="border border-border rounded-lg p-4 bg-background">
+              <h3 className="font-medium text-foreground border-b border-border pb-2 mb-4 text-sm">
+                Discount
+              </h3>
+              <div className="flex items-center gap-3">
+                <Label className="text-xs whitespace-nowrap">Discount %</Label>
+                <Input
+                  type="number"
+                  value={discountPercent}
+                  onChange={e => setDiscountPercent(Math.max(0, Math.min(100, Number(e.target.value))))}
+                  className="w-24 h-9"
+                  min={0}
+                  max={100}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Default: {selectedProduct?.defaultDiscount}%
+                </span>
               </div>
             </div>
           )}
