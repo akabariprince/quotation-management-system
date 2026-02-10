@@ -238,12 +238,17 @@ const QuotationForm: React.FC = () => {
           </div>
 
           <div className="form-section">
-            <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Customer Information</h2>
+              <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => navigate('/customers/new')}>
+                <Plus className="h-3.5 w-3.5" /> Add New Customer
+              </Button>
+            </div>
             <div className="form-grid">
               <div className="space-y-2 lg:col-span-2">
-                <Label>Select Customer *</Label>
+                <Label>Search & Select Customer *</Label>
                 <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger><SelectValue placeholder="Select a customer" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Search customer by name or mobile..." /></SelectTrigger>
                   <SelectContent>
                     {customers.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name} - {c.mobile}</SelectItem>
