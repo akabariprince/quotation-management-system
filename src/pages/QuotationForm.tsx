@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+// QuotationForm.tsx
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Save, Send, Package, Calculator, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +19,12 @@ const resolveSelectValue = (val: string): string | undefined =>
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 
+const generateProductUniqueNumber = (quotationNo: string, itemIndex: number): string => {
+  const prefix = quotationNo.replace(/[^A-Z0-9]/gi, '').slice(0, 4).toUpperCase() || 'QT';
+  const num = String(itemIndex + 1).padStart(4, '0');
+  return `${prefix}P${num}`;
+};
+
 const QuotationForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -29,35 +36,29 @@ const QuotationForm: React.FC = () => {
   } = useData();
 
   const existingQuotation = id ? quotations.find(q => q.id === id) : null;
+  const quotationNo = existingQuotation?.quotationNo || getNextQuotationNumber();
 
-  // Step state
   const [step, setStep] = useState<1 | 2>(existingQuotation ? 2 : 1);
-
-  // Step 1 data
   const [customerId, setCustomerId] = useState(existingQuotation?.customerId || '');
   const [salesManager, setSalesManager] = useState(existingQuotation?.salesManager || salesManagers[0]);
-
-  // Step 2 data
   const [items, setItems] = useState<QuotationItemWithMaterials[]>(
-    existingQuotation?.items.map((item, i) => ({ ...item, itemNumber: i + 1 })) || []
+    existingQuotation?.items.map((item, i) => ({
+      ...item,
+      itemNumber: i + 1,
+      uniqueNumber: generateProductUniqueNumber(existingQuotation?.quotationNo || '', i),
+    })) || []
   );
   const [showAddModal, setShowAddModal] = useState(false);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
-
-  // OTP
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [pendingDiscountEdit, setPendingDiscountEdit] = useState<{ itemId: string; newDiscount: number } | null>(null);
-
-  // Email
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [savedQuotation, setSavedQuotation] = useState<any>(null);
+  const [newlyAddedItemId, setNewlyAddedItemId] = useState<string | null>(null);
 
-  // Refs for scroll-to
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-
   const selectedCustomer = customers.find(c => c.id === customerId);
 
-  // Calculations
   const recalculateItem = (item: QuotationItemWithMaterials): QuotationItemWithMaterials => {
     const amount = item.basePrice * item.quantity;
     const gstAmount = (amount * item.gstPercent) / 100;
@@ -117,26 +118,47 @@ const QuotationForm: React.FC = () => {
   const removeItem = (itemId: string) => {
     setItems(prev => {
       const filtered = prev.filter(item => item.id !== itemId);
-      return filtered.map((item, i) => ({ ...item, itemNumber: i + 1 }));
+      return filtered.map((item, i) => ({
+        ...item,
+        itemNumber: i + 1,
+        uniqueNumber: generateProductUniqueNumber(quotationNo, i),
+      }));
     });
     toast.success('Product removed');
   };
 
   const handleAddProduct = (newItem: QuotationItemWithMaterials) => {
-    setItems(prev => [...prev, { ...newItem, itemNumber: prev.length + 1 }]);
+    const newIndex = items.length;
+    const itemWithUniqueNumber = {
+      ...newItem,
+      itemNumber: newIndex + 1,
+      uniqueNumber: generateProductUniqueNumber(quotationNo, newIndex),
+    };
+    setItems(prev => [...prev, itemWithUniqueNumber]);
+    setNewlyAddedItemId(itemWithUniqueNumber.id);
   };
 
-  // Summary scroll sync
+  // Auto-scroll and highlight newly added product
+  useEffect(() => {
+    if (newlyAddedItemId) {
+      // Small delay to allow DOM to render
+      const timer = setTimeout(() => {
+        scrollToItem(newlyAddedItemId);
+        setNewlyAddedItemId(null);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [newlyAddedItemId, items]);
+
   const scrollToItem = useCallback((itemId: string) => {
     setHighlightedItemId(itemId);
     const el = itemRefs.current.get(itemId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    setTimeout(() => setHighlightedItemId(null), 2000);
+    setTimeout(() => setHighlightedItemId(null), 2500);
   }, []);
 
-  // Totals
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
   const totalGst = items.reduce((sum, item) => sum + item.cgst + item.sgst + item.igst, 0);
   const totalCgst = items.reduce((sum, item) => sum + item.cgst, 0);
@@ -185,7 +207,10 @@ const QuotationForm: React.FC = () => {
       {/* Header */}
       <div className="page-header mb-4">
         <div className="flex items-center gap-4">
-          <button onClick={() => step === 2 && !existingQuotation ? setStep(1) : navigate('/quotations')} className="p-2 hover:bg-muted rounded-md transition-colors">
+          <button
+            onClick={() => step === 2 && !existingQuotation ? setStep(1) : navigate('/quotations')}
+            className="p-2 hover:bg-muted rounded-md transition-colors"
+          >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
@@ -193,13 +218,13 @@ const QuotationForm: React.FC = () => {
               {existingQuotation ? `Edit ${existingQuotation.quotationNo}` : 'Create Quotation'}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {existingQuotation ? 'Update quotation details' : `New Quotation: ${getNextQuotationNumber()}`}
+              {existingQuotation ? 'Update quotation details' : `New Quotation: ${quotationNo}`}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ===== STEP 1: Company & Customer ===== */}
+      {/* ===== STEP 1 ===== */}
       {step === 1 && (
         <div className="space-y-6 max-w-3xl">
           <div className="form-section">
@@ -255,28 +280,34 @@ const QuotationForm: React.FC = () => {
         </div>
       )}
 
-      {/* ===== STEP 2: Products & Summary ===== */}
+      {/* ===== STEP 2 ===== */}
       {step === 2 && (
         <>
           {/* Sticky Customer Info Bar */}
-          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm my-4 -mx-1 px-1">
+          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm mt-4 mb-6">
             <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-6 min-w-0 overflow-hidden">
+              <div className="flex items-center gap-5 min-w-0 overflow-hidden">
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Customer</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Customer</p>
                   <p className="font-semibold text-sm truncate">{selectedCustomer?.name}</p>
                 </div>
-                <div className="hidden sm:block min-w-0">
-                  <p className="text-xs text-muted-foreground">Contact</p>
+                <div className="hidden sm:block min-w-0 border-l border-border pl-5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contact</p>
                   <p className="text-sm truncate">{selectedCustomer?.mobile}</p>
                 </div>
-                <div className="hidden md:block min-w-0">
-                  <p className="text-xs text-muted-foreground">GSTIN</p>
+                <div className="hidden md:block min-w-0 border-l border-border pl-5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">GSTIN</p>
                   <p className="text-sm font-mono truncate">{selectedCustomer?.gstin}</p>
                 </div>
-                <div className="hidden lg:block min-w-0">
-                  <p className="text-xs text-muted-foreground">Sales Manager</p>
+                <div className="hidden lg:block min-w-0 border-l border-border pl-5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Sales Manager</p>
                   <p className="text-sm truncate">{salesManager}</p>
+                </div>
+                <div className="hidden xl:block min-w-0 border-l border-border pl-5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Quotation</p>
+                  <p className="text-sm font-bold font-mono text-primary truncate">
+                    {quotationNo}
+                  </p>
                 </div>
               </div>
               <Button onClick={() => setShowAddModal(true)} className="btn-accent gap-2 flex-shrink-0">
@@ -288,12 +319,14 @@ const QuotationForm: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Main Product List */}
-            <div className="lg:col-span-3 space-y-4">
+            <div className="lg:col-span-3 space-y-5 mt-4">
               {items.length === 0 ? (
-                <div className="border-2 border-dashed border-border rounded-xl p-12 text-center">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <div className="border border-dashed border-border rounded-xl p-14 text-center">
+                  <Package className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
                   <h3 className="font-semibold text-lg mb-1">No products added</h3>
-                  <p className="text-muted-foreground text-sm mb-4">Click "Add Product" to start adding products</p>
+                  <p className="text-muted-foreground text-sm mb-5">
+                    Click "Add Product" to start building your quotation
+                  </p>
                   <Button onClick={() => setShowAddModal(true)} className="btn-accent gap-2">
                     <Plus className="h-4 w-4" /> Add Product
                   </Button>
@@ -302,7 +335,10 @@ const QuotationForm: React.FC = () => {
                 items.map((item, index) => (
                   <ProductCard
                     key={item.id}
-                    ref={el => { if (el) itemRefs.current.set(item.id, el); else itemRefs.current.delete(item.id); }}
+                    ref={el => {
+                      if (el) itemRefs.current.set(item.id, el);
+                      else itemRefs.current.delete(item.id);
+                    }}
                     item={item}
                     index={index}
                     isHighlighted={highlightedItemId === item.id}
@@ -310,78 +346,120 @@ const QuotationForm: React.FC = () => {
                     onUpdateMaterial={updateItemMaterial}
                     onRemoveItem={removeItem}
                     onDiscountChange={handleDiscountChange}
+                    salesManager={salesManager}
                   />
                 ))
               )}
             </div>
 
             {/* Right Summary Panel */}
-            <div className="lg:col-span-1">
-              <div className="form-section sticky top-20">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Calculator className="h-5 w-5" /> Summary
+            <div className="lg:col-span-1 mt-4">
+              <div className="form-section sticky top-24">
+                <h2 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-wide">
+                  <Calculator className="h-4 w-4" /> Summary
                 </h2>
 
-                {/* Product list in summary */}
                 {items.length > 0 && (
-                  <div className="space-y-1 mb-4 max-h-48 overflow-y-auto">
+                  <div className="space-y-0.5 mb-4 max-h-52 overflow-y-auto border border-border rounded-lg">
                     {items.map((item, i) => (
                       <button
                         key={item.id}
                         onClick={() => scrollToItem(item.id)}
-                        className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-xs flex items-center gap-2"
+                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${
+                          highlightedItemId === item.id
+                            ? 'bg-primary/10 border-l-2 border-l-primary'
+                            : 'hover:bg-muted/60'
+                        }`}
                       >
-                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                           {item.itemNumber || i + 1}
                         </span>
-                        <span className="truncate flex-1 font-medium">{item.productName}</span>
-                        <span className="text-muted-foreground font-mono text-[10px]">{item.productCode}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-[11px] leading-tight">
+                            {item.productName}
+                          </p>
+                          <p className="text-muted-foreground font-mono text-[9px]">
+                            {(item as any).uniqueNumber || item.productCode}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold tabular-nums text-accent flex-shrink-0">
+                          {formatCurrency(item.totalWithGst || 0)}
+                        </span>
                       </button>
                     ))}
                   </div>
                 )}
 
                 {items.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground text-sm">Add products to see summary</div>
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Add products to see summary
+                  </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Amount ({items.length} items)</span>
-                      <span className="font-medium">{formatCurrency(totalAmount)}</span>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between border-b border-border pb-2">
+                      <span className="text-muted-foreground">
+                        Amount ({items.length} {items.length === 1 ? 'item' : 'items'})
+                      </span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(totalAmount)}</span>
                     </div>
-                    <div className="border-t border-border pt-3">
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">CGST</span><span>{formatCurrency(totalCgst)}</span></div>
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">SGST</span><span>{formatCurrency(totalSgst)}</span></div>
-                      {totalIgst > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">IGST</span><span>{formatCurrency(totalIgst)}</span></div>}
-                      <div className="flex justify-between text-sm font-medium mt-1">
+
+                    <div className="space-y-1 border-b border-border pb-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">CGST</span>
+                        <span className="tabular-nums">{formatCurrency(totalCgst)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">SGST</span>
+                        <span className="tabular-nums">{formatCurrency(totalSgst)}</span>
+                      </div>
+                      {totalIgst > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">IGST</span>
+                          <span className="tabular-nums">{formatCurrency(totalIgst)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-semibold pt-1">
                         <span className="text-muted-foreground">Total GST</span>
-                        <span className="text-blue-600">+{formatCurrency(totalGst)}</span>
+                        <span className="text-blue-600 tabular-nums">+{formatCurrency(totalGst)}</span>
                       </div>
                     </div>
-                    <div className="border-t border-border pt-3">
-                      <div className="flex justify-between text-sm font-semibold"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+
+                    <div className="flex justify-between text-sm font-bold border-b border-border pb-2">
+                      <span>Subtotal</span>
+                      <span className="tabular-nums">{formatCurrency(subtotal)}</span>
                     </div>
-                    <div className="border-t border-border pt-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Discount</span>
-                        <span className="font-medium text-red-500">-{formatCurrency(totalDiscount)}</span>
-                      </div>
+
+                    <div className="flex justify-between border-b border-border pb-2">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span className="font-semibold text-destructive tabular-nums">
+                        -{formatCurrency(totalDiscount)}
+                      </span>
                     </div>
-                    <div className="border-t-2 border-border pt-3">
-                      <div className="flex justify-between text-lg font-bold">
+
+                    <div className="pt-2">
+                      <div className="flex justify-between text-base font-bold">
                         <span>Grand Total</span>
-                        <span className="text-accent">{formatCurrency(grandTotal)}</span>
+                        <span className="text-accent tabular-nums">{formatCurrency(grandTotal)}</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-3 mt-6">
-                  <Button onClick={() => handleSave(false)} variant="outline" className="w-full" disabled={items.length === 0}>
-                    <Save className="h-4 w-4 mr-2" /> Save as Draft
+                <div className="space-y-2 mt-5 pt-4 border-t border-border">
+                  <Button
+                    onClick={() => handleSave(false)}
+                    variant="outline"
+                    className="w-full text-xs h-9"
+                    disabled={items.length === 0}
+                  >
+                    <Save className="h-3.5 w-3.5 mr-2" /> Save as Draft
                   </Button>
-                  <Button onClick={() => handleSave(true)} className="w-full btn-accent" disabled={items.length === 0 || !customerId}>
-                    <Send className="h-4 w-4 mr-2" /> Save & Send Email
+                  <Button
+                    onClick={() => handleSave(true)}
+                    className="w-full btn-accent text-xs h-9"
+                    disabled={items.length === 0 || !customerId}
+                  >
+                    <Send className="h-3.5 w-3.5 mr-2" /> Save & Send Email
                   </Button>
                 </div>
               </div>
@@ -390,10 +468,8 @@ const QuotationForm: React.FC = () => {
         </>
       )}
 
-      {/* Add Product Modal */}
       <AddProductModal open={showAddModal} onOpenChange={setShowAddModal} existingItems={items} onAddProduct={handleAddProduct} />
 
-      {/* OTP Modal */}
       <OTPModal
         isOpen={showOTPModal}
         onClose={() => { setShowOTPModal(false); setPendingDiscountEdit(null); }}
@@ -403,7 +479,6 @@ const QuotationForm: React.FC = () => {
         type="discount"
       />
 
-      {/* Email Preview Modal */}
       {showEmailPreview && savedQuotation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => { setShowEmailPreview(false); navigate('/quotations'); }} />
