@@ -151,7 +151,7 @@ const ApprovalManagement: React.FC = () => {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="discounts">Discount Approval Log</TabsTrigger>
+            {/* <TabsTrigger value="discounts">Discount Approval Log</TabsTrigger> */}
           </TabsList>
         </div>
 
@@ -225,7 +225,7 @@ const ApprovalManagement: React.FC = () => {
         </TabsContent>
 
         {/* Discount Approval Log */}
-        <TabsContent value="discounts" className="space-y-4">
+        {/* <TabsContent value="discounts" className="space-y-4">
           <div className="enterprise-card overflow-hidden">
             <div className="table-container">
               <table className="enterprise-table">
@@ -282,7 +282,7 @@ const ApprovalManagement: React.FC = () => {
             </div>
           </div>
         </TabsContent>
-      </Tabs>
+      </Tabs> */}
 
       {/* OTP Modal */}
       <OTPModal
