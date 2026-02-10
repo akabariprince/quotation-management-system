@@ -1,5 +1,6 @@
+// ProductCard.tsx
 import React, { useState } from 'react';
-import { Trash2, Image as ImageIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Image as ImageIcon, ChevronDown, ChevronUp, Percent, Hash } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -18,10 +19,11 @@ interface ProductCardProps {
   onUpdateMaterial: (itemId: string, type: 'wood' | 'polish' | 'fabric', value: string) => void;
   onRemoveItem: (itemId: string) => void;
   onDiscountChange: (itemId: string, newDiscount: number) => void;
+  salesManager?: string;
 }
 
 const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
-  ({ item, index, isHighlighted, onUpdateItem, onUpdateMaterial, onRemoveItem, onDiscountChange }, ref) => {
+  ({ item, index, isHighlighted, onUpdateItem, onUpdateMaterial, onRemoveItem, onDiscountChange, salesManager }, ref) => {
     const { hasPermission } = useAuth();
     const { woods, polishes, fabrics } = useData();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -34,30 +36,53 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
     const gstAmount = item.cgst + item.sgst + item.igst;
     const subtotalWithGst = itemAmount + gstAmount;
     const grandTotal = subtotalWithGst - item.discountAmount;
-    const hasMaterials = item.woodId || item.polishId || item.fabricId;
+
+    const woodObj = item.woodId ? woods.find(w => w.id === item.woodId) : null;
+    const polishObj = item.polishId ? polishes.find(p => p.id === item.polishId) : null;
+    const fabricObj = item.fabricId ? fabrics.find(f => f.id === item.fabricId) : null;
+
+    const uniqueNumber = (item as any).uniqueNumber || `ITM-${String(index + 1).padStart(4, '0')}`;
 
     return (
       <div
         ref={ref}
-        className={`border rounded-xl bg-card shadow-sm overflow-hidden transition-all duration-300 ${
+        className={`border rounded-xl bg-card overflow-hidden transition-all duration-500 ${
           isHighlighted
-            ? 'border-primary ring-2 ring-primary/30 shadow-lg'
+            ? 'border-primary ring-2 ring-primary/30 shadow-xl scale-[1.01]'
             : 'border-border hover:shadow-md'
         }`}
       >
-        {/* ===== TOP BAR: Item number + Code + Delete ===== */}
-        <div className="flex items-center justify-between bg-muted/50 px-4 py-2 border-b border-border">
-          <div className="flex items-center gap-3">
-            <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+        {/* ═══════ TOP HEADER ROW ═══════ */}
+        <div className="grid grid-cols-12 border-b border-border bg-muted/50">
+          {/* Index + Reference Image */}
+          <div className="col-span-4 sm:col-span-3 border-r border-border px-3 py-2.5 flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">
               {item.itemNumber || index + 1}
             </span>
-            <span className="text-sm font-semibold font-mono tracking-wide">{item.productCode}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Reference Image
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground hidden sm:inline">{item.productName}</span>
+          {/* Unique Number Badge */}
+          <div className="col-span-2 hidden sm:flex border-r border-border px-3 py-2.5 items-center justify-center">
+            <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+              <Hash className="h-3 w-3" />
+              <span className="text-[10px] font-bold font-mono tracking-wide">
+                {uniqueNumber}
+              </span>
+            </div>
+          </div>
+          {/* Product Code + Name + Delete */}
+          <div className="col-span-8 sm:col-span-7 px-3 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold font-mono tracking-wide">{item.productCode}</span>
+              <span className="text-xs text-muted-foreground truncate hidden md:inline">
+                — {item.productName}
+              </span>
+            </div>
             <button
               onClick={() => onRemoveItem(item.id)}
-              className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0"
               title="Remove product"
             >
               <Trash2 className="h-4 w-4 text-destructive" />
@@ -65,167 +90,365 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
           </div>
         </div>
 
-        {/* ===== FULL-WIDTH IMAGE ===== */}
-        <div className="w-full flex justify-center bg-muted/20 border-b border-border">
-          <div className="w-full max-w-md aspect-[4/3] overflow-hidden">
-            {item.images[0] ? (
-              <img src={item.images[0]} alt={item.productName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-muted">
-                <ImageIcon className="h-16 w-16 text-muted-foreground" />
-              </div>
-            )}
+        {/* Mobile unique number badge */}
+        <div className="sm:hidden border-b border-border bg-muted/30 px-3 py-1.5 flex items-center justify-center">
+          <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+            <Hash className="h-3 w-3" />
+            <span className="text-[10px] font-bold font-mono tracking-wide">
+              {uniqueNumber}
+            </span>
           </div>
         </div>
 
-        {/* Material circles below image */}
-        {hasMaterials && (
-          <div className="flex gap-2 justify-center py-2 border-b border-border bg-muted/10">
-            {item.woodName && (
-              <span className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-medium">
-                Wood: {item.woodName}
-              </span>
-            )}
-            {item.polishName && (
-              <span className="inline-flex items-center px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-md text-[10px] font-medium">
-                Polish: {item.polishName}
-              </span>
-            )}
-            {item.fabricName && (
-              <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[10px] font-medium">
-                Fabric: {item.fabricName}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* ===== 2-SECTION: Description | Price Table ===== */}
-        <div className="grid grid-cols-1 md:grid-cols-3 border-b border-border">
-          {/* Description - 1 col */}
-          <div className="p-4 md:border-r border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Description</p>
-            <p className="text-sm text-foreground leading-relaxed">{item.description}</p>
-            <div className="mt-3">
-              <p className="text-xs text-muted-foreground">Qty</p>
-              <Input
-                type="number"
-                value={item.quantity}
-                onChange={e => onUpdateItem(item.id, 'quantity', Math.max(1, Number(e.target.value)))}
-                className="w-20 h-8 text-sm mt-1"
-                min={1}
-              />
+        {/* ═══════ IMAGE + MATERIAL CIRCLES ROW ═══════ */}
+        <div className="grid grid-cols-12 border-b border-border">
+          {/* Product Image */}
+          <div className="col-span-12 sm:col-span-9 border-r-0 sm:border-r border-border bg-muted/5">
+            <div className="w-full aspect-[16/9] max-h-[340px] overflow-hidden flex items-center justify-center">
+              {item.images?.[0] ? (
+                <img
+                  src={item.images[0]}
+                  alt={item.productName}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20">
+                  <ImageIcon className="h-14 w-14 text-muted-foreground/30" />
+                  <span className="text-[10px] text-muted-foreground/50 mt-2">No image</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Price Table - 2 cols */}
-          <div className="md:col-span-2 p-0">
+          {/* Material Circles — stacked vertically */}
+          <div className="col-span-12 sm:col-span-3 flex sm:flex-col items-center justify-center gap-5 py-5 px-3 border-t sm:border-t-0 border-border">
+            {/* Wood Circle */}
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={`w-14 h-14 rounded-full border-2 transition-colors ${
+                  woodObj ? 'border-amber-400 shadow-sm' : 'border-border'
+                }`}
+                style={{ backgroundColor: woodObj ? '#D2B48C' : undefined }}
+                title={item.woodName || 'No wood'}
+              >
+                {!woodObj && (
+                  <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center">
+                    <span className="text-muted-foreground/40 text-lg">—</span>
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-center leading-tight max-w-[70px]">
+                {item.woodName || 'Wood'}
+              </span>
+            </div>
+
+            {/* Polish Circle */}
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={`w-14 h-14 rounded-full border-2 transition-colors ${
+                  polishObj ? 'border-purple-400 shadow-sm' : 'border-border'
+                }`}
+                style={{ backgroundColor: polishObj ? '#8B6914' : undefined }}
+                title={item.polishName || 'No polish'}
+              >
+                {!polishObj && (
+                  <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center">
+                    <span className="text-muted-foreground/40 text-lg">—</span>
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-center leading-tight max-w-[70px]">
+                {item.polishName || 'Polish'}
+              </span>
+            </div>
+
+            {/* Fabric Circle */}
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className={`w-14 h-14 rounded-full border-2 transition-colors ${
+                  fabricObj ? 'border-blue-400 shadow-sm' : 'border-border'
+                }`}
+                style={{ backgroundColor: fabricObj ? '#4A90D9' : undefined }}
+                title={item.fabricName || 'No fabric'}
+              >
+                {!fabricObj && (
+                  <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center">
+                    <span className="text-muted-foreground/40 text-lg">—</span>
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-center leading-tight max-w-[70px]">
+                {item.fabricName || 'Fabric'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════ DETAILS TABLE ROW ═══════ */}
+        <div className="grid grid-cols-1 md:grid-cols-3 border-b border-border">
+          {/* Left — Description Fields */}
+          <div className="border-r-0 md:border-r border-border col-span-2">
             <table className="w-full text-sm">
               <tbody>
-                <tr className="border-b border-border">
-                  <td className="px-4 py-2.5 text-muted-foreground font-medium">Base Price</td>
-                  <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(item.basePrice)}</td>
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="px-4 py-2.5 text-muted-foreground font-medium">Amount (Qty × Price)</td>
-                  <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(itemAmount)}</td>
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="px-4 py-2.5 text-muted-foreground font-medium">
-                    CGST ({item.gstPercent / 2}%)
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground w-28 border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Description
                   </td>
-                  <td className="px-4 py-2.5 text-right">{formatCurrency(item.cgst)}</td>
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="px-4 py-2.5 text-muted-foreground font-medium">
-                    SGST ({item.gstPercent / 2}%)
+                  <td className="px-3 py-2 text-sm leading-relaxed">
+                    {item.description || '—'}
                   </td>
-                  <td className="px-4 py-2.5 text-right">{formatCurrency(item.sgst)}</td>
                 </tr>
-                {item.igst > 0 && (
-                  <tr className="border-b border-border">
-                    <td className="px-4 py-2.5 text-muted-foreground font-medium">IGST</td>
-                    <td className="px-4 py-2.5 text-right">{formatCurrency(item.igst)}</td>
-                  </tr>
-                )}
-                <tr className="border-b border-border bg-muted/30">
-                  <td className="px-4 py-2.5 font-semibold">Subtotal (with GST)</td>
-                  <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(subtotalWithGst)}</td>
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Length
+                  </td>
+                  <td className="px-3 py-2 text-sm font-medium">
+                    {(item as any).length || '—'}
+                  </td>
                 </tr>
-                {item.discountPercent > 0 ? (
-                  <tr className="border-b border-border">
-                    <td className="px-4 py-2.5 font-medium text-destructive">
-                      <div className="flex items-center gap-2">
-                        <span>Discount</span>
-                        <span className="bg-destructive/10 text-destructive px-1.5 py-0.5 rounded text-xs font-bold">
-                          {item.discountPercent}%
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Width
+                  </td>
+                  <td className="px-3 py-2 text-sm font-medium">
+                    {(item as any).width || '—'}
+                  </td>
+                </tr>
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Seat Height
+                  </td>
+                  <td className="px-3 py-2 text-sm font-medium">
+                    {(item as any).seatHeight || '—'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Sales Mgr
+                  </td>
+                  <td className="px-3 py-2 text-sm font-medium">
+                    {salesManager || '—'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Right — Pricing Table (improved discount UI) */}
+          <div>
+            <table className="w-full text-sm">
+              <tbody>
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide w-28">
+                    Price
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    {formatCurrency(item.basePrice)}
+                  </td>
+                </tr>
+
+                {/* Improved Discount Row — Fixed layout */}
+                <tr className="border-b border-border/60 bg-orange-50/50 dark:bg-orange-950/10">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Discount
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      {/* Discount input — always left */}
+                      <div className="flex items-center gap-1 bg-white dark:bg-muted/50 rounded-lg px-2 py-1 border border-border shadow-sm">
+                        <Input
+                          type="number"
+                          value={item.discountPercent}
+                          onChange={e => {
+                            const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                            onDiscountChange(item.id, val);
+                          }}
+                          className="w-12 h-6 text-xs text-right border-0 bg-transparent p-0 focus-visible:ring-0"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                        />
+                        <Percent className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      </div>
+                      <div className="w-1"></div>
+                      {/* Discount amount — always right */}
+                      <div className="text-right">
+                        <span className={`text-xs font-semibold tabular-nums ${
+                          item.discountAmount > 0 ? 'text-destructive' : 'text-muted-foreground/50'
+                        }`}>
+                          {item.discountAmount > 0 ? `-${formatCurrency(item.discountAmount)}` : '₹0'}
                         </span>
                       </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Final Price
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                    {formatCurrency(item.basePrice - (item.quantity > 0 ? item.discountAmount / item.quantity : 0))}
+                  </td>
+                </tr>
+
+                {/* Editable Units Row — max 100 */}
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    Units
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center justify-end gap-2">
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={e => {
+                          const val = Math.max(1, Math.min(100, Number(e.target.value)));
+                          onUpdateItem(item.id, 'quantity', val);
+                        }}
+                        className="w-16 h-7 text-sm text-right ml-auto"
+                        min={1}
+                        max={100}
+                      />
+                      {/* <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+                        max 100
+                      </span> */}
+                    </div>
+                  </td>
+                </tr>
+
+                <tr className="border-b border-border/60 bg-muted/20">
+                  <td className="px-3 py-2 font-bold border-r border-border/60 text-[10px] uppercase tracking-wide">
+                    Total
+                  </td>
+                  <td className="px-3 py-2 text-right font-bold tabular-nums">
+                    {formatCurrency(itemAmount)}
+                  </td>
+                </tr>
+
+                {item.igst > 0 && (
+                  <tr className="border-b border-border/60">
+                    <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                      IGST
                     </td>
-                    <td className="px-4 py-2.5 text-right text-destructive font-semibold">
-                      -{formatCurrency(item.discountAmount)}
+                    <td className="px-3 py-2 text-right tabular-nums text-xs">
+                      {formatCurrency(item.igst)}
                     </td>
-                  </tr>
-                ) : (
-                  <tr className="border-b border-border">
-                    <td className="px-4 py-2.5 text-muted-foreground font-medium">Discount</td>
-                    <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
                   </tr>
                 )}
+
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    CGST ({item.gstPercent / 2}%)
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs">
+                    {formatCurrency(item.cgst)}
+                  </td>
+                </tr>
+
+                <tr className="border-b border-border/60">
+                  <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
+                    SGST ({item.gstPercent / 2}%)
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-xs">
+                    {formatCurrency(item.sgst)}
+                  </td>
+                </tr>
+
                 <tr className="bg-primary/5">
-                  <td className="px-4 py-3 font-bold text-base">Grand Total</td>
-                  <td className="px-4 py-3 text-right font-bold text-base text-accent">{formatCurrency(grandTotal)}</td>
+                  <td className="px-3 py-2.5 font-bold border-r border-border/60 text-[10px] uppercase tracking-wide">
+                    Total with GST
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-bold text-base tabular-nums text-accent">
+                    {formatCurrency(grandTotal)}
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Edit Materials Toggle */}
-        <div>
+        {/* ═══════ FOOTER ROW ═══════ */}
+        <div className="flex items-center justify-between bg-muted/40 px-4 py-2">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Item #{item.itemNumber || index + 1}
+            </span>
+            <span className="text-[9px] font-mono text-primary/70 bg-primary/5 px-2 py-0.5 rounded-full">
+              {uniqueNumber}
+            </span>
+          </div>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+            className="flex items-center gap-1.5 text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors uppercase tracking-wide"
           >
-            {isExpanded ? <><ChevronUp className="h-3.5 w-3.5" /> Hide Materials</> : <><ChevronDown className="h-3.5 w-3.5" /> Edit Materials</>}
+            {isExpanded ? (
+              <>
+                <ChevronUp className="h-3 w-3" /> Hide Materials
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3" /> Edit Materials
+              </>
+            )}
           </button>
+        </div>
 
-          {isExpanded && (
-            <div className="border-t border-border bg-muted/20 p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Wood Type</Label>
-                  <Select value={item.woodId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'wood', v)}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select wood" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none"><span className="text-muted-foreground">None</span></SelectItem>
-                      {activeWoods.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Polish</Label>
-                  <Select value={item.polishId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'polish', v)}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select polish" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none"><span className="text-muted-foreground">None</span></SelectItem>
-                      {activePolishes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Fabric</Label>
-                  <Select value={item.fabricId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'fabric', v)}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select fabric" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none"><span className="text-muted-foreground">None</span></SelectItem>
-                      {activeFabrics.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* ═══════ EXPANDABLE MATERIALS ═══════ */}
+        {isExpanded && (
+          <div className="border-t border-border bg-muted/10 p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold uppercase tracking-wide">Wood Type</Label>
+                <Select value={item.woodId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'wood', v)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select wood" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">None</span>
+                    </SelectItem>
+                    {activeWoods.map(w => (
+                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold uppercase tracking-wide">Polish</Label>
+                <Select value={item.polishId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'polish', v)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select polish" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">None</span>
+                    </SelectItem>
+                    {activePolishes.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold uppercase tracking-wide">Fabric</Label>
+                <Select value={item.fabricId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'fabric', v)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select fabric" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">None</span>
+                    </SelectItem>
+                    {activeFabrics.map(f => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
