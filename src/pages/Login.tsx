@@ -7,10 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
 
+const userList = [
+  { id: '1', name: 'Data Entry User', email: 'dataentry@esipl.in', role: 'data_entry' as UserRole },
+  { id: '2', name: 'Creator User', email: 'creator@esipl.in', role: 'creator' as UserRole },
+  { id: '3', name: 'Master User', email: 'master@esipl.in', role: 'master' as UserRole },
+  { id: '4', name: 'Admin User', email: 'admin@esipl.in', role: 'admin' as UserRole },
+];
+
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('creator');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,27 +24,23 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const selectedUser = userList.find(u => u.id === selectedUserId);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!selectedUser) { setError('Please select a user'); return; }
     setIsLoading(true);
 
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const success = login(email, password, role);
+    const success = login(selectedUser.email, password, selectedUser.role);
     if (success) {
       navigate('/dashboard');
     } else {
       setError('Invalid credentials. Please try again.');
     }
     setIsLoading(false);
-  };
-
-  const quickLogin = (presetEmail: string, presetRole: UserRole) => {
-    setEmail(presetEmail);
-    setPassword('password123');
-    setRole(presetRole);
   };
 
   return (
@@ -93,21 +95,27 @@ const Login: React.FC = () => {
           <div className="enterprise-card p-8">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-semibold text-foreground">Welcome Back</h2>
-              <p className="text-muted-foreground mt-2">Sign in to your account</p>
+              <p className="text-muted-foreground mt-2">Select your account to sign in</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your.email@esipl.in"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="input-field"
-                />
+                <Label htmlFor="user">Select User</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="select-field">
+                    <SelectValue placeholder="Choose your account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userList.map(u => (
+                      <SelectItem key={u.id} value={u.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{u.name}</span>
+                          <span className="text-muted-foreground text-xs capitalize">({u.role.replace('_', ' ')})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -132,21 +140,6 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="role">Select Role</Label>
-                <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                  <SelectTrigger className="select-field">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="data_entry">Data Entry</SelectItem>
-                    <SelectItem value="creator">Creator</SelectItem>
-                    <SelectItem value="master">Master</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {error && (
                 <div className="flex items-center gap-2 text-destructive text-sm">
                   <AlertCircle className="h-4 w-4" />
@@ -157,7 +150,7 @@ const Login: React.FC = () => {
               <Button 
                 type="submit" 
                 className="w-full btn-accent"
-                disabled={isLoading}
+                disabled={isLoading || !selectedUserId}
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -172,36 +165,6 @@ const Login: React.FC = () => {
                 )}
               </Button>
             </form>
-
-            <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-muted-foreground text-center mb-3">Quick Login (Demo)</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => quickLogin('dataentry@esipl.in', 'data_entry')}
-                  className="text-xs py-2 px-3 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-                >
-                  Data Entry
-                </button>
-                <button
-                  onClick={() => quickLogin('creator@esipl.in', 'creator')}
-                  className="text-xs py-2 px-3 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-                >
-                  Creator
-                </button>
-                <button
-                  onClick={() => quickLogin('master@esipl.in', 'master')}
-                  className="text-xs py-2 px-3 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-                >
-                  Master
-                </button>
-                <button
-                  onClick={() => quickLogin('admin@esipl.in', 'admin')}
-                  className="text-xs py-2 px-3 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
           </div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
