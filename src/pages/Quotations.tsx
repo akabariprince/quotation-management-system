@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, FileText, Download, Copy } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, FileText, Download, Copy, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -42,9 +42,9 @@ const Quotations: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this quotation?')) {
+    if (confirm('Are you sure you want to delete this project?')) {
       deleteQuotation(id);
-      toast.success('Quotation deleted successfully');
+      toast.success('Project deleted successfully');
     }
   };
 
@@ -63,7 +63,7 @@ const Quotations: React.FC = () => {
       grandTotalWithGst: quotation.grandTotalWithGst,
       status: 'draft',
     });
-    toast.success(`Quotation duplicated as ${duplicatedQuotation.quotationNo}`);
+    toast.success(`Project duplicated as ${duplicatedQuotation.quotationNo}`);
     navigate(`/quotations/edit/${duplicatedQuotation.id}`);
   };
 
@@ -83,21 +83,31 @@ const Quotations: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="page-title">Quotations</h1>
+          <h1 className="page-title">Projects</h1>
           <p className="text-muted-foreground mt-1">
-            Manage and track all quotations
+            Manage and track all projects
           </p>
         </div>
-        {hasPermission('create_quotation') && (
-          <Link to="/quotations/new">
-            <Button className="btn-accent gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Create Quotation</span>
+
+        <div className="flex gap-2">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
             </Button>
           </Link>
-        )}
+
+          {hasPermission('create_quotation') && (
+            <Link to="/quotations/new">
+              <Button className="btn-accent gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Project</span>
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -106,7 +116,7 @@ const Quotations: React.FC = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by quotation number or customer name..."
+              placeholder="Search by project number or customer name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-11"
@@ -133,7 +143,7 @@ const Quotations: React.FC = () => {
           <table className="enterprise-table">
             <thead>
               <tr>
-                <th>Quotation No</th>
+                <th>Project No</th>
                 <th className="hidden sm:table-cell">Customer</th>
                 <th className="hidden md:table-cell">Date</th>
                 <th className="hidden lg:table-cell">Items</th>
@@ -147,7 +157,7 @@ const Quotations: React.FC = () => {
                 <tr>
                   <td colSpan={7} className="text-center text-muted-foreground py-12">
                     <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    {searchTerm ? 'No quotations found matching your search.' : 'No quotations yet. Create your first quotation.'}
+                    {searchTerm ? 'No projects found matching your search.' : 'No projects yet. Create your first project.'}
                   </td>
                 </tr>
               ) : (
@@ -177,7 +187,7 @@ const Quotations: React.FC = () => {
                           {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
                         </span>
                       </td>
-                        <td>
+                      <td>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => navigate(`/quotations/${quotation.id}`)}

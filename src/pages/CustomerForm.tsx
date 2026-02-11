@@ -60,24 +60,38 @@ const CustomerForm: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/customers')}
-            className="p-2 hover:bg-muted rounded-md transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="page-title">
-              {existingCustomer ? 'Edit Customer' : 'Add New Customer'}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {existingCustomer ? 'Update customer information' : 'Enter customer details'}
-            </p>
-          </div>
-        </div>
-      </div>
+<div className="page-header flex items-center justify-between">
+  <div className="flex items-center gap-4">
+    <button
+      onClick={() => navigate('/customers')}
+      className="p-2 hover:bg-muted rounded-md transition-colors"
+    >
+      <ArrowLeft className="h-5 w-5" />
+    </button>
+    <div>
+      <h1 className="page-title">
+        {existingCustomer ? 'Edit Customer' : 'Add New Customer'}
+      </h1>
+      <p className="text-muted-foreground mt-1">
+        {existingCustomer
+          ? 'Update customer information'
+          : 'Enter customer details'}
+      </p>
+    </div>
+  </div>
+
+  {/* Added button only */}
+  <Button
+    variant="outline"
+    className="gap-2"
+    onClick={() => navigate('/dashboard')}
+  >
+    <ArrowLeft className="h-4 w-4" />
+    <span className="hidden sm:inline">Back to Dashboard</span>
+  </Button>
+</div>
+
+
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="max-w-3xl">

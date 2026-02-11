@@ -1,4 +1,3 @@
-// ProductCard.tsx
 import React, { useState } from 'react';
 import { Trash2, Image as ImageIcon, ChevronDown, ChevronUp, Percent, Hash } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
@@ -26,7 +25,8 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
   ({ item, index, isHighlighted, onUpdateItem, onUpdateMaterial, onRemoveItem, onDiscountChange, salesManager }, ref) => {
     const { hasPermission } = useAuth();
     const { woods, polishes, fabrics } = useData();
-    const [isExpanded, setIsExpanded] = useState(false);
+    // ✅ Default expanded (was false, now true)
+    const [isExpanded, setIsExpanded] = useState(true);
 
     const activeWoods = woods.filter(w => w.status === 'active');
     const activePolishes = polishes.filter(p => p.status === 'active');
@@ -234,7 +234,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
             </table>
           </div>
 
-          {/* Right — Pricing Table (improved discount UI) */}
+          {/* Right — Pricing Table */}
           <div>
             <table className="w-full text-sm">
               <tbody>
@@ -247,14 +247,13 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                   </td>
                 </tr>
 
-                {/* Improved Discount Row — Fixed layout */}
+                {/* Discount Row */}
                 <tr className="border-b border-border/60 bg-orange-50/50 dark:bg-orange-950/10">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     Discount
                   </td>
                   <td className="px-3 py-1.5">
                     <div className="grid grid-cols-3 gap-2 items-center">
-                      {/* Discount input — always left */}
                       <div className="flex items-center gap-1 bg-white dark:bg-muted/50 rounded-lg px-2 py-1 border border-border shadow-sm">
                         <Input
                           type="number"
@@ -271,7 +270,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                         <Percent className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                       </div>
                       <div className="w-1"></div>
-                      {/* Discount amount — always right */}
                       <div className="text-right">
                         <span className={`text-xs font-semibold tabular-nums ${
                           item.discountAmount > 0 ? 'text-destructive' : 'text-muted-foreground/50'
@@ -292,7 +290,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                   </td>
                 </tr>
 
-                {/* Editable Units Row — max 100 */}
+                {/* Editable Units Row */}
                 <tr className="border-b border-border/60">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     Units
@@ -310,9 +308,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                         min={1}
                         max={100}
                       />
-                      {/* <span className="text-[9px] text-muted-foreground whitespace-nowrap">
-                        max 100
-                      </span> */}
                     </div>
                   </td>
                 </tr>
@@ -394,7 +389,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
           </button>
         </div>
 
-        {/* ═══════ EXPANDABLE MATERIALS ═══════ */}
+        {/* ═══════ EXPANDABLE MATERIALS (default open) ═══════ */}
         {isExpanded && (
           <div className="border-t border-border bg-muted/10 p-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -1,10 +1,10 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Users, 
-  Package, 
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  Package,
   BarChart3,
   LogOut,
   Database,
@@ -52,18 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
     { path: '/reports', label: 'MIS Reports', icon: BarChart3, show: hasPermission('view_reports') || user?.role === 'admin' },
   ];
 
-  const quickActions: QuickAction[] = [
-    { label: 'New Customer', icon: UserPlus, path: '/customers/new', permission: 'add_customer' },
-    { label: 'New Quotation', icon: FilePlus, path: '/quotations/new', permission: 'create_quotation' },
-    { label: 'View Reports', icon: BarChart3, path: '/reports', permission: 'view_reports' },
-  ];
-
-  const visibleQuickActions = quickActions.filter(a => {
-    if (a.adminOnly && user?.role !== 'admin') return false;
-    if (a.permission && !hasPermission(a.permission)) return false;
-    return true;
-  });
-
   const handleNavClick = () => {
     if (window.innerWidth < 1024) {
       onClose();
@@ -74,14 +62,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={cn(
           "fixed lg:static inset-y-0 left-0 z-50 bg-card border-r border-border flex flex-col h-screen transition-all duration-300 ease-in-out",
           isCollapsed ? "w-[68px]" : "w-64",
@@ -91,7 +79,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
         {/* Logo */}
         <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+            <div
+              className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 cursor-pointer"
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+                else onToggleCollapse();
+              }}
+            >
               <span className="text-primary-foreground font-bold text-lg">E</span>
             </div>
             {!isCollapsed && (
@@ -102,47 +96,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
             )}
           </div>
           {/* Mobile Close / Desktop Toggle */}
-          <button 
-            onClick={() => { if (window.innerWidth < 1024) onClose(); else onToggleCollapse(); }}
-            className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0"
-          >
-            {window.innerWidth < 1024 ? (
-              <X className="h-5 w-5 text-muted-foreground" />
-            ) : isCollapsed ? (
-              <PanelLeft className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <PanelLeftClose className="h-5 w-5 text-muted-foreground" />
-            )}
-          </button>
+          {!isCollapsed && (
+            <button
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+                else onToggleCollapse();
+              }}
+              className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0"
+            >
+              {window.innerWidth < 1024 ? (
+                <X className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <PanelLeftClose className="h-5 w-5 text-muted-foreground" />
+              )}
+            </button>
+          )}
         </div>
 
-        {/* Quick Actions */}
-        {visibleQuickActions.length > 0 && (
-          <div className={cn("px-3 pt-3 pb-1 border-b border-border flex-shrink-0", isCollapsed ? "px-2" : "px-3")}>
-            {!isCollapsed && (
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 px-1">Quick Actions</p>
-            )}
-            <div className={cn("space-y-1", isCollapsed && "flex flex-col items-center")}>
-              {visibleQuickActions.map(action => (
-                <button
-                  key={action.path}
-                  onClick={() => { navigate(action.path); handleNavClick(); }}
-                  title={isCollapsed ? action.label : undefined}
-                  className={cn(
-                    "flex items-center gap-2 w-full rounded-lg text-xs font-medium transition-colors bg-accent/10 text-accent hover:bg-accent/20",
-                    isCollapsed ? "p-2 justify-center" : "px-3 py-2"
-                  )}
-                >
-                  <action.icon className="h-4 w-4 flex-shrink-0" />
-                  {!isCollapsed && <span>{action.label}</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Navigation */}
-        <nav className={cn("flex-1 p-3 space-y-1 overflow-hidden", isCollapsed && "px-2")}>
+        <nav className={cn("flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden", isCollapsed && "px-2")}>
           {navItems.filter(item => item.show).map((item) => (
             <NavLink
               key={item.path}
@@ -169,7 +141,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
             onClick={onToggleCollapse}
             className="nav-item nav-item-inactive w-full justify-center"
           >
-            {isCollapsed ? <PanelLeft className="h-5 w-5" /> : (
+            {isCollapsed ? (
+              <PanelLeft className="h-5 w-5" />
+            ) : (
               <span className="flex items-center gap-2 w-full">
                 <PanelLeftClose className="h-5 w-5" />
                 <span>Minimize</span>
@@ -182,12 +156,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
         <div className="p-3 border-t border-border flex-shrink-0">
           {isCollapsed ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="w-9 h-9 bg-accent/10 rounded-full flex items-center justify-center" title={user?.name}>
+              <div
+                className="w-9 h-9 bg-accent/10 rounded-full flex items-center justify-center"
+                title={user?.name}
+              >
                 <span className="text-accent font-semibold text-sm">
                   {user?.name.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <button onClick={logout} title="Logout" className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors">
+              <button
+                onClick={logout}
+                title="Logout"
+                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+              >
                 <LogOut className="h-5 w-5" />
               </button>
             </div>

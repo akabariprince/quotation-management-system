@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, MapPin, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, MapPin, X, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData, Customer } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -31,22 +31,34 @@ const Customers: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header">
-        <div>
+      <div className="page-header flex items-center justify-between">
+        <div className="flex gap-2">
           <h1 className="page-title">Customers</h1>
           <p className="text-muted-foreground mt-1">
             Manage your customer database
           </p>
         </div>
-        {hasPermission('add_customer') && (
-          <Link to="/customers/new">
-            <Button className="btn-accent gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Customer</span>
+
+        <div className="flex gap-2">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
             </Button>
           </Link>
-        )}
+
+          {hasPermission('add_customer') && (
+            <Link to="/customers/new">
+              <Button className="btn-accent gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Customer</span>
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
+
+
 
       {/* Search */}
       <div className="enterprise-card p-4">

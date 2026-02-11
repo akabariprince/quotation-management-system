@@ -1,14 +1,12 @@
-// QuotationForm.tsx
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Save, Send, Package, Calculator, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Send, Package, Calculator, ChevronRight, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import OTPModal from '@/components/common/OTPModal';
-import AddProductModal from '@/components/quotation/AddProductModal';
 import ProductCard from '@/components/quotation/ProductCard';
 import type { QuotationItemWithMaterials } from '@/components/quotation/AddProductModal';
 import { toast } from 'sonner';
@@ -48,7 +46,6 @@ const QuotationForm: React.FC = () => {
       uniqueNumber: generateProductUniqueNumber(existingQuotation?.quotationNo || '', i),
     })) || []
   );
-  const [showAddModal, setShowAddModal] = useState(false);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [pendingDiscountEdit, setPendingDiscountEdit] = useState<{ itemId: string; newDiscount: number } | null>(null);
@@ -56,9 +53,15 @@ const QuotationForm: React.FC = () => {
   const [savedQuotation, setSavedQuotation] = useState<any>(null);
   const [newlyAddedItemId, setNewlyAddedItemId] = useState<string | null>(null);
 
+  // Inline product selection state (replaces modal)
+  const [selectedProductId, setSelectedProductId] = useState('');
+
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const selectedCustomer = customers.find(c => c.id === customerId);
 
+  // Filter active products for the inline selector
+  const activeProducts = products.filter(p => p.status === 'active');
+console.log(activeProducts)
   const recalculateItem = (item: QuotationItemWithMaterials): QuotationItemWithMaterials => {
     const amount = item.basePrice * item.quantity;
     const gstAmount = (amount * item.gstPercent) / 100;
@@ -127,21 +130,62 @@ const QuotationForm: React.FC = () => {
     toast.success('Product removed');
   };
 
-  const handleAddProduct = (newItem: QuotationItemWithMaterials) => {
+  // Inline add product handler (replaces modal)
+  const handleInlineAddProduct = () => {
+    if (!selectedProductId) {
+      toast.error('Please select a product');
+      return;
+    }
+
+    const product = products.find(p => p.id === selectedProductId);
+    if (!product) return;
+
+    if (items.find(item => item.productId === product.id)) {
+      toast.error('Product already added. Update quantity instead.');
+      return;
+    }
+
+    const quantity = 1;
+    const amount = product.basePrice * quantity;
+    const gstAmount = (amount * product.gstPercent) / 100;
+    const subtotalWithGst = amount + gstAmount;
+    const discountPercent = product.defaultDiscount;
+    const discountAmount = (amount * discountPercent) / 100;
+    const grandTotalItem = subtotalWithGst - discountAmount;
+
     const newIndex = items.length;
-    const itemWithUniqueNumber = {
-      ...newItem,
+    const newItem: QuotationItemWithMaterials = {
+      id: Date.now().toString(),
+      productId: product.id,
+      productCode: product.partCode,
+      productName: product.name,
+      description: product.description,
+      images: product.images,
+      basePrice: product.basePrice,
+      discountPercent,
+      discountAmount,
+      finalPrice: product.basePrice,
+      quantity,
+      total: amount,
+      gstPercent: product.gstPercent,
+      igst: 0,
+      cgst: gstAmount / 2,
+      sgst: gstAmount / 2,
+      totalWithGst: grandTotalItem,
+      notes: product.description.split('. '),
       itemNumber: newIndex + 1,
       uniqueNumber: generateProductUniqueNumber(quotationNo, newIndex),
     };
-    setItems(prev => [...prev, itemWithUniqueNumber]);
-    setNewlyAddedItemId(itemWithUniqueNumber.id);
+
+    setItems(prev => [...prev, newItem]);
+    setNewlyAddedItemId(newItem.id);
+    setSelectedProductId('');
+    toast.success('Product added to quotation');
   };
 
   // Auto-scroll and highlight newly added product
   useEffect(() => {
     if (newlyAddedItemId) {
-      // Small delay to allow DOM to render
       const timer = setTimeout(() => {
         scrollToItem(newlyAddedItemId);
         setNewlyAddedItemId(null);
@@ -183,10 +227,10 @@ const QuotationForm: React.FC = () => {
     if (existingQuotation) {
       updateQuotation(existingQuotation.id, quotationData);
       saved = { ...existingQuotation, ...quotationData };
-      toast.success('Quotation updated');
+      toast.success('Project updated');
     } else {
       saved = addQuotation(quotationData);
-      toast.success('Quotation created');
+      toast.success('Project created');
     }
 
     if (sendEmail) {
@@ -205,23 +249,40 @@ const QuotationForm: React.FC = () => {
   return (
     <div className="space-y-0 animate-fade-in">
       {/* Header */}
-      <div className="page-header mb-4">
+      <div className="page-header mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => step === 2 && !existingQuotation ? setStep(1) : navigate('/quotations')}
+            onClick={() =>
+              step === 2 && !existingQuotation
+                ? setStep(1)
+                : navigate('/quotations')
+            }
             className="p-2 hover:bg-muted rounded-md transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
+          <div className='flex flex-row gap-2'>
             <h1 className="page-title">
-              {existingQuotation ? `Edit ${existingQuotation.quotationNo}` : 'Create Quotation'}
+              {existingQuotation
+                ? `Edit ${existingQuotation.quotationNo}`
+                : 'Create Project'}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {existingQuotation ? 'Update quotation details' : `New Quotation: ${quotationNo}`}
+              {existingQuotation
+                ? 'Update project details'
+                : `New Project: ${quotationNo}`}
             </p>
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => navigate('/dashboard')}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Back to Dashboard</span>
+        </Button>
       </div>
 
       {/* ===== STEP 1 ===== */}
@@ -289,7 +350,7 @@ const QuotationForm: React.FC = () => {
       {step === 2 && (
         <>
           {/* Sticky Customer Info Bar */}
-          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm mt-4 mb-6">
+          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm mt-4 mb-2">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-5 min-w-0 overflow-hidden">
                 <div className="min-w-0">
@@ -309,32 +370,81 @@ const QuotationForm: React.FC = () => {
                   <p className="text-sm truncate">{salesManager}</p>
                 </div>
                 <div className="hidden xl:block min-w-0 border-l border-border pl-5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Quotation</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Project</p>
                   <p className="text-sm font-bold font-mono text-primary truncate">
                     {quotationNo}
                   </p>
                 </div>
               </div>
-              <Button onClick={() => setShowAddModal(true)} className="btn-accent gap-2 flex-shrink-0">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Product</span>
-              </Button>
             </div>
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Main Product List */}
-            <div className="lg:col-span-3 space-y-5 mt-4">
+            <div className="lg:col-span-3 space-y-5">
+              <div className="sticky top-[60px] z-20 bg-card border border-border rounded-xl shadow-sm mb-6">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Package className="h-4 w-4 text-accent" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
+                      Add Quotation
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                      <SelectTrigger className="h-10 w-full">
+                        <SelectValue placeholder="Search or select a product..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeProducts.length === 0 ? (
+                          <div className="py-4 text-center text-sm text-muted-foreground">No products available</div>
+                        ) : (
+                          activeProducts.map(product => (
+                           <SelectItem key={product.id} value={product.id}>
+  <div className="flex items-center gap-3 w-full">
+    {/* Product Image */}
+    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+      {product.images?.[0] && (
+        <img
+          src={product.images[0]}
+          alt={product.name}
+          className="h-full w-full object-cover"
+        />
+      )}
+    </div>
+
+    {/* Existing content — unchanged */}
+    <span className="font-medium">{product.partCode}</span>
+    <span className="text-muted-foreground">—</span>
+    <span className="truncate">{product.name}</span>
+
+    <span className="text-xs text-accent font-semibold ml-auto">
+      {formatCurrency(product.basePrice)}
+    </span>
+  </div>
+</SelectItem>
+
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    onClick={handleInlineAddProduct}
+                    className="btn-accent gap-2 flex-shrink-0 h-10"
+                    disabled={!selectedProductId}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Add Quotation</span>
+                  </Button>
+                </div>
+              </div>
               {items.length === 0 ? (
                 <div className="border border-dashed border-border rounded-xl p-14 text-center">
                   <Package className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
                   <h3 className="font-semibold text-lg mb-1">No products added</h3>
                   <p className="text-muted-foreground text-sm mb-5">
-                    Click "Add Product" to start building your quotation
+                    Use the product bar above to search and add products to your project
                   </p>
-                  <Button onClick={() => setShowAddModal(true)} className="btn-accent gap-2">
-                    <Plus className="h-4 w-4" /> Add Product
-                  </Button>
                 </div>
               ) : (
                 items.map((item, index) => (
@@ -358,8 +468,8 @@ const QuotationForm: React.FC = () => {
             </div>
 
             {/* Right Summary Panel */}
-            <div className="lg:col-span-1 mt-4">
-              <div className="form-section sticky top-24">
+            <div className="lg:col-span-1">
+              <div className="form-section sticky top-[62px]">
                 <h2 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-wide">
                   <Calculator className="h-4 w-4" /> Summary
                 </h2>
@@ -370,11 +480,10 @@ const QuotationForm: React.FC = () => {
                       <button
                         key={item.id}
                         onClick={() => scrollToItem(item.id)}
-                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${
-                          highlightedItemId === item.id
-                            ? 'bg-primary/10 border-l-2 border-l-primary'
-                            : 'hover:bg-muted/60'
-                        }`}
+                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${highlightedItemId === item.id
+                          ? 'bg-primary/10 border-l-2 border-l-primary'
+                          : 'hover:bg-muted/60'
+                          }`}
                       >
                         <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                           {item.itemNumber || i + 1}
@@ -473,7 +582,7 @@ const QuotationForm: React.FC = () => {
         </>
       )}
 
-      <AddProductModal open={showAddModal} onOpenChange={setShowAddModal} existingItems={items} onAddProduct={handleAddProduct} />
+      {/* No more AddProductModal */}
 
       <OTPModal
         isOpen={showOTPModal}

@@ -281,8 +281,8 @@ const ApprovalManagement: React.FC = () => {
               </table>
             </div>
           </div>
-        </TabsContent>
-      </Tabs> */}
+        </TabsContent> */}
+      </Tabs>
 
       {/* OTP Modal */}
       <OTPModal
