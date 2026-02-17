@@ -1,148 +1,255 @@
-import React, { useState } from 'react';
-import { Mail, FileText, Shield, Percent, Search, Download, CheckCircle, Clock } from 'lucide-react';
-import { useData } from '@/contexts/DataContext';
+// src/pages/EmailLogs.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Mail,
+  FileText,
+  Shield,
+  Search,
+  Download,
+  CheckCircle,
+  Clock,
+  XCircle,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
+import { useApi } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
-type EmailType = 'quotation_created' | 'quotation_revised' | 'master_otp' | 'discount_otp' | 'quotation_sent';
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface EmailLog {
   id: string;
-  type: EmailType;
+  toEmail: string;
   subject: string;
-  sentTo: string;
-  reference: string;
-  referenceId: string;
-  status: 'sent' | 'pending' | 'failed';
-  createdAt: Date;
+  type: string;
+  referenceId: string | null;
+  referenceType: string | null;
+  status: 'sent' | 'failed';
+  errorMessage: string | null;
+  sentBy: string | null;
+  createdAt: string;
+  sender?: { id: string; name: string; email: string };
 }
 
-const emailTypeLabels: Record<EmailType, { label: string; icon: React.ReactNode; color: string }> = {
-  quotation_created: { label: 'Quotation Created', icon: <FileText className="h-4 w-4" />, color: 'text-primary' },
-  quotation_revised: { label: 'Quotation Revised', icon: <FileText className="h-4 w-4" />, color: 'text-warning' },
-  quotation_sent: { label: 'Quotation Sent', icon: <Mail className="h-4 w-4" />, color: 'text-success' },
-  master_otp: { label: 'Master OTP Sent', icon: <Shield className="h-4 w-4" />, color: 'text-accent' },
-  discount_otp: { label: 'Discount OTP Used', icon: <Percent className="h-4 w-4" />, color: 'text-destructive' },
+interface PaginationMeta {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  totalItems?: number;
+  limit: number;
+}
+
+interface EmailStats {
+  total: number;
+  sent: number;
+  failed: number;
+  todayCount: number;
+  byType: Array<{ type: string; count: string }>;
+}
+
+// ─── Type Config ────────────────────────────────────────────────────────────
+
+const emailTypeConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  login_otp: { label: 'Login OTP', icon: <Shield className="h-4 w-4" />, color: 'text-primary' },
+  master_activation_otp: { label: 'Master OTP', icon: <Shield className="h-4 w-4" />, color: 'text-accent' },
+  discount_otp: { label: 'Discount OTP', icon: <Shield className="h-4 w-4" />, color: 'text-warning' },
+  project_created: { label: 'Project Created', icon: <FileText className="h-4 w-4" />, color: 'text-blue-600' },
+  project_sent: { label: 'Project Sent', icon: <Mail className="h-4 w-4" />, color: 'text-success' },
+  project_revised: { label: 'Project Revised', icon: <FileText className="h-4 w-4" />, color: 'text-orange-600' },
+  project_approved: { label: 'Project Approved', icon: <CheckCircle className="h-4 w-4" />, color: 'text-success' },
+  project_status_update: { label: 'Status Update', icon: <RefreshCw className="h-4 w-4" />, color: 'text-indigo-600' },
+  welcome: { label: 'Welcome', icon: <Mail className="h-4 w-4" />, color: 'text-emerald-600' },
+  approved_notification: { label: 'Approved', icon: <CheckCircle className="h-4 w-4" />, color: 'text-success' },
+  rejected_notification: { label: 'Rejected', icon: <XCircle className="h-4 w-4" />, color: 'text-destructive' },
+  otp : { label: 'Master OTP', icon: <Shield className="h-4 w-4" />, color: 'text-accent' }
 };
 
+const getTypeInfo = (type: string) =>
+  emailTypeConfig[type] || { label: type, icon: <Mail className="h-4 w-4" />, color: 'text-muted-foreground' };
+
+// ─── Skeletons ──────────────────────────────────────────────────────────────
+
+const StatsSkeleton: React.FC = () => (
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div key={i} className="stat-card">
+        <Skeleton className="h-5 w-5 rounded" />
+        <Skeleton className="h-8 w-16 mt-3" />
+        <Skeleton className="h-4 w-28 mt-2" />
+      </div>
+    ))}
+  </div>
+);
+
+const TableSkeleton: React.FC = () => (
+  <div className="enterprise-card overflow-hidden mt-4">
+    <div className="table-container">
+      <table className="enterprise-table">
+        <thead>
+          <tr>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <th key={i}><Skeleton className="h-4 w-20" /></th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i}>
+              {Array.from({ length: 6 }).map((_, j) => (
+                <td key={j}><Skeleton className="h-4 w-full" /></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 const EmailLogs: React.FC = () => {
-  const { quotations, customers, otpLogs } = useData();
+  const api = useApi();
+
+  const [logs, setLogs] = useState<EmailLog[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [stats, setStats] = useState<EmailStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [page, setPage] = useState(1);
 
-  // Generate simulated email logs from actual data
-  const generateEmailLogs = (): EmailLog[] => {
-    const logs: EmailLog[] = [];
+  // ─── Fetch ──────────────────────────────────────────────────────────
 
-    // Quotation creation emails
-    quotations.forEach(q => {
-      const customer = customers.find(c => c.id === q.customerId);
-      logs.push({
-        id: `email-qt-created-${q.id}`,
-        type: 'quotation_created',
-        subject: `Quotation ${q.quotationNo} Created`,
-        sentTo: customer?.email || 'N/A',
-        reference: q.quotationNo,
-        referenceId: q.id,
-        status: 'sent',
-        createdAt: q.createdAt,
-      });
+  const fetchLogs = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', '20');
+      params.append('sortBy', 'createdAt');
+      params.append('sortOrder', 'DESC');
+      if (searchTerm) params.append('search', searchTerm);
+      if (filterType !== 'all') params.append('type', filterType);
+      if (filterStatus !== 'all') params.append('status', filterStatus);
 
-      // If quotation was sent
-      if (q.status === 'sent' || q.status === 'approved') {
-        logs.push({
-          id: `email-qt-sent-${q.id}`,
-          type: 'quotation_sent',
-          subject: `Quotation ${q.quotationNo} Sent to Customer`,
-          sentTo: customer?.email || 'N/A',
-          reference: q.quotationNo,
-          referenceId: q.id,
-          status: 'sent',
-          createdAt: new Date(new Date(q.createdAt).getTime() + 3600000), // 1 hour after creation
-        });
+      const res = await api.get(`/email-logs?${params.toString()}`);
+      if (res.success) {
+        setLogs(res.data || []);
+        setMeta(res.meta || null);
       }
+    } catch (err) {
+      console.error('Failed to fetch email logs:', err);
+    }
+  }, [page, searchTerm, filterType, filterStatus]);
 
-      // If quotation was updated (simulate revision)
-      if (q.updatedAt && q.updatedAt !== q.createdAt) {
-        logs.push({
-          id: `email-qt-revised-${q.id}`,
-          type: 'quotation_revised',
-          subject: `Quotation ${q.quotationNo} Revised`,
-          sentTo: customer?.email || 'N/A',
-          reference: q.quotationNo,
-          referenceId: q.id,
-          status: 'sent',
-          createdAt: q.updatedAt,
-        });
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await api.get('/email-logs/stats');
+      if (res.success) {
+        setStats(res.data);
       }
-    });
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+    }
+  }, []);
 
-    // OTP emails
-    otpLogs.forEach(log => {
-      if (log.type === 'master_activation') {
-        logs.push({
-          id: `email-otp-master-${log.id}`,
-          type: 'master_otp',
-          subject: `OTP for Master Activation: ${log.entityType}`,
-          sentTo: log.requestedBy,
-          reference: log.entityType,
-          referenceId: log.entityId,
-          status: 'sent',
-          createdAt: log.createdAt,
-        });
-      } else if (log.type === 'discount') {
-        logs.push({
-          id: `email-otp-discount-${log.id}`,
-          type: 'discount_otp',
-          subject: 'OTP for Discount Override',
-          sentTo: log.requestedBy,
-          reference: 'Quotation Item',
-          referenceId: log.entityId,
-          status: 'sent',
-          createdAt: log.createdAt,
-        });
-      }
-    });
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([fetchLogs(), fetchStats()]);
+      setLoading(false);
+    };
+    loadAll();
+  }, []);
 
-    // Sort by date descending
-    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  };
+  useEffect(() => {
+    if (!loading) fetchLogs();
+  }, [page, searchTerm, filterType, filterStatus]);
 
-  const emailLogs = generateEmailLogs();
+  // ─── Helpers ────────────────────────────────────────────────────────
 
-  const filteredLogs = emailLogs.filter(log => {
-    const matchesSearch = 
-      log.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.sentTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.reference.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === 'all' || log.type === filterType;
-
-    return matchesSearch && matchesType;
-  });
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    await Promise.all([fetchLogs(), fetchStats()]);
+    setLoading(false);
+    toast.success('Refreshed');
   };
 
   const handleExport = () => {
-    toast.success('Export functionality - UI simulation only');
+    // Build CSV from current logs
+    const csvHeaders = 'Date,Type,Subject,Sent To,Status\n';
+    const csvRows = logs
+      .map(
+        (log) =>
+          `"${formatDate(log.createdAt)}","${getTypeInfo(log.type).label}","${log.subject}","${log.toEmail}","${log.status}"`
+      )
+      .join('\n');
+
+    const blob = new Blob([csvHeaders + csvRows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `email-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Email logs exported');
   };
 
-  // Summary counts
-  const quotationEmails = emailLogs.filter(l => l.type.startsWith('quotation')).length;
-  const otpEmails = emailLogs.filter(l => l.type.includes('otp')).length;
+  const totalCount = meta?.totalCount || meta?.totalItems || 0;
+
+  // ─── Render ─────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="animate-fade-in">
+        <div className="page-header">
+          <div>
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-4 w-56 mt-2" />
+          </div>
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
+        <StatsSkeleton />
+        <div className="enterprise-card p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Skeleton className="h-11 flex-1 rounded-lg" />
+            <Skeleton className="h-11 w-44 rounded-lg" />
+            <Skeleton className="h-11 w-36 rounded-lg" />
+          </div>
+        </div>
+        <TableSkeleton />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="page-header">
         <div>
@@ -151,66 +258,100 @@ const EmailLogs: React.FC = () => {
             Audit trail of all system emails
           </p>
         </div>
-        <Button variant="outline" className="gap-2" onClick={handleExport}>
-          <Download className="h-4 w-4" />
-          <span className="hidden sm:inline">Export</span>
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export</span>
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="stat-card">
           <Mail className="h-5 w-5 text-accent" />
-          <p className="stat-value">{emailLogs.length}</p>
+          <p className="stat-value">{stats?.total || 0}</p>
           <p className="stat-label">Total Emails</p>
         </div>
         <div className="stat-card">
-          <FileText className="h-5 w-5 text-primary" />
-          <p className="stat-value">{quotationEmails}</p>
-          <p className="stat-label">Quotation Emails</p>
-        </div>
-        <div className="stat-card">
-          <Shield className="h-5 w-5 text-warning" />
-          <p className="stat-value">{otpEmails}</p>
-          <p className="stat-label">OTP Emails</p>
-        </div>
-        <div className="stat-card">
           <CheckCircle className="h-5 w-5 text-success" />
-          <p className="stat-value">{emailLogs.filter(l => l.status === 'sent').length}</p>
+          <p className="stat-value">{stats?.sent || 0}</p>
           <p className="stat-label">Successfully Sent</p>
+        </div>
+        <div className="stat-card">
+          <XCircle className="h-5 w-5 text-destructive" />
+          <p className="stat-value">{stats?.failed || 0}</p>
+          <p className="stat-label">Failed</p>
+        </div>
+        <div className="stat-card">
+          <Calendar className="h-5 w-5 text-primary" />
+          <p className="stat-value">{stats?.todayCount || 0}</p>
+          <p className="stat-label">Sent Today</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="enterprise-card p-4">
+      <div className="enterprise-card p-4 mt-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by subject, email, or reference..."
+              placeholder="Search by subject, email..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
               className="pl-10 h-11"
             />
           </div>
-          <Select value={filterType} onValueChange={setFilterType}>
+          <Select
+            value={filterType}
+            onValueChange={(v) => {
+              setFilterType(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="quotation_created">Quotation Created</SelectItem>
-              <SelectItem value="quotation_revised">Quotation Revised</SelectItem>
-              <SelectItem value="quotation_sent">Quotation Sent</SelectItem>
-              <SelectItem value="master_otp">Master OTP</SelectItem>
+              <SelectItem value="login_otp">Login OTP</SelectItem>
+              <SelectItem value="master_activation_otp">Master OTP</SelectItem>
               <SelectItem value="discount_otp">Discount OTP</SelectItem>
+              <SelectItem value="project_created">Project Created</SelectItem>
+              <SelectItem value="project_sent">Project Sent</SelectItem>
+              <SelectItem value="project_revised">Project Revised</SelectItem>
+              <SelectItem value="project_approved">Project Approved</SelectItem>
+              <SelectItem value="welcome">Welcome</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={filterStatus}
+            onValueChange={(v) => {
+              setFilterStatus(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-36">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Email Logs Table */}
-      <div className="enterprise-card overflow-hidden">
+      <div className="enterprise-card overflow-hidden mt-4">
         <div className="table-container">
           <table className="enterprise-table">
             <thead>
@@ -219,12 +360,12 @@ const EmailLogs: React.FC = () => {
                 <th>Type</th>
                 <th className="hidden sm:table-cell">Subject</th>
                 <th className="hidden md:table-cell">Sent To</th>
-                <th className="hidden lg:table-cell">Reference</th>
+                <th className="hidden lg:table-cell">Sent By</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.length === 0 ? (
+              {logs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center text-muted-foreground py-12">
                     <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -232,41 +373,41 @@ const EmailLogs: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => {
-                  const typeInfo = emailTypeLabels[log.type];
+                logs.map((log) => {
+                  const typeInfo = getTypeInfo(log.type);
                   return (
-                    <tr key={log.id}>
-                      <td className="text-muted-foreground whitespace-nowrap">
+                    <tr key={log.id} className="group">
+                      <td className="text-muted-foreground whitespace-nowrap text-sm">
                         {formatDate(log.createdAt)}
                       </td>
                       <td>
                         <div className={`flex items-center gap-2 ${typeInfo.color}`}>
                           {typeInfo.icon}
-                          <span className="text-sm font-medium hidden sm:inline">{typeInfo.label}</span>
+                          <span className="text-sm font-medium hidden sm:inline">
+                            {typeInfo.label}
+                          </span>
                         </div>
                       </td>
-                      <td className="hidden sm:table-cell font-medium max-w-[200px] truncate">
+                      <td className="hidden sm:table-cell font-medium max-w-[220px] truncate text-sm">
                         {log.subject}
                       </td>
-                      <td className="hidden md:table-cell text-muted-foreground">
-                        {log.sentTo}
+                      <td className="hidden md:table-cell text-muted-foreground text-sm">
+                        {log.toEmail}
                       </td>
-                      <td className="hidden lg:table-cell">
-                        <span className="bg-muted px-2 py-1 rounded text-xs font-mono">
-                          {log.reference}
-                        </span>
+                      <td className="hidden lg:table-cell text-muted-foreground text-sm">
+                        {log.sender?.name || '—'}
                       </td>
                       <td>
                         {log.status === 'sent' ? (
                           <span className="badge-success">
-                            <CheckCircle className="h-3 w-3" /> Sent
-                          </span>
-                        ) : log.status === 'pending' ? (
-                          <span className="badge-warning">
-                            <Clock className="h-3 w-3" /> Pending
+                            <CheckCircle className="h-3 w-3" />
+                            Sent
                           </span>
                         ) : (
-                          <span className="badge-error">Failed</span>
+                          <span className="badge-error" title={log.errorMessage || undefined}>
+                            <XCircle className="h-3 w-3" />
+                            Failed
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -276,11 +417,34 @@ const EmailLogs: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Note */}
-      <div className="text-center text-sm text-muted-foreground">
-        <p>* This is a simulated email log for demonstration purposes. Actual email delivery is not implemented.</p>
+        {/* Pagination */}
+        {meta && meta.totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Showing {logs.length} of {totalCount} •
+              Page {meta.currentPage} of {meta.totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= meta.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

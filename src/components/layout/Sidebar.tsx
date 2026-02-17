@@ -1,24 +1,8 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Package,
-  BarChart3,
-  LogOut,
-  Database,
-  X,
-  Shield,
-  Mail,
-  UserCog,
-  PanelLeftClose,
-  PanelLeft,
-  Plus,
-  UserPlus,
-  FilePlus,
-} from 'lucide-react';
-import { useAuth, Permission } from '@/contexts/AuthContext';
+import { NavLink } from 'react-router-dom';
+import { LogOut, X, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getVisibleNavItems } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -28,34 +12,33 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-interface QuickAction {
-  label: string;
-  icon: React.ElementType;
-  path: string;
-  permission?: Permission;
-  adminOnly?: boolean;
-}
+const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  onClose,
+  isCollapsed,
+  onToggleCollapse,
+}) => {
+  const { user, logout, hasPermission, hasAnyPermission } = useAuth();
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
-  const { user, logout, hasPermission } = useAuth();
-  const navigate = useNavigate();
-
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
-    { path: '/quotations', label: 'Quotations', icon: FileText, show: true },
-    { path: '/customers', label: 'Customers', icon: Users, show: true },
-    { path: '/products', label: 'Products', icon: Package, show: true },
-    { path: '/masters', label: 'Masters', icon: Database, show: hasPermission('edit_masters') || user?.role === 'admin' },
-    { path: '/approvals', label: 'Approvals', icon: Shield, show: user?.role === 'admin' },
-    { path: '/users', label: 'User Management', icon: UserCog, show: user?.role === 'admin' },
-    { path: '/email-logs', label: 'Email Logs', icon: Mail, show: user?.role === 'admin' },
-    { path: '/reports', label: 'MIS Reports', icon: BarChart3, show: hasPermission('view_reports') || user?.role === 'admin' },
-  ];
+  const visibleNavItems = getVisibleNavItems(hasPermission, hasAnyPermission);
 
   const handleNavClick = () => {
-    if (window.innerWidth < 1024) {
-      onClose();
-    }
+    if (window.innerWidth < 1024) onClose();
+  };
+
+  const handleLogoClick = () => {
+    if (window.innerWidth < 1024) onClose();
+    else onToggleCollapse();
+  };
+
+  const handleCloseOrCollapse = () => {
+    if (window.innerWidth < 1024) onClose();
+    else onToggleCollapse();
+  };
+
+  const getRoleDisplayName = (): string => {
+    if (!user) return '';
+    return user.role?.displayName || user.role?.name || '';
   };
 
   return (
@@ -63,59 +46,62 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+          className="lg:hidden fixed inset-0 bg-primary/60 backdrop-blur-sm z-40 transition-opacity"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — wider */}
       <aside
         className={cn(
-          "fixed lg:static inset-y-0 left-0 z-50 bg-card border-r border-border flex flex-col h-screen transition-all duration-300 ease-in-out",
-          isCollapsed ? "w-[68px]" : "w-64",
-          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          'fixed lg:static inset-y-0 left-0 z-50 bg-card border-r-2 border-primary/20',
+          'flex flex-col h-screen transition-all duration-300 ease-in-out',
+          isCollapsed ? 'w-[82px]' : 'w-[280px]',
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        {/* Logo */}
-        <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+        {/* Logo Area */}
+        <div className="p-5 border-b-2 border-primary/10 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div
-              className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 cursor-pointer"
-              onClick={() => {
-                if (window.innerWidth < 1024) onClose();
-                else onToggleCollapse();
-              }}
+              className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-md flex-shrink-0 cursor-pointer"
+              onClick={handleLogoClick}
+              title={isCollapsed ? 'Expand sidebar' : 'ecstatics.'}
             >
-              <span className="text-primary-foreground font-bold text-lg">E</span>
+              <span className="text-primary-foreground font-bold text-xl">
+                E
+              </span>
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <h1 className="font-semibold text-foreground">ecstatics.</h1>
-                <p className="text-xs text-muted-foreground">Quotation System</p>
+                <h1 className="font-bold text-foreground text-lg">
+                  ecstatics.
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  Quotation Management
+                </p>
               </div>
             )}
           </div>
-          {/* Mobile Close / Desktop Toggle */}
           {!isCollapsed && (
             <button
-              onClick={() => {
-                if (window.innerWidth < 1024) onClose();
-                else onToggleCollapse();
-              }}
-              className="p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0"
+              onClick={handleCloseOrCollapse}
+              className="p-2.5 hover:bg-secondary/30 rounded-xl transition-colors flex-shrink-0"
             >
-              {window.innerWidth < 1024 ? (
-                <X className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <PanelLeftClose className="h-5 w-5 text-muted-foreground" />
-              )}
+              <X className="h-5 w-5 text-muted-foreground lg:hidden" />
+              <PanelLeftClose className="h-5 w-5 text-muted-foreground hidden lg:block" />
             </button>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className={cn("flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden", isCollapsed && "px-2")}>
-          {navItems.filter(item => item.show).map((item) => (
+        {/* Navigation — bigger items */}
+        <nav
+          className={cn(
+            'flex-1 p-3 space-y-1.5 overflow-y-auto overflow-x-hidden',
+            isCollapsed && 'px-2'
+          )}
+        >
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -123,71 +109,94 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
               title={isCollapsed ? item.label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'nav-item',
-                  isActive ? 'nav-item-active' : 'nav-item-inactive',
-                  isCollapsed && 'justify-center px-2'
+                  'flex items-center gap-3 rounded-xl transition-all duration-200 font-medium',
+                  isActive
+                    ? 'bg-accent text-accent-foreground shadow-md'
+                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground',
+                  isCollapsed
+                    ? 'justify-center p-3.5'
+                    : 'px-4 py-3.5'
                 )
               }
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span>{item.label}</span>}
+              <item.icon className={cn('flex-shrink-0', isCollapsed ? 'h-6 w-6' : 'h-5 w-5')} />
+              {!isCollapsed && (
+                <span className="text-sm">{item.label}</span>
+              )}
             </NavLink>
           ))}
+
+          {visibleNavItems.length === 0 && (
+            <div className="text-center text-muted-foreground text-sm py-8">
+              No menu items available.
+              <br />
+              Contact admin for permissions.
+            </div>
+          )}
         </nav>
 
-        {/* Collapse Toggle (Desktop only, at bottom before user) */}
-        <div className="hidden lg:block px-3 flex-shrink-0">
+        {/* Collapse Toggle (Desktop) */}
+        {/* <div className="hidden lg:block px-3 flex-shrink-0">
           <button
             onClick={onToggleCollapse}
-            className="nav-item nav-item-inactive w-full justify-center"
+            className="flex items-center gap-2 w-full justify-center px-4 py-3 rounded-xl
+                       text-muted-foreground hover:bg-secondary/30 hover:text-foreground
+                       transition-colors text-sm font-medium"
+            title={isCollapsed ? 'Expand' : 'Minimize'}
           >
             {isCollapsed ? (
               <PanelLeft className="h-5 w-5" />
             ) : (
-              <span className="flex items-center gap-2 w-full">
+              <>
                 <PanelLeftClose className="h-5 w-5" />
                 <span>Minimize</span>
-              </span>
+              </>
             )}
           </button>
-        </div>
+        </div> */}
 
-        {/* User Info */}
-        <div className="p-3 border-t border-border flex-shrink-0">
+        {/* User Info — bigger */}
+        <div className="p-3 border-t-2 border-primary/10 flex-shrink-0">
           {isCollapsed ? (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-3">
               <div
-                className="w-9 h-9 bg-accent/10 rounded-full flex items-center justify-center"
-                title={user?.name}
+                className="w-11 h-11 bg-accent/15 rounded-full flex items-center justify-center"
+                title={`${user?.name} (${getRoleDisplayName()})`}
               >
-                <span className="text-accent font-semibold text-sm">
-                  {user?.name.charAt(0).toUpperCase()}
+                <span className="text-accent font-bold text-sm">
+                  {user?.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <button
                 onClick={logout}
                 title="Logout"
-                className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                className="p-2.5 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <LogOut className="h-5 w-5" />
               </button>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-3 mb-3 p-2 rounded-lg bg-muted/50">
-                <div className="w-9 h-9 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-accent font-semibold text-sm">
-                    {user?.name.charAt(0).toUpperCase()}
+              <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-secondary/20 border border-secondary/40">
+                <div className="w-11 h-11 bg-accent/15 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-accent font-bold text-sm">
+                    {user?.name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role.replace('_', ' ')}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {user?.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {getRoleDisplayName()}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={logout}
-                className="nav-item nav-item-inactive w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl
+                           text-destructive hover:bg-destructive/10 hover:text-destructive
+                           transition-colors text-sm font-medium"
               >
                 <LogOut className="h-5 w-5" />
                 <span>Logout</span>

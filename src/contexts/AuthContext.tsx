@@ -1,96 +1,213 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 
-export type UserRole = 'data_entry' | 'creator' | 'master' | 'admin';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+export interface Role {
+  id: string;
+  name: string;
+  displayName: string;
+  permissions: string[];
+}
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  roleId: string;
+  isActive: boolean;
+  role: Role;
+}
+
+export interface LoginUser {
+  id: string;
+  name: string;
+  email: string;
+  role: {
+    id: string;
+    name: string;
+    displayName: string;
+  };
+}
+
+interface LoginResult {
+  success: boolean;
+  message?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => boolean;
-  logout: () => void;
+  accessToken: string | null;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
-  hasPermission: (permission: Permission) => boolean;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (...permissions: string[]) => boolean;
+  loading: boolean;
+  fetchLoginUsers: () => Promise<LoginUser[]>;
 }
-
-export type Permission = 
-  | 'add_customer'
-  | 'create_quotation'
-  | 'edit_quotation'
-  | 'edit_masters'
-  | 'approve_otp'
-  | 'view_reports'
-  | 'edit_image'
-  | 'edit_quantity'
-  | 'edit_discount';
-
-const rolePermissions: Record<UserRole, Permission[]> = {
-  data_entry: ['add_customer', 'create_quotation', 'edit_image', 'edit_quantity'],
-  creator: ['add_customer', 'create_quotation', 'edit_quotation', 'edit_image', 'edit_quantity', 'edit_discount'],
-  master: ['add_customer', 'create_quotation', 'edit_quotation', 'edit_masters', 'edit_image', 'edit_quantity', 'edit_discount'],
-  admin: ['add_customer', 'create_quotation', 'edit_quotation', 'edit_masters', 'approve_otp', 'view_reports', 'edit_image', 'edit_quantity', 'edit_discount'],
-};
-
-const mockUsers: Record<string, { password: string; user: User }> = {
-  'dataentry@esipl.in': {
-    password: 'password123',
-    user: { id: '1', name: 'Data Entry User', email: 'dataentry@esipl.in', role: 'data_entry' }
-  },
-  'creator@esipl.in': {
-    password: 'password123',
-    user: { id: '2', name: 'Creator User', email: 'creator@esipl.in', role: 'creator' }
-  },
-  'master@esipl.in': {
-    password: 'password123',
-    user: { id: '3', name: 'Master User', email: 'master@esipl.in', role: 'master' }
-  },
-  'admin@esipl.in': {
-    password: 'password123',
-    user: { id: '4', name: 'Admin User', email: 'admin@esipl.in', role: 'admin' }
-  },
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(
+    localStorage.getItem('accessToken')
+  );
+  const [refreshToken, setRefreshToken] = useState<string | null>(
+    localStorage.getItem('refreshToken')
+  );
+  const [loading, setLoading] = useState(true);
 
-  const login = (email: string, password: string, role: UserRole): boolean => {
-    // Check mock users first
-    const mockUser = mockUsers[email];
-    if (mockUser && mockUser.password === password) {
-      setUser(mockUser.user);
-      return true;
-    }
-    
-    // Allow any email/password combination with selected role
-    if (email && password) {
-      setUser({
-        id: Date.now().toString(),
-        name: email.split('@')[0],
-        email,
-        role,
-      });
-      return true;
-    }
-    return false;
-  };
-
-  const logout = () => {
+  const clearAuth = useCallback(() => {
     setUser(null);
-  };
+    setAccessToken(null);
+    setRefreshToken(null);
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  }, []);
 
-  const hasPermission = (permission: Permission): boolean => {
-    if (!user) return false;
-    return rolePermissions[user.role].includes(permission);
-  };
+  const tryRefresh = useCallback(async (): Promise<boolean> => {
+    const storedRefresh = refreshToken || localStorage.getItem('refreshToken');
+    if (!storedRefresh) {
+      clearAuth();
+      return false;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: storedRefresh }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser(data.data.user);
+        setAccessToken(data.data.accessToken);
+        setRefreshToken(data.data.refreshToken);
+        localStorage.setItem('accessToken', data.data.accessToken);
+        localStorage.setItem('refreshToken', data.data.refreshToken);
+        return true;
+      }
+      clearAuth();
+      return false;
+    } catch {
+      clearAuth();
+      return false;
+    }
+  }, [refreshToken, clearAuth]);
+
+  useEffect(() => {
+    const init = async () => {
+      const storedToken = accessToken || localStorage.getItem('accessToken');
+      if (storedToken) {
+        try {
+          const res = await fetch(`${API_BASE}/auth/profile`, {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          });
+          const data = await res.json();
+          if (data.success) {
+            setUser(data.data);
+          } else {
+            await tryRefresh();
+          }
+        } catch {
+          await tryRefresh();
+        }
+      }
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  const fetchLoginUsers = useCallback(async (): Promise<LoginUser[]> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login-users`);
+      const data = await res.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<LoginResult> => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setUser(data.data.user);
+          setAccessToken(data.data.accessToken);
+          setRefreshToken(data.data.refreshToken);
+          localStorage.setItem('accessToken', data.data.accessToken);
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+          return { success: true };
+        }
+        return { success: false, message: data.message || 'Invalid credentials' };
+      } catch (err: any) {
+        return { success: false, message: err.message || 'Network error' };
+      }
+    },
+    []
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      const token = accessToken || localStorage.getItem('accessToken');
+      if (token) {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch {}
+    clearAuth();
+  }, [accessToken, clearAuth]);
+
+  const hasPermission = useCallback(
+    (permission: string): boolean => {
+      if (!user) return false;
+      if (user.role.name === 'admin') return true;
+      return user.role.permissions.includes(permission);
+    },
+    [user]
+  );
+
+  const hasAnyPermission = useCallback(
+    (...permissions: string[]): boolean => {
+      if (!user) return false;
+      if (user.role.name === 'admin') return true;
+      return permissions.some((p) => user.role.permissions.includes(p));
+    },
+    [user]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, hasPermission }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        login,
+        logout,
+        isAuthenticated: !!user,
+        hasPermission,
+        hasAnyPermission,
+        loading,
+        fetchLoginUsers,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,61 +1,99 @@
-import React, { useState } from 'react';
-import { Trash2, Image as ImageIcon, ChevronDown, ChevronUp, Percent, Hash } from 'lucide-react';
-import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { QuotationItemWithMaterials } from './AddProductModal';
+import React, { useState } from "react";
+import {
+  Trash2,
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronUp,
+  Percent,
+  Hash,
+} from "lucide-react";
+import { useMaterials } from "@/hooks/useMaterials";
+import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getImageUrl } from "@/utils/reportHelpers";
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 
-interface ProductCardProps {
-  item: QuotationItemWithMaterials;
+interface QuotationCardProps {
+  item: any;
   index: number;
   isHighlighted: boolean;
   onUpdateItem: (itemId: string, field: string, value: any) => void;
-  onUpdateMaterial: (itemId: string, type: 'wood' | 'polish' | 'fabric', value: string) => void;
+  onUpdateMaterial: (
+    itemId: string,
+    type: "wood" | "polish" | "fabric",
+    value: string,
+  ) => void;
   onRemoveItem: (itemId: string) => void;
   onDiscountChange: (itemId: string, newDiscount: number) => void;
   salesManager?: string;
 }
 
-const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
-  ({ item, index, isHighlighted, onUpdateItem, onUpdateMaterial, onRemoveItem, onDiscountChange, salesManager }, ref) => {
+const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
+  (
+    {
+      item,
+      index,
+      isHighlighted,
+      onUpdateItem,
+      onUpdateMaterial,
+      onRemoveItem,
+      onDiscountChange,
+      salesManager,
+    },
+    ref,
+  ) => {
     const { hasPermission } = useAuth();
-    const { woods, polishes, fabrics } = useData();
-    // ✅ Default expanded (was false, now true)
+    const { woods, polishes, fabrics } = useMaterials();
     const [isExpanded, setIsExpanded] = useState(true);
 
-    const activeWoods = woods.filter(w => w.status === 'active');
-    const activePolishes = polishes.filter(p => p.status === 'active');
-    const activeFabrics = fabrics.filter(f => f.status === 'active');
+    const activeWoods = woods.filter((w) => w.status === "active");
+    const activePolishes = polishes.filter((p) => p.status === "active");
+    const activeFabrics = fabrics.filter((f) => f.status === "active");
 
     const itemAmount = item.basePrice * item.quantity;
     const gstAmount = item.cgst + item.sgst + item.igst;
     const subtotalWithGst = itemAmount + gstAmount;
     const grandTotal = subtotalWithGst - item.discountAmount;
 
-    const woodObj = item.woodId ? woods.find(w => w.id === item.woodId) : null;
-    const polishObj = item.polishId ? polishes.find(p => p.id === item.polishId) : null;
-    const fabricObj = item.fabricId ? fabrics.find(f => f.id === item.fabricId) : null;
+    const woodObj = item.woodId
+      ? woods.find((w) => w.id === item.woodId)
+      : null;
+    const polishObj = item.polishId
+      ? polishes.find((p) => p.id === item.polishId)
+      : null;
+    const fabricObj = item.fabricId
+      ? fabrics.find((f) => f.id === item.fabricId)
+      : null;
 
-    const uniqueNumber = (item as any).uniqueNumber || `ITM-${String(index + 1).padStart(4, '0')}`;
+    const uniqueNumber =
+      (item as any).projectQuotationNo || `ITM-${String(index + 1).padStart(4, "0")}`;
 
     return (
       <div
         ref={ref}
         className={`border rounded-xl bg-card overflow-hidden transition-all duration-500 ${
           isHighlighted
-            ? 'border-primary ring-2 ring-primary/30 shadow-xl scale-[1.01]'
-            : 'border-border hover:shadow-md'
+            ? "border-primary ring-2 ring-primary/30 shadow-xl scale-[1.01]"
+            : "border-border hover:shadow-md"
         }`}
       >
         {/* ═══════ TOP HEADER ROW ═══════ */}
         <div className="grid grid-cols-12 border-b border-border bg-muted/50">
-          {/* Index + Reference Image */}
-          <div className="col-span-4 sm:col-span-3 border-r border-border px-3 py-2.5 flex items-center gap-2.5">
+          <div className="col-span-4 sm:col-span-3 border-r border-border px-3 py-2.5 flex items-center gap-2">
             <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">
               {item.itemNumber || index + 1}
             </span>
@@ -63,8 +101,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
               Reference Image
             </span>
           </div>
-          {/* Unique Number Badge */}
-          <div className="col-span-2 hidden sm:flex border-r border-border px-3 py-2.5 items-center justify-center">
+          <div className="col-span-4 sm:flex border-r border-border px-3 py-2.5 items-center justify-start">
             <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full">
               <Hash className="h-3 w-3" />
               <span className="text-[10px] font-bold font-mono tracking-wide">
@@ -72,18 +109,19 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
               </span>
             </div>
           </div>
-          {/* Product Code + Name + Delete */}
-          <div className="col-span-8 sm:col-span-7 px-3 py-2.5 flex items-center justify-between">
+          <div className="col-span-6 sm:col-span-5 px-3 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-bold font-mono tracking-wide">{item.productCode}</span>
+              <span className="text-sm font-bold font-mono tracking-wide">
+                {item.quotationCode}
+              </span>
               <span className="text-xs text-muted-foreground truncate hidden md:inline">
-                — {item.productName}
+                — {item.quotationName}
               </span>
             </div>
             <button
               onClick={() => onRemoveItem(item.id)}
               className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0"
-              title="Remove product"
+              title="Remove quotation"
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </button>
@@ -102,34 +140,35 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
 
         {/* ═══════ IMAGE + MATERIAL CIRCLES ROW ═══════ */}
         <div className="grid grid-cols-12 border-b border-border">
-          {/* Product Image */}
           <div className="col-span-12 sm:col-span-9 border-r-0 sm:border-r border-border bg-muted/5">
-            <div className="w-full aspect-[16/9] max-h-[340px] overflow-hidden flex items-center justify-center">
+            <div className="w-full aspect-[16/9] overflow-hidden bg-muted/5">
               {item.images?.[0] ? (
                 <img
-                  src={item.images[0]}
-                  alt={item.productName}
-                  className="w-full h-full object-contain"
+                  src={getImageUrl(item.images[0])}
+                  alt={item.quotationName}
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20">
                   <ImageIcon className="h-14 w-14 text-muted-foreground/30" />
-                  <span className="text-[10px] text-muted-foreground/50 mt-2">No image</span>
+                  <span className="text-[10px] text-muted-foreground/50 mt-2">
+                    No image
+                  </span>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Material Circles — stacked vertically */}
           <div className="col-span-12 sm:col-span-3 flex sm:flex-col items-center justify-center gap-5 py-5 px-3 border-t sm:border-t-0 border-border">
             {/* Wood Circle */}
             <div className="flex flex-col items-center gap-2">
               <div
                 className={`w-14 h-14 rounded-full border-2 transition-colors ${
-                  woodObj ? 'border-amber-400 shadow-sm' : 'border-border'
+                  woodObj ? "border-amber-400 shadow-sm" : "border-border"
                 }`}
-                style={{ backgroundColor: woodObj ? '#D2B48C' : undefined }}
-                title={item.woodName || 'No wood'}
+                style={{
+                  backgroundColor: woodObj ? "#D2B48C" : undefined,
+                }}
+                title={item.woodName || "No wood"}
               >
                 {!woodObj && (
                   <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center">
@@ -138,18 +177,19 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                 )}
               </div>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-center leading-tight max-w-[70px]">
-                {item.woodName || 'Wood'}
+                {item.woodName || "Wood"}
               </span>
             </div>
-
             {/* Polish Circle */}
             <div className="flex flex-col items-center gap-2">
               <div
                 className={`w-14 h-14 rounded-full border-2 transition-colors ${
-                  polishObj ? 'border-purple-400 shadow-sm' : 'border-border'
+                  polishObj ? "border-purple-400 shadow-sm" : "border-border"
                 }`}
-                style={{ backgroundColor: polishObj ? '#8B6914' : undefined }}
-                title={item.polishName || 'No polish'}
+                style={{
+                  backgroundColor: polishObj ? "#8B6914" : undefined,
+                }}
+                title={item.polishName || "No polish"}
               >
                 {!polishObj && (
                   <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center">
@@ -158,18 +198,19 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                 )}
               </div>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-center leading-tight max-w-[70px]">
-                {item.polishName || 'Polish'}
+                {item.polishName || "Polish"}
               </span>
             </div>
-
             {/* Fabric Circle */}
             <div className="flex flex-col items-center gap-2">
               <div
                 className={`w-14 h-14 rounded-full border-2 transition-colors ${
-                  fabricObj ? 'border-blue-400 shadow-sm' : 'border-border'
+                  fabricObj ? "border-blue-400 shadow-sm" : "border-border"
                 }`}
-                style={{ backgroundColor: fabricObj ? '#4A90D9' : undefined }}
-                title={item.fabricName || 'No fabric'}
+                style={{
+                  backgroundColor: fabricObj ? "#4A90D9" : undefined,
+                }}
+                title={item.fabricName || "No fabric"}
               >
                 {!fabricObj && (
                   <div className="w-full h-full rounded-full bg-muted/40 flex items-center justify-center">
@@ -178,7 +219,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                 )}
               </div>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide text-center leading-tight max-w-[70px]">
-                {item.fabricName || 'Fabric'}
+                {item.fabricName || "Fabric"}
               </span>
             </div>
           </div>
@@ -186,7 +227,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
 
         {/* ═══════ DETAILS TABLE ROW ═══════ */}
         <div className="grid grid-cols-1 md:grid-cols-3 border-b border-border">
-          {/* Left — Description Fields */}
           <div className="border-r-0 md:border-r border-border col-span-2">
             <table className="w-full text-sm">
               <tbody>
@@ -195,7 +235,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     Description
                   </td>
                   <td className="px-3 py-2 text-sm leading-relaxed">
-                    {item.description || '—'}
+                    {item.description || "—"}
                   </td>
                 </tr>
                 <tr className="border-b border-border/60">
@@ -203,7 +243,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     Length
                   </td>
                   <td className="px-3 py-2 text-sm font-medium">
-                    {(item as any).length || '—'}
+                    {(item as any).length + " (mm)" || "—"}
                   </td>
                 </tr>
                 <tr className="border-b border-border/60">
@@ -211,7 +251,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     Width
                   </td>
                   <td className="px-3 py-2 text-sm font-medium">
-                    {(item as any).width || '—'}
+                    {(item as any).width + " (mm)" || "—"}
                   </td>
                 </tr>
                 <tr className="border-b border-border/60">
@@ -219,7 +259,7 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     Seat Height
                   </td>
                   <td className="px-3 py-2 text-sm font-medium">
-                    {(item as any).seatHeight || '—'}
+                    {(item as any).seatHeight + " (mm)" || "—"}
                   </td>
                 </tr>
                 <tr>
@@ -227,14 +267,12 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     Sales Mgr
                   </td>
                   <td className="px-3 py-2 text-sm font-medium">
-                    {salesManager || '—'}
+                    {salesManager || "—"}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-
-          {/* Right — Pricing Table */}
           <div>
             <table className="w-full text-sm">
               <tbody>
@@ -246,51 +284,59 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     {formatCurrency(item.basePrice)}
                   </td>
                 </tr>
-
-                {/* Discount Row */}
                 <tr className="border-b border-border/60 bg-orange-50/50 dark:bg-orange-950/10">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     Discount
                   </td>
                   <td className="px-3 py-1.5">
-                    <div className="grid grid-cols-3 gap-2 items-center">
+                    <div className="grid grid-cols-2 gap-2 items-center">
                       <div className="flex items-center gap-1 bg-white dark:bg-muted/50 rounded-lg px-2 py-1 border border-border shadow-sm">
                         <Input
                           type="number"
                           value={item.discountPercent}
-                          onChange={e => {
-                            const val = Math.max(0, Math.min(100, Number(e.target.value)));
+                          onChange={(e) => {
+                            const val = Math.max(
+                              0,
+                              Math.min(100, Number(e.target.value)),
+                            );
                             onDiscountChange(item.id, val);
                           }}
-                          className="w-12 h-6 text-xs text-right border-0 bg-transparent p-0 focus-visible:ring-0"
+                          className="w-18 h-6 text-xs text-right border-0 bg-transparent p-0 focus-visible:ring-0"
                           min={0}
                           max={100}
                           step={0.5}
                         />
-                        <Percent className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <Percent className="h-3 text-muted-foreground flex-shrink-0" />
                       </div>
-                      <div className="w-1"></div>
                       <div className="text-right">
-                        <span className={`text-xs font-semibold tabular-nums ${
-                          item.discountAmount > 0 ? 'text-destructive' : 'text-muted-foreground/50'
-                        }`}>
-                          {item.discountAmount > 0 ? `-${formatCurrency(item.discountAmount)}` : '₹0'}
+                        <span
+                          className={`text-xs font-semibold tabular-nums ${
+                            item.discountAmount > 0
+                              ? "text-destructive"
+                              : "text-muted-foreground/50"
+                          }`}
+                        >
+                          {item.discountAmount > 0
+                            ? `-${formatCurrency(item.discountAmount)}`
+                            : "₹0"}
                         </span>
                       </div>
                     </div>
                   </td>
                 </tr>
-
                 <tr className="border-b border-border/60">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     Final Price
                   </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    {formatCurrency(item.basePrice - (item.quantity > 0 ? item.discountAmount / item.quantity : 0))}
+                    {formatCurrency(
+                      item.basePrice -
+                        (item.quantity > 0
+                          ? item.discountAmount / item.quantity
+                          : 0),
+                    )}
                   </td>
                 </tr>
-
-                {/* Editable Units Row */}
                 <tr className="border-b border-border/60">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     Units
@@ -300,9 +346,12 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                       <Input
                         type="number"
                         value={item.quantity}
-                        onChange={e => {
-                          const val = Math.max(1, Math.min(100, Number(e.target.value)));
-                          onUpdateItem(item.id, 'quantity', val);
+                        onChange={(e) => {
+                          const val = Math.max(
+                            1,
+                            Math.min(100, Number(e.target.value)),
+                          );
+                          onUpdateItem(item.id, "quantity", val);
                         }}
                         className="w-16 h-7 text-sm text-right ml-auto"
                         min={1}
@@ -311,7 +360,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     </div>
                   </td>
                 </tr>
-
                 <tr className="border-b border-border/60 bg-muted/20">
                   <td className="px-3 py-2 font-bold border-r border-border/60 text-[10px] uppercase tracking-wide">
                     Total
@@ -320,7 +368,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     {formatCurrency(itemAmount)}
                   </td>
                 </tr>
-
                 {item.igst > 0 && (
                   <tr className="border-b border-border/60">
                     <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
@@ -331,7 +378,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     </td>
                   </tr>
                 )}
-
                 <tr className="border-b border-border/60">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     CGST ({item.gstPercent / 2}%)
@@ -340,7 +386,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     {formatCurrency(item.cgst)}
                   </td>
                 </tr>
-
                 <tr className="border-b border-border/60">
                   <td className="px-3 py-2 text-muted-foreground border-r border-border/60 text-[10px] font-semibold uppercase tracking-wide">
                     SGST ({item.gstPercent / 2}%)
@@ -349,7 +394,6 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     {formatCurrency(item.sgst)}
                   </td>
                 </tr>
-
                 <tr className="bg-primary/5">
                   <td className="px-3 py-2.5 font-bold border-r border-border/60 text-[10px] uppercase tracking-wide">
                     Total with GST
@@ -379,23 +423,30 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
           >
             {isExpanded ? (
               <>
-                <ChevronUp className="h-3 w-3" /> Hide Materials
+                <ChevronUp className="h-3 w-3" />
+                Hide Materials
               </>
             ) : (
               <>
-                <ChevronDown className="h-3 w-3" /> Edit Materials
+                <ChevronDown className="h-3 w-3" />
+                Edit Materials
               </>
             )}
           </button>
         </div>
 
-        {/* ═══════ EXPANDABLE MATERIALS (default open) ═══════ */}
+        {/* ═══════ EXPANDABLE MATERIALS ═══════ */}
         {isExpanded && (
           <div className="border-t border-border bg-muted/10 p-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-semibold uppercase tracking-wide">Wood Type</Label>
-                <Select value={item.woodId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'wood', v)}>
+                <Label className="text-[10px] font-semibold uppercase tracking-wide">
+                  Wood Type
+                </Label>
+                <Select
+                  value={item.woodId || "none"}
+                  onValueChange={(v) => onUpdateMaterial(item.id, "wood", v)}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select wood" />
                   </SelectTrigger>
@@ -403,15 +454,22 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     <SelectItem value="none">
                       <span className="text-muted-foreground">None</span>
                     </SelectItem>
-                    {activeWoods.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    {activeWoods.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-semibold uppercase tracking-wide">Polish</Label>
-                <Select value={item.polishId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'polish', v)}>
+                <Label className="text-[10px] font-semibold uppercase tracking-wide">
+                  Polish
+                </Label>
+                <Select
+                  value={item.polishId || "none"}
+                  onValueChange={(v) => onUpdateMaterial(item.id, "polish", v)}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select polish" />
                   </SelectTrigger>
@@ -419,15 +477,22 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     <SelectItem value="none">
                       <span className="text-muted-foreground">None</span>
                     </SelectItem>
-                    {activePolishes.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    {activePolishes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-semibold uppercase tracking-wide">Fabric</Label>
-                <Select value={item.fabricId || 'none'} onValueChange={v => onUpdateMaterial(item.id, 'fabric', v)}>
+                <Label className="text-[10px] font-semibold uppercase tracking-wide">
+                  Fabric
+                </Label>
+                <Select
+                  value={item.fabricId || "none"}
+                  onValueChange={(v) => onUpdateMaterial(item.id, "fabric", v)}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select fabric" />
                   </SelectTrigger>
@@ -435,8 +500,10 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                     <SelectItem value="none">
                       <span className="text-muted-foreground">None</span>
                     </SelectItem>
-                    {activeFabrics.map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    {activeFabrics.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -446,9 +513,9 @@ const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
-ProductCard.displayName = 'ProductCard';
+QuotationCard.displayName = "QuotationCard";
 
-export default ProductCard;
+export default QuotationCard;
