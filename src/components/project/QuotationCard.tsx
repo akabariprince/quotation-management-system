@@ -93,7 +93,8 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
       >
         {/* ═══════ TOP HEADER ROW ═══════ */}
         <div className="grid grid-cols-12 border-b border-border bg-muted/50">
-          <div className="col-span-4 sm:col-span-3 border-r border-border px-3 py-2.5 flex items-center gap-2">
+          {/* Cell 1: mobile=6cols, sm+=3cols (was col-span-4 causing 4+4+6=14 overflow) */}
+          <div className="col-span-6 sm:col-span-3 border-r border-border px-3 py-2.5 flex items-center gap-2">
             <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">
               {item.itemNumber || index + 1}
             </span>
@@ -101,7 +102,8 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
               Reference Image
             </span>
           </div>
-          <div className="col-span-4 sm:flex border-r border-border px-3 py-2.5 items-center justify-start">
+          {/* Cell 2: hidden on mobile (mobile badge exists below), visible sm+ */}
+          <div className="hidden sm:flex col-span-4 border-r border-border px-3 py-2.5 items-center justify-start">
             <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full">
               <Hash className="h-3 w-3" />
               <span className="text-[10px] font-bold font-mono tracking-wide">
@@ -109,9 +111,10 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
               </span>
             </div>
           </div>
-          <div className="col-span-6 sm:col-span-5 px-3 py-2.5 flex items-center justify-between">
+          {/* Cell 3: mobile=6cols, sm+=5cols */}
+          <div className="col-span-6 sm:col-span-5 px-3 py-2.5 flex items-center justify-between min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-bold font-mono tracking-wide">
+              <span className="text-sm font-bold font-mono tracking-wide truncate">
                 {item.quotationCode}
               </span>
               <span className="text-xs text-muted-foreground truncate hidden md:inline">
@@ -227,7 +230,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
 
         {/* ═══════ DETAILS TABLE ROW ═══════ */}
         <div className="grid grid-cols-1 md:grid-cols-3 border-b border-border">
-          <div className="border-r-0 md:border-r border-border col-span-2">
+          <div className="border-r-0 md:border-r border-border md:col-span-2">
             <table className="w-full text-sm">
               <tbody>
                 <tr className="border-b border-border/60">
@@ -408,18 +411,18 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
         </div>
 
         {/* ═══════ FOOTER ROW ═══════ */}
-        <div className="flex items-center justify-between bg-muted/40 px-4 py-2">
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between bg-muted/40 px-4 py-2 gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
               Item #{item.itemNumber || index + 1}
             </span>
-            <span className="text-[9px] font-mono text-primary/70 bg-primary/5 px-2 py-0.5 rounded-full">
+            <span className="text-[9px] font-mono text-primary/70 bg-primary/5 px-2 py-0.5 rounded-full whitespace-nowrap">
               {uniqueNumber}
             </span>
           </div>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors uppercase tracking-wide"
+            className="flex items-center gap-1.5 text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors uppercase tracking-wide whitespace-nowrap"
           >
             {isExpanded ? (
               <>

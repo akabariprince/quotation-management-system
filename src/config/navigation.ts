@@ -43,8 +43,8 @@ export const NAV_ITEMS: NavItem[] = [
     description: 'Customer management',
   },
   {
-    path: '/quotations',
-    label: 'Quotations',
+    path: '/products',
+    label: 'Products',
     icon: Package,
     permission: 'quotation:view',
     description: 'Product quotations',

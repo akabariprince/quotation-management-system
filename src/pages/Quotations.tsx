@@ -222,9 +222,9 @@ const Quotations: React.FC = () => {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Quotations</h1>
+          <h1 className="page-title">Products</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your quotation catalog
+            Manage your product catalog
           </p>
         </div>
         {hasPermission("master:manage") && (
@@ -233,7 +233,7 @@ const Quotations: React.FC = () => {
             onClick={() => navigate("/masters?tab=quotation")}
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Quotation</span>
+            <span className="hidden sm:inline">Add Product</span>
           </Button>
         )}
       </div>
@@ -308,7 +308,7 @@ const Quotations: React.FC = () => {
             </div>
             {!loading && totalCount > 0 && (
               <div className="text-sm text-muted-foreground whitespace-nowrap">
-                {totalCount} quotation{totalCount !== 1 ? "s" : ""}
+                {totalCount} Products{totalCount !== 1 ? "s" : ""}
               </div>
             )}
           </div>

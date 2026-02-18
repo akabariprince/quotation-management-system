@@ -159,7 +159,7 @@ const AppRoutes: React.FC = () => {
 
         {/* Quotations (was Products) */}
         <Route
-          path="quotations"
+          path="products"
           element={
             <PermissionRoute permission="quotation:view">
               <Quotations />
