@@ -1255,7 +1255,7 @@ const Masters: React.FC = () => {
               )}
               {activeTab === "quotationModel" && (
                 <div className="space-y-2">
-                  <Label>Select Quotation Type</Label>
+                  <Label>Select Product Type</Label>
                   <Select
                     value={selectedParent}
                     onValueChange={setSelectedParent}
@@ -1359,7 +1359,7 @@ const Masters: React.FC = () => {
               )}
               {editingItem.type === "quotationModel" && (
                 <div className="space-y-2">
-                  <Label>Select Quotation Type</Label>
+                  <Label>Select Product Type</Label>
                   <Select
                     value={editSelectedParent}
                     onValueChange={setEditSelectedParent}
@@ -1432,7 +1432,7 @@ const Masters: React.FC = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-foreground">
-                {editingQuotation ? "Edit Quotation" : "Add Product"}
+                {editingQuotation ? "Edit Product" : "Add Product"}
               </h2>
               <button
                 onClick={() => {
