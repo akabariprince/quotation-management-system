@@ -725,8 +725,8 @@ const Masters: React.FC = () => {
   const getTabLabel = (tab: string) => {
     const labels: Record<string, string> = {
       category: "Category",
-      quotationType: "Quotation Type",
-      quotationModel: "Quotation Model",
+      quotationType: "Product Type",
+      quotationModel: "Product Model",
       wood: "Wood",
       polish: "Polish",
       fabric: "Fabric",
