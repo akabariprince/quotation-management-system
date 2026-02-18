@@ -408,13 +408,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           path: "/customers",
           show: hasPermission("customer:view"),
         },
-        {
-          label: "Quotations",
-          description: "Browse quotation catalog",
-          icon: Package,
-          path: "/quotations",
-          show: hasPermission("quotation:view"),
-        },
+        // {
+        //   label: "Quotations",
+        //   description: "Browse quotation catalog",
+        //   icon: Package,
+        //   path: "/quotations",
+        //   show: hasPermission("quotation:view"),
+        // },
       ],
     },
     {
@@ -515,7 +515,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {category.category}
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
               {category.items.map((item) => {
                 const cardH = CARD_HEIGHT;
                 const rawIconSize = Math.round(cardH * 0.45);
