@@ -408,13 +408,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           path: "/customers",
           show: hasPermission("customer:view"),
         },
-        // {
-        //   label: "Quotations",
-        //   description: "Browse quotation catalog",
-        //   icon: Package,
-        //   path: "/quotations",
-        //   show: hasPermission("quotation:view"),
-        // },
+        {
+          label: "Products",
+          description: "Browse quotation catalog",
+          icon: Package,
+          path: "/products",
+          show: hasPermission("product:view"),
+        },
       ],
     },
     {
