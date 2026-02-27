@@ -13,6 +13,12 @@ import {
   Mail,
   X,
   Eye,
+  MapPin,
+  Truck,
+  Edit,
+  Check,
+  Pencil,
+  FolderOpen,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, ProjectDetail } from "@/hooks/useProjects";
@@ -25,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -39,6 +46,7 @@ import { toast } from "sonner";
 import { getImageUrl } from "@/utils/reportHelpers";
 import QuotationSearchSelect from "@/components/common/QuotationSearchSelect";
 
+/* ── Interfaces ── */
 interface ProjectItemLocal {
   id: string;
   quotationId: string;
@@ -68,9 +76,18 @@ interface ProjectItemLocal {
   uniqueNumber: string;
   length: number;
   width: number;
-  seatHeight: number;
+  specialNote: string;
 }
 
+interface DeliveryAddressData {
+  address: string;
+  landmark: string;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+/* ── Helpers ── */
 const resolveSelectValue = (val: string): string | undefined =>
   val === "none" || val === "" ? undefined : val;
 
@@ -94,7 +111,38 @@ const generateQuotationUniqueNumber = (
   return `${prefix}Q${num}`;
 };
 
-// Skeleton for form loading
+const states = [
+  "Himachal Pradesh",
+  "Punjab",
+  "Uttarakhand",
+  "Uttar Pradesh",
+  "Haryana",
+  "Rajasthan",
+  "Andhra Pradesh",
+  "Karnataka",
+  "Kerala",
+  "Tamil Nadu",
+  "Telangana",
+  "Bihar",
+  "Jharkhand",
+  "Odisha",
+  "West Bengal",
+  "Goa",
+  "Gujarat",
+  "Maharashtra",
+  "Madhya Pradesh",
+  "Chhattisgarh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Sikkim",
+  "Tripura",
+];
+
+/* ── Form Page Skeleton ── */
 const FormPageSkeleton = () => (
   <div className="space-y-6 animate-pulse">
     <div className="page-header mb-4 flex items-center justify-between">
@@ -130,8 +178,129 @@ const FormPageSkeleton = () => (
   </div>
 );
 
-// ─── Email Send Modal ───────────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────── */
+/* Inline Editable Project Name                                  */
+/* ────────────────────────────────────────────────────────────── */
+interface InlineProjectNameProps {
+  value: string;
+  onChange: (value: string) => void;
+  projectNo: string;
+}
 
+const InlineProjectName: React.FC<InlineProjectNameProps> = ({
+  value,
+  onChange,
+  projectNo,
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    onChange(editValue.trim());
+    setIsEditing(false);
+    if (editValue.trim() && editValue.trim() !== value) {
+      toast.success("Project name updated");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSave();
+    if (e.key === "Escape") {
+      setEditValue(value);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3 bg-muted/30 border border-border rounded-lg px-4 py-2.5 mt-2 mb-4">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <FolderOpen className="h-4 w-4 text-accent" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Project Name
+        </span>
+      </div>
+
+      <div className="h-4 w-px bg-border flex-shrink-0" />
+
+      {isEditing ? (
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Input
+            ref={inputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter project name..."
+            className="h-8 text-sm font-medium border-accent/50 focus-visible:ring-accent/30 flex-1"
+          />
+          <button
+            onClick={handleSave}
+            className="p-1.5 bg-accent/10 hover:bg-accent/20 rounded-md transition-colors flex-shrink-0"
+            title="Save"
+          >
+            <Check className="h-3.5 w-3.5 text-accent" />
+          </button>
+          <button
+            onClick={() => {
+              setEditValue(value);
+              setIsEditing(false);
+            }}
+            className="p-1.5 hover:bg-muted rounded-md transition-colors flex-shrink-0"
+            title="Cancel"
+          >
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {value ? (
+            <span className="text-sm font-semibold truncate flex-1">
+              {value}
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground italic truncate flex-1">
+              No project name — click to add
+            </span>
+          )}
+          <button
+            onClick={() => setIsEditing(true)}
+            className="p-1.5 hover:bg-muted rounded-md transition-colors flex-shrink-0 group"
+            title="Edit project name"
+          >
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors" />
+          </button>
+        </div>
+      )}
+
+      <div className="h-4 w-px bg-border flex-shrink-0 hidden sm:block" />
+
+      <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          No:
+        </span>
+        <span className="text-xs font-bold font-mono text-primary">
+          {projectNo}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────── */
+/* Email Send Modal                                              */
+/* ────────────────────────────────────────────────────────────── */
 interface EmailSendModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -153,7 +322,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
 }) => {
   const api = useApi();
   const navigate = useNavigate();
-
   const [toEmail, setToEmail] = useState(customer?.email || "");
   const [ccEmail, setCcEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -181,16 +349,12 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
       toast.error("Please enter a recipient email address");
       return;
     }
-
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(toEmail.trim())) {
       toast.error("Please enter a valid email address");
       return;
     }
-
     setSending(true);
-
     try {
       const res = await api.post(`/projects/${project.id}/send-email`, {
         to: toEmail.trim(),
@@ -199,7 +363,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         message: message.trim(),
         type: "sent",
       });
-
       if (res.success) {
         setSent(true);
         toast.success(`Email sent successfully to ${toEmail}`);
@@ -207,7 +370,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         toast.error(res.message || "Failed to send email");
       }
     } catch (err: any) {
-      toast.error(err?.message || "Failed to send email. Please try again.");
+      toast.error(err?.message || "Failed to send email.");
     } finally {
       setSending(false);
     }
@@ -215,9 +378,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
 
   const handleClose = () => {
     onClose();
-    if (sent) {
-      navigate("/projects");
-    }
+    if (sent) navigate("/projects");
   };
 
   if (!isOpen) return null;
@@ -228,8 +389,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-card rounded-xl shadow-2xl w-full max-w-2xl p-6 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+      <div className="relative bg-card  shadow-2xl w-full max-w-2xl p-6 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-accent/10 rounded-lg">
@@ -253,7 +413,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         </div>
 
         {sent ? (
-          /* ─── Success State ──────────────────────────────────────── */
           <div className="text-center py-8">
             <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
               <Mail className="h-8 w-8 text-success" />
@@ -276,15 +435,12 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 onClick={() => navigate(`/projects/${project.id}/pdf`)}
                 className="btn-accent gap-2"
               >
-                <Eye className="h-4 w-4" />
-                View PDF
+                <Eye className="h-4 w-4" /> View PDF
               </Button>
             </div>
           </div>
         ) : (
-          /* ─── Email Form ─────────────────────────────────────────── */
           <div className="space-y-4">
-            {/* To */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">To *</Label>
               <Input
@@ -295,14 +451,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 className="h-11"
                 disabled={sending}
               />
-              {!customer?.email && (
-                <p className="text-xs text-warning">
-                  Customer doesn't have an email on file. Please enter one.
-                </p>
-              )}
             </div>
-
-            {/* CC */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">CC (optional)</Label>
               <Input
@@ -314,8 +463,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
-
-            {/* Subject */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Subject</Label>
               <Input
@@ -325,8 +472,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
-
-            {/* Preview Info */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Project</span>
@@ -351,8 +496,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 </span>
               </div>
             </div>
-
-            {/* Message */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Message</Label>
               <Textarea
@@ -362,14 +505,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
-
-            {/* Note */}
-            <p className="text-xs text-muted-foreground">
-              * The email will include the full project quotation details with
-              item breakdown, GST, and a link to view the PDF.
-            </p>
-
-            {/* Actions */}
             <div className="flex gap-3 pt-2 border-t border-border">
               <Button
                 variant="outline"
@@ -385,8 +520,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 className="gap-2 h-11"
                 disabled={sending}
               >
-                <Eye className="h-4 w-4" />
-                Preview PDF
+                <Eye className="h-4 w-4" /> Preview PDF
               </Button>
               <Button
                 onClick={handleSendEmail}
@@ -395,13 +529,11 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               >
                 {sending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Sending...
+                    <Loader2 className="h-4 w-4 animate-spin" /> Sending...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4" />
-                    Send Email
+                    <Send className="h-4 w-4" /> Send Email
                   </>
                 )}
               </Button>
@@ -413,8 +545,114 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   );
 };
 
-// ─── Main ProjectForm Component ─────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────── */
+/* Delivery Address Editor                                       */
+/* ────────────────────────────────────────────────────────────── */
+interface DeliveryAddressEditorProps {
+  deliverySameAsBilling: boolean;
+  onToggleSame: (checked: boolean) => void;
+  deliveryAddr: DeliveryAddressData;
+  onChangeField: (field: keyof DeliveryAddressData, value: string) => void;
+  billingAddress: string;
+}
 
+const DeliveryAddressEditor: React.FC<DeliveryAddressEditorProps> = ({
+  deliverySameAsBilling,
+  onToggleSame,
+  deliveryAddr,
+  onChangeField,
+  billingAddress,
+}) => (
+  <div className="space-y-3">
+    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+      <Checkbox
+        id="deliverySame"
+        checked={deliverySameAsBilling}
+        onCheckedChange={(v) => onToggleSame(v as boolean)}
+      />
+      <Label
+        htmlFor="deliverySame"
+        className="text-sm font-medium cursor-pointer flex items-center gap-2"
+      >
+        <Check className="h-4 w-4 text-success" />
+        Delivery address same as billing
+      </Label>
+    </div>
+
+    {deliverySameAsBilling && billingAddress && (
+      <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+        <span className="font-medium text-foreground">
+          Using billing address:{" "}
+        </span>
+        {billingAddress}
+      </p>
+    )}
+
+    {!deliverySameAsBilling && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1 sm:col-span-2">
+          <Label className="text-xs">Address Line</Label>
+          <Input
+            value={deliveryAddr.address}
+            onChange={(e) => onChangeField("address", e.target.value)}
+            placeholder="Delivery street address"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label className="text-xs">Near / Landmark</Label>
+          <Input
+            value={deliveryAddr.landmark}
+            onChange={(e) => onChangeField("landmark", e.target.value)}
+            placeholder="Near landmark"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">City</Label>
+          <Input
+            value={deliveryAddr.city}
+            onChange={(e) => onChangeField("city", e.target.value)}
+            placeholder="City"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">State</Label>
+          <Select
+            value={deliveryAddr.state}
+            onValueChange={(v) => onChangeField("state", v)}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Pincode</Label>
+          <Input
+            value={deliveryAddr.pincode}
+            onChange={(e) => onChangeField("pincode", e.target.value)}
+            placeholder="411014"
+            maxLength={6}
+            className="h-9 text-sm"
+          />
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+/* ────────────────────────────────────────────────────────────── */
+/* Main ProjectForm Component                                    */
+/* ────────────────────────────────────────────────────────────── */
 const ProjectForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -427,7 +665,7 @@ const ProjectForm: React.FC = () => {
       navigate("/projects");
     }
   }, [requiredPermission]);
-  // Hooks for API data
+
   const {
     fetchProjectById,
     getNextProjectNumber,
@@ -450,7 +688,6 @@ const ProjectForm: React.FC = () => {
     loadQuotations();
   }, []);
 
-  // Load customers for fallback
   useEffect(() => {
     fetchCustomers({ limit: 20, sortBy: "updatedAt", sortOrder: "DESC" });
   }, []);
@@ -458,11 +695,12 @@ const ProjectForm: React.FC = () => {
   const { woods, polishes, fabrics } = useMaterials();
   const { salesPersons } = useSalesPersons();
 
-  // State
+  /* ── State ── */
   const [existingProject, setExistingProject] = useState<ProjectDetail | null>(
     null,
   );
   const [projectNo, setProjectNo] = useState("");
+  const [projectName, setProjectName] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const [customerId, setCustomerId] = useState("");
   const [salesPersonId, setSalesPersonId] = useState("");
@@ -470,26 +708,43 @@ const ProjectForm: React.FC = () => {
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(
     null,
   );
+
+  // Delivery address
+  const [deliverySameAsBilling, setDeliverySameAsBilling] = useState(true);
+  const [deliveryAddr, setDeliveryAddr] = useState<DeliveryAddressData>({
+    address: "",
+    landmark: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
+  const [showDeliveryEditor, setShowDeliveryEditor] = useState(false);
+
+  // OTP
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [pendingDiscountEdit, setPendingDiscountEdit] = useState<{
     itemId: string;
     newDiscount: number;
   } | null>(null);
-
   const pendingItem = pendingDiscountEdit
     ? items.find((i) => i.id === pendingDiscountEdit.itemId)
     : null;
 
+  // Email
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [savedProject, setSavedProject] = useState<any>(null);
+
+  // Quotation add
   const [newlyAddedItemId, setNewlyAddedItemId] = useState<string | null>(null);
   const [selectedQuotationId, setSelectedQuotationId] = useState("");
+
+  // Loading
   const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Load existing project or generate next number
+  /* ── Load existing project or generate next number ── */
   useEffect(() => {
     const init = async () => {
       if (id) {
@@ -497,8 +752,24 @@ const ProjectForm: React.FC = () => {
         if (p) {
           setExistingProject(p);
           setProjectNo(p.projectNo);
+          setProjectName((p as any).projectName || "");
           setCustomerId(p.customerId);
           setSalesPersonId(p.salesPersonId || "");
+
+          const pAny = p as any;
+          if (pAny.deliveryAddress) {
+            setDeliverySameAsBilling(false);
+            setDeliveryAddr({
+              address: pAny.deliveryAddress || "",
+              landmark: pAny.deliveryLandmark || "",
+              city: pAny.deliveryCity || "",
+              state: pAny.deliveryState || "",
+              pincode: pAny.deliveryPincode || "",
+            });
+          } else {
+            setDeliverySameAsBilling(true);
+          }
+
           setItems(
             (p.items || []).map((item: any, i: number) =>
               recalculateItem({
@@ -523,7 +794,7 @@ const ProjectForm: React.FC = () => {
                 uniqueNumber: generateQuotationUniqueNumber(p.projectNo, i),
                 length: item.quotation?.length,
                 width: item.quotation?.width,
-                seatHeight: item.quotation?.height,
+                specialNote: item.specialNote || "",
               }),
             ),
           );
@@ -544,17 +815,54 @@ const ProjectForm: React.FC = () => {
     (sp) => sp.id === salesPersonId,
   );
 
+  /* ── Populate delivery address from customer ── */
+  useEffect(() => {
+    if (selectedCustomer && !existingProject) {
+      const cust = selectedCustomer as any;
+      if (cust.deliverySameAsBilling === false && cust.deliveryAddress) {
+        setDeliverySameAsBilling(false);
+        setDeliveryAddr({
+          address: cust.deliveryAddress || "",
+          landmark: cust.deliveryLandmark || "",
+          city: cust.deliveryCity || "",
+          state: cust.deliveryState || "",
+          pincode: cust.deliveryPincode || "",
+        });
+      } else {
+        setDeliverySameAsBilling(true);
+        setDeliveryAddr({
+          address: "",
+          landmark: "",
+          city: "",
+          state: "",
+          pincode: "",
+        });
+      }
+    }
+  }, [customerId, selectedCustomer]);
+
+  const billingAddressString = selectedCustomer
+    ? [
+        selectedCustomer.address,
+        (selectedCustomer as any).landmark,
+        selectedCustomer.city,
+        selectedCustomer.state,
+        (selectedCustomer as any).pincode,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  /* ── Recalculate Item ── */
   const recalculateItem = (item: ProjectItemLocal): ProjectItemLocal => {
     const basePrice = Number(item.basePrice) || 0;
     const quantity = Number(item.quantity) || 1;
     const gstPercent = Number(item.gstPercent) || 18;
     const discountPercent = Number(item.discountPercent) || 0;
-
     const amount = basePrice * quantity;
     const gstAmount = (amount * gstPercent) / 100;
     const discountAmount = (amount * discountPercent) / 100;
     const grandTotalItem = amount + gstAmount - discountAmount;
-
     return {
       ...item,
       basePrice,
@@ -572,7 +880,6 @@ const ProjectForm: React.FC = () => {
   };
 
   const updateItem = (itemId: string, field: string, value: any) => {
-    // Check permission for specific field edits
     if (field === "quantity" && !hasPermission("quantity:edit")) {
       toast.error("No permission to edit quantity");
       return;
@@ -625,17 +932,30 @@ const ProjectForm: React.FC = () => {
       `${materialType.charAt(0).toUpperCase() + materialType.slice(1)} updated`,
     );
   };
-
+  const discountRange = {
+    min: Number((user as any)?.role?.discountMin) || 0,
+    max: Number((user as any)?.role?.discountMax) || 100,
+  };
   const handleDiscountChange = (itemId: string, newDiscount: number) => {
     if (!hasPermission("discount:edit")) {
       toast.error("No permission to edit discount");
       return;
     }
+    // Clamp to allowed range
+    const clamped = Math.max(
+      discountRange.min,
+      Math.min(discountRange.max, newDiscount),
+    );
+    if (newDiscount !== clamped) {
+      toast.warning(
+        `Discount must be between ${discountRange.min}% and ${discountRange.max}%`,
+      );
+    }
     if (user?.role?.name !== "admin") {
-      setPendingDiscountEdit({ itemId, newDiscount });
+      setPendingDiscountEdit({ itemId, newDiscount: clamped });
       setShowOTPModal(true);
     } else {
-      updateItem(itemId, "discountPercent", newDiscount);
+      updateItem(itemId, "discountPercent", clamped);
     }
   };
 
@@ -671,7 +991,6 @@ const ProjectForm: React.FC = () => {
     }
     const quotation = allQuotations.find((q) => q.id === selectedQuotationId);
     if (!quotation) return;
-
     if (items.find((item) => item.quotationId === quotation.id)) {
       toast.error("Quotation already added. Update quantity instead.");
       return;
@@ -684,7 +1003,6 @@ const ProjectForm: React.FC = () => {
     const discountPercent = quotation.defaultDiscount || 0;
     const discountAmount = (amount * discountPercent) / 100;
     const grandTotalItem = subtotalWithGst - discountAmount;
-
     const newIndex = items.length;
 
     const newItem: ProjectItemLocal = {
@@ -718,7 +1036,7 @@ const ProjectForm: React.FC = () => {
       uniqueNumber: generateQuotationUniqueNumber(projectNo, newIndex),
       length: quotation.length,
       width: quotation.width,
-      seatHeight: quotation.height,
+      specialNote: "",
     };
 
     setItems((prev) => [...prev, newItem]);
@@ -727,7 +1045,6 @@ const ProjectForm: React.FC = () => {
     toast.success("Quotation added to project");
   };
 
-  // Auto-scroll
   useEffect(() => {
     if (newlyAddedItemId) {
       const timer = setTimeout(() => {
@@ -745,7 +1062,7 @@ const ProjectForm: React.FC = () => {
     setTimeout(() => setHighlightedItemId(null), 2500);
   }, []);
 
-  // Totals
+  /* ── Totals ── */
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
   const totalGst = items.reduce(
     (sum, item) => sum + item.cgst + item.sgst + item.igst,
@@ -761,10 +1078,23 @@ const ProjectForm: React.FC = () => {
   );
   const grandTotal = subtotal - totalDiscount;
 
+  /* ── Build Payload ── */
   const buildPayload = (status: "draft" | "sent") => ({
     date: new Date().toISOString().split("T")[0],
     customerId,
+    projectName: projectName || null,
     salesPersonId: salesPersonId || null,
+    deliveryAddress: deliverySameAsBilling
+      ? null
+      : deliveryAddr.address || null,
+    deliveryLandmark: deliverySameAsBilling
+      ? null
+      : deliveryAddr.landmark || null,
+    deliveryCity: deliverySameAsBilling ? null : deliveryAddr.city || null,
+    deliveryState: deliverySameAsBilling ? null : deliveryAddr.state || null,
+    deliveryPincode: deliverySameAsBilling
+      ? null
+      : deliveryAddr.pincode || null,
     subtotal: Number(totalAmount) || 0,
     totalDiscount: Number(totalDiscount) || 0,
     igst: Number(totalIgst) || 0,
@@ -797,9 +1127,11 @@ const ProjectForm: React.FC = () => {
       sgst: Number(item.sgst) || 0,
       totalWithGst: Number(item.totalWithGst) || 0,
       notes: item.notes || [],
+      specialNote: item.specialNote || null,
     })),
   });
 
+  /* ── Save ── */
   const handleSave = async (sendEmail: boolean = false) => {
     if (!customerId) {
       toast.error("Please select a customer");
@@ -813,7 +1145,6 @@ const ProjectForm: React.FC = () => {
     try {
       const status = sendEmail ? "sent" : "draft";
       const payload = buildPayload(status as "draft" | "sent");
-
       let saved;
       if (existingProject) {
         saved = await updateProject(existingProject.id, payload);
@@ -822,7 +1153,6 @@ const ProjectForm: React.FC = () => {
         saved = await createProject(payload);
         toast.success("Project created");
       }
-
       if (sendEmail) {
         setSavedProject(saved);
         setShowEmailModal(true);
@@ -844,9 +1174,7 @@ const ProjectForm: React.FC = () => {
     setStep(2);
   };
 
-  if (pageLoading) {
-    return <FormPageSkeleton />;
-  }
+  if (pageLoading) return <FormPageSkeleton />;
 
   return (
     <div className="space-y-0 animate-fade-in">
@@ -889,6 +1217,7 @@ const ProjectForm: React.FC = () => {
       {/* ===== STEP 1 ===== */}
       {step === 1 && (
         <div className="space-y-6 max-w-3xl">
+          {/* Company Details */}
           <div className="form-section">
             <h2 className="text-lg font-semibold mb-4">Company Details</h2>
             <div className="bg-muted/50 rounded-lg p-4 text-sm">
@@ -898,11 +1227,27 @@ const ProjectForm: React.FC = () => {
               </p>
               <p className="text-muted-foreground">GST No: 27AAFCE9942B1ZM</p>
               <p className="text-muted-foreground">
-                (+91) 7066 46 6060 | info@esipl.in
+                (+91) 7066466060 | info@esipl.in
               </p>
             </div>
           </div>
 
+          {/* Project Name */}
+          <div className="form-section">
+            <h2 className="text-lg font-semibold mb-4">Project Details</h2>
+            <div className="space-y-2">
+              <Label htmlFor="projectName">Project Name</Label>
+              <Input
+                id="projectName"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Enter project name (e.g., Living Room Furniture, Office Setup)"
+                className="h-11"
+              />
+            </div>
+          </div>
+
+          {/* Customer Information */}
           <div className="rounded-lg border bg-card overflow-visible p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Customer Information</h2>
@@ -912,10 +1257,10 @@ const ProjectForm: React.FC = () => {
                 className="gap-2 text-xs"
                 onClick={() => navigate("/customers/new")}
               >
-                <Plus className="h-3.5 w-3.5" />
-                Add New Customer
+                <Plus className="h-3.5 w-3.5" /> Add New Customer
               </Button>
             </div>
+
             <div className="form-grid">
               <div className="space-y-2 lg:col-span-2">
                 <Label>Search & Select Customer *</Label>
@@ -951,31 +1296,118 @@ const ProjectForm: React.FC = () => {
                 </Select>
               </div>
             </div>
+
+            {/* Customer Details + Addresses */}
             {selectedCustomer && (
-              <div className="mt-4 bg-muted/50 rounded-lg p-4 text-sm">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-muted-foreground">Name</p>
-                    <p className="font-medium">{selectedCustomer.name}</p>
+              <div className="mt-4 space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Customer Details
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-xs h-7"
+                      onClick={() =>
+                        navigate(`/customers/edit/${selectedCustomer.id}`)
+                      }
+                    >
+                      <Edit className="h-3 w-3" /> Edit Customer
+                    </Button>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Contact</p>
-                    <p className="font-medium">{selectedCustomer.mobile}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-muted-foreground">Name</p>
+                      <p className="font-medium">{selectedCustomer.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Contact</p>
+                      <p className="font-medium">{selectedCustomer.mobile}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">GSTIN</p>
+                      <p className="font-medium font-mono">
+                        {selectedCustomer.gstin || "—"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Address</p>
+                </div>
+
+                {/* Billing Address */}
+                <div className="bg-blue-50/50 dark:bg-blue-950/10 rounded-lg p-4 text-sm border border-blue-200/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+                      Billing Address
+                    </span>
+                  </div>
+                  <p className="font-medium">
+                    {billingAddressString || "No billing address on file"}
+                  </p>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="bg-green-50/50 dark:bg-green-950/10 rounded-lg p-4 text-sm border border-green-200/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-green-600" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
+                        Delivery Address
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-xs h-7"
+                      onClick={() => setShowDeliveryEditor(!showDeliveryEditor)}
+                    >
+                      <Edit className="h-3 w-3" />
+                      {showDeliveryEditor
+                        ? "Close"
+                        : deliverySameAsBilling
+                          ? "Add Different Address"
+                          : "Edit"}
+                    </Button>
+                  </div>
+
+                  {!showDeliveryEditor && (
                     <p className="font-medium">
-                      {[selectedCustomer.address, selectedCustomer.city]
-                        .filter(Boolean)
-                        .join(", ") || "—"}
+                      {deliverySameAsBilling
+                        ? "Same as billing address"
+                        : [
+                            deliveryAddr.address,
+                            deliveryAddr.landmark,
+                            deliveryAddr.city,
+                            deliveryAddr.state,
+                            deliveryAddr.pincode,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "Not specified"}
                     </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">GSTIN</p>
-                    <p className="font-medium font-mono">
-                      {selectedCustomer.gstin || "—"}
-                    </p>
-                  </div>
+                  )}
+
+                  {showDeliveryEditor && (
+                    <DeliveryAddressEditor
+                      deliverySameAsBilling={deliverySameAsBilling}
+                      onToggleSame={(checked) => {
+                        setDeliverySameAsBilling(checked);
+                        if (checked)
+                          setDeliveryAddr({
+                            address: "",
+                            landmark: "",
+                            city: "",
+                            state: "",
+                            pincode: "",
+                          });
+                      }}
+                      deliveryAddr={deliveryAddr}
+                      onChangeField={(field, value) =>
+                        setDeliveryAddr((prev) => ({ ...prev, [field]: value }))
+                      }
+                      billingAddress={billingAddressString}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -986,8 +1418,7 @@ const ProjectForm: React.FC = () => {
             className="btn-accent gap-2"
             disabled={!customerId}
           >
-            Next
-            <ChevronRight className="h-4 w-4" />
+            Next <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       )}
@@ -996,7 +1427,7 @@ const ProjectForm: React.FC = () => {
       {step === 2 && (
         <>
           {/* Sticky Customer Info Bar */}
-          <div className="sticky top-0 z-30 bg-card border border-border rounded-xl shadow-sm mt-4 mb-2">
+          <div className="sticky top-0 z-30 bg-card border border-border  shadow-sm mt-4 mb-0">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-5 min-w-0 overflow-hidden">
                 <div className="min-w-0">
@@ -1031,20 +1462,30 @@ const ProjectForm: React.FC = () => {
                 </div>
                 <div className="hidden xl:block min-w-0 border-l border-border pl-5">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Project
+                    Delivery
                   </p>
-                  <p className="text-sm font-bold font-mono text-primary truncate">
-                    {projectNo}
+                  <p className="text-sm truncate">
+                    {deliverySameAsBilling
+                      ? "Same as billing"
+                      : deliveryAddr.city || deliveryAddr.address || "Custom"}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* ── Inline Editable Project Name Bar ── */}
+          <InlineProjectName
+            value={projectName}
+            onChange={setProjectName}
+            projectNo={projectNo}
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Main Quotation List */}
             <div className="lg:col-span-3 space-y-5">
-              <div className="sticky top-[60px] z-20 bg-card border border-border rounded-xl shadow-sm mb-6">
+              {/* Add Quotation Bar */}
+              <div className="sticky top-[60px] z-20 bg-card border border-border  shadow-sm mb-6">
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Package className="h-4 w-4 text-accent" />
@@ -1066,13 +1507,13 @@ const ProjectForm: React.FC = () => {
                     disabled={!selectedQuotationId}
                   >
                     <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Add Quotation</span>
+                    <span className="hidden sm:inline">Add Cart</span>
                   </Button>
                 </div>
               </div>
 
               {items.length === 0 ? (
-                <div className="border border-dashed border-border rounded-xl p-14 text-center">
+                <div className="border border-dashed border-border  p-14 text-center">
                   <Package className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
                   <h3 className="font-semibold text-lg mb-1">
                     No quotations added
@@ -1098,6 +1539,7 @@ const ProjectForm: React.FC = () => {
                     onRemoveItem={removeItem}
                     onDiscountChange={handleDiscountChange}
                     salesManager={selectedSalesPerson?.name}
+                    discountRange={discountRange}
                   />
                 ))
               )}
@@ -1107,12 +1549,11 @@ const ProjectForm: React.FC = () => {
             <div className="lg:col-span-1">
               <div className="form-section sticky top-[62px]">
                 <h2 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-wide">
-                  <Calculator className="h-4 w-4" />
-                  Summary
+                  <Calculator className="h-4 w-4" /> Summary
                 </h2>
 
                 {items.length > 0 && (
-                  <div className="space-y-0.5 mb-4 max-h-52 overflow-y-auto border border-border rounded-lg">
+                  <div className="space-y-0.5 mb-4 max-h-52 overflow-y-auto border border-border">
                     {items.map((item, i) => (
                       <button
                         key={item.id}
@@ -1230,13 +1671,13 @@ const ProjectForm: React.FC = () => {
                     >
                       {saving ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />{" "}
                           Saving...
                         </>
                       ) : (
                         <>
-                          <Send className="h-3.5 w-3.5 mr-2" />
-                          Save & Send Email
+                          <Send className="h-3.5 w-3.5 mr-2" /> Save & Send
+                          Email
                         </>
                       )}
                     </Button>

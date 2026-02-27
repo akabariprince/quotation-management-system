@@ -1,3 +1,4 @@
+// src/pages/Customers.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -15,7 +16,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Filter,
+  Truck,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
@@ -31,7 +32,6 @@ import {
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import TableSkeleton from "@/components/common/TableSkeleton";
-import Pagination from "@/components/common/Pagination";
 
 const PAGE_SIZE = 10;
 
@@ -47,11 +47,9 @@ const Customers: React.FC = () => {
     null,
   );
 
-  // Filters
   const [stateFilter, setStateFilter] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
 
-  // Confirm dialog
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -66,10 +64,8 @@ const Customers: React.FC = () => {
     loading: false,
   });
 
-  // Debounce ref
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch data
   const loadCustomers = useCallback(
     (page?: number, search?: string) => {
       const p = page ?? currentPage;
@@ -88,23 +84,19 @@ const Customers: React.FC = () => {
     [currentPage, searchTerm, stateFilter, regionFilter, fetchCustomers],
   );
 
-  // Initial load
   useEffect(() => {
     loadCustomers(1);
   }, []);
 
-  // Reload on filter changes
   useEffect(() => {
     setCurrentPage(1);
     loadCustomers(1);
   }, [stateFilter, regionFilter]);
 
-  // Reload on page change
   useEffect(() => {
     loadCustomers(currentPage);
   }, [currentPage]);
 
-  // Debounced search
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -114,7 +106,6 @@ const Customers: React.FC = () => {
     }, 400);
   };
 
-  // Delete with custom confirm
   const handleDelete = (id: string, name: string) => {
     setConfirmDialog({
       open: true,
@@ -144,50 +135,16 @@ const Customers: React.FC = () => {
   const totalCount = meta?.totalCount || 0;
 
   const states = [
-    // North
-    "Himachal Pradesh",
-    "Punjab",
-    "Uttarakhand",
-    "Uttar Pradesh",
-    "Haryana",
-    "Rajasthan",
-
-    // South
-    "Andhra Pradesh",
-    "Karnataka",
-    "Kerala",
-    "Tamil Nadu",
-    "Telangana",
-
-    // East
-    "Bihar",
-    "Jharkhand",
-    "Odisha",
-    "West Bengal",
-
-    // West
-    "Goa",
-    "Gujarat",
-    "Maharashtra",
-
-    // Central
-    "Madhya Pradesh",
-    "Chhattisgarh",
-
-    // North-East
-    "Arunachal Pradesh",
-    "Assam",
-    "Manipur",
-    "Meghalaya",
-    "Mizoram",
-    "Nagaland",
-    "Sikkim",
-    "Tripura",
+    "Himachal Pradesh", "Punjab", "Uttarakhand", "Uttar Pradesh", "Haryana", "Rajasthan",
+    "Andhra Pradesh", "Karnataka", "Kerala", "Tamil Nadu", "Telangana",
+    "Bihar", "Jharkhand", "Odisha", "West Bengal",
+    "Goa", "Gujarat", "Maharashtra",
+    "Madhya Pradesh", "Chhattisgarh",
+    "Arunachal Pradesh", "Assam", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Tripura",
   ];
 
   const regions = ["North", "South", "East", "West", "Central", "North-East"];
 
-  // Clear all filters
   const clearFilters = () => {
     setSearchTerm("");
     setStateFilter("");
@@ -196,6 +153,13 @@ const Customers: React.FC = () => {
   };
 
   const hasActiveFilters = searchTerm || stateFilter || regionFilter;
+
+  // Helper to build full address string
+  const buildAddressString = (parts: (string | null | undefined)[]) =>
+    parts.filter(Boolean).join(", ") || "—";
+
+  // Cast selected customer for extra fields
+  const sc = selectedCustomer as any;
 
   return (
     <div className="animate-fade-in">
@@ -229,7 +193,6 @@ const Customers: React.FC = () => {
       <div className="enterprise-card p-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row items-center gap-3">
-            {/* Search */}
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -239,8 +202,6 @@ const Customers: React.FC = () => {
                 className="pl-10 h-11"
               />
             </div>
-
-            {/* Filters */}
             <div className="flex gap-2 w-full sm:w-auto">
               <Select
                 value={stateFilter || "all"}
@@ -252,13 +213,10 @@ const Customers: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">All States</SelectItem>
                   {states.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-
               <Select
                 value={regionFilter || "all"}
                 onValueChange={(v) => setRegionFilter(v === "all" ? "" : v)}
@@ -269,32 +227,22 @@ const Customers: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">All Regions</SelectItem>
                   {regions.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Active filters info */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               {hasActiveFilters && (
                 <>
-                  <span className="text-xs text-muted-foreground">
-                    Filters:
-                  </span>
+                  <span className="text-xs text-muted-foreground">Filters:</span>
                   {searchTerm && (
                     <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full flex items-center gap-1">
                       Search: "{searchTerm}"
-                      <button
-                        onClick={() => {
-                          setSearchTerm("");
-                          loadCustomers(1, "");
-                        }}
-                      >
+                      <button onClick={() => { setSearchTerm(""); loadCustomers(1, ""); }}>
                         <X className="h-3 w-3" />
                       </button>
                     </span>
@@ -315,10 +263,7 @@ const Customers: React.FC = () => {
                       </button>
                     </span>
                   )}
-                  <button
-                    onClick={clearFilters}
-                    className="text-xs text-destructive hover:underline ml-1"
-                  >
+                  <button onClick={clearFilters} className="text-xs text-destructive hover:underline ml-1">
                     Clear all
                   </button>
                 </>
@@ -352,10 +297,7 @@ const Customers: React.FC = () => {
               <tbody>
                 {customers.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="text-center text-muted-foreground py-12"
-                    >
+                    <td colSpan={5} className="text-center text-muted-foreground py-12">
                       {hasActiveFilters
                         ? "No customers found matching your filters. Try different criteria."
                         : "No customers yet. Add your first customer."}
@@ -366,12 +308,8 @@ const Customers: React.FC = () => {
                     <tr key={customer.id}>
                       <td>
                         <div>
-                          <p className="font-medium text-foreground">
-                            {customer.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {customer.contactPerson}
-                          </p>
+                          <p className="font-medium text-foreground">{customer.name}</p>
+                          <p className="text-xs text-muted-foreground">{customer.contactPerson}</p>
                         </div>
                       </td>
                       <td className="hidden md:table-cell">
@@ -390,9 +328,7 @@ const Customers: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <span>
-                            {[customer.city, customer.state]
-                              .filter(Boolean)
-                              .join(", ") || "—"}
+                            {[customer.city, customer.state].filter(Boolean).join(", ") || "—"}
                           </span>
                         </div>
                       </td>
@@ -402,9 +338,7 @@ const Customers: React.FC = () => {
                             {customer.gstin}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-sm">
-                            —
-                          </span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </td>
                       <td>
@@ -418,9 +352,7 @@ const Customers: React.FC = () => {
                           </button>
                           {hasPermission("customer:edit") && (
                             <button
-                              onClick={() =>
-                                navigate(`/customers/edit/${customer.id}`)
-                              }
+                              onClick={() => navigate(`/customers/edit/${customer.id}`)}
                               className="action-btn"
                               title="Edit"
                             >
@@ -429,9 +361,7 @@ const Customers: React.FC = () => {
                           )}
                           {hasPermission("customer:delete") && (
                             <button
-                              onClick={() =>
-                                handleDelete(customer.id, customer.name)
-                              }
+                              onClick={() => handleDelete(customer.id, customer.name)}
                               className="action-btn action-btn-danger"
                               title="Delete"
                             >
@@ -450,7 +380,6 @@ const Customers: React.FC = () => {
           {/* Pagination */}
           {!loading && meta && totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              {/* Left: showing info */}
               <div className="text-xs text-muted-foreground hidden sm:block">
                 Showing{" "}
                 <span className="font-medium text-foreground">
@@ -461,15 +390,10 @@ const Customers: React.FC = () => {
                   {Math.min(currentPage * PAGE_SIZE, totalCount)}
                 </span>{" "}
                 of{" "}
-                <span className="font-medium text-foreground">
-                  {totalCount}
-                </span>{" "}
+                <span className="font-medium text-foreground">{totalCount}</span>{" "}
                 customers
               </div>
-
-              {/* Right: page controls */}
               <div className="flex items-center gap-1">
-                {/* First */}
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
@@ -478,8 +402,6 @@ const Customers: React.FC = () => {
                 >
                   <ChevronsLeft className="h-4 w-4" />
                 </button>
-
-                {/* Previous */}
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
@@ -488,8 +410,6 @@ const Customers: React.FC = () => {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-
-                {/* Page numbers */}
                 <div className="flex items-center gap-0.5 mx-1">
                   {(() => {
                     const pages: (number | string)[] = [];
@@ -506,10 +426,7 @@ const Customers: React.FC = () => {
                     }
                     return pages.map((page, idx) =>
                       page === "..." ? (
-                        <span
-                          key={`dots-${idx}`}
-                          className="w-8 text-center text-xs text-muted-foreground"
-                        >
+                        <span key={`dots-${idx}`} className="w-8 text-center text-xs text-muted-foreground">
                           ...
                         </span>
                       ) : (
@@ -528,20 +445,14 @@ const Customers: React.FC = () => {
                     );
                   })()}
                 </div>
-
-                {/* Next */}
                 <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Next page"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
-
-                {/* Last */}
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
@@ -556,78 +467,209 @@ const Customers: React.FC = () => {
         </div>
       )}
 
-      {/* Customer Detail Modal */}
+      {/* ═══════ Customer Detail Modal (Full Details) ═══════ */}
       {selectedCustomer && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setSelectedCustomer(null)}
-        >
+        <div className="modal-backdrop" onClick={() => setSelectedCustomer(null)}>
           <div
-            className="modal-content p-6"
+            className="modal-content p-0 max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">
-                {selectedCustomer.name}
-              </h2>
-              <button
-                onClick={() => setSelectedCustomer(null)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                  <span className="text-lg font-bold text-accent">
+                    {selectedCustomer.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {selectedCustomer.name}
+                  </h2>
+                  {selectedCustomer.contactPerson && (
+                    <p className="text-xs text-muted-foreground">
+                      c/o {selectedCustomer.contactPerson}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasPermission("customer:edit") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-xs h-8"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      navigate(`/customers/edit/${selectedCustomer.id}`);
+                    }}
+                  >
+                    <Edit className="h-3 w-3" /> Edit
+                  </Button>
+                )}
+                <button
+                  onClick={() => setSelectedCustomer(null)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
             </div>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    Contact Person
-                  </p>
-                  <p className="font-medium">
-                    {selectedCustomer.contactPerson || "—"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Mobile</p>
-                  <p className="font-medium">{selectedCustomer.mobile}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{selectedCustomer.email || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">GSTIN</p>
-                  <p className="font-medium font-mono text-sm bg-muted px-2 py-1 rounded inline-block">
-                    {selectedCustomer.gstin || "—"}
-                  </p>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* ── Basic Information ── */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Customer Name</p>
+                    <p className="font-medium text-sm">{selectedCustomer.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Contact Person</p>
+                    <p className="font-medium text-sm">
+                      {selectedCustomer.contactPerson || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Mobile</p>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                      {selectedCustomer.mobile}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      {selectedCustomer.email || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-xs text-muted-foreground">GSTIN</p>
+                    {selectedCustomer.gstin ? (
+                      <span className="font-mono text-xs bg-muted px-2.5 py-1 rounded inline-block">
+                        {selectedCustomer.gstin}
+                      </span>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">—</p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Address</p>
-                <p className="font-medium">{selectedCustomer.address || "—"}</p>
+
+              {/* ── Billing Address ── */}
+              <div className="bg-blue-50/50 dark:bg-blue-950/10 rounded-lg p-4 border border-blue-200/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+                    Billing Address
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-xs text-muted-foreground">Address Line</p>
+                    <p className="font-medium">
+                      {selectedCustomer.address || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-xs text-muted-foreground">Near / Landmark</p>
+                    <p className="font-medium">{sc?.landmark || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">City</p>
+                    <p className="font-medium">{selectedCustomer.city || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">State</p>
+                    <p className="font-medium">{selectedCustomer.state || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Pincode</p>
+                    <p className="font-medium">{sc?.pincode || "—"}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Region</p>
+                    <p className="font-medium">{selectedCustomer.region || "—"}</p>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">City</p>
-                  <p className="font-medium">{selectedCustomer.city || "—"}</p>
+
+              {/* ── Delivery Address ── */}
+              <div className="bg-green-50/50 dark:bg-green-950/10 rounded-lg p-4 border border-green-200/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <Truck className="h-4 w-4 text-green-600" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
+                    Delivery Address
+                  </h3>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">State</p>
-                  <p className="font-medium">{selectedCustomer.state || "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Region</p>
-                  <p className="font-medium">
-                    {selectedCustomer.region || "—"}
-                  </p>
-                </div>
+
+                {sc?.deliverySameAsBilling !== false ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-green-600 text-xs">✓</span>
+                    </div>
+                    <p className="text-muted-foreground font-medium">
+                      Same as billing address
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="space-y-1 col-span-2">
+                      <p className="text-xs text-muted-foreground">Address Line</p>
+                      <p className="font-medium">{sc?.deliveryAddress || "—"}</p>
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <p className="text-xs text-muted-foreground">Near / Landmark</p>
+                      <p className="font-medium">{sc?.deliveryLandmark || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">City</p>
+                      <p className="font-medium">{sc?.deliveryCity || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">State</p>
+                      <p className="font-medium">{sc?.deliveryState || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Pincode</p>
+                      <p className="font-medium">{sc?.deliveryPincode || "—"}</p>
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-border bg-muted/30">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedCustomer(null)}
+              >
+                Close
+              </Button>
+              {hasPermission("customer:edit") && (
+                <Button
+                  size="sm"
+                  className="btn-accent gap-1"
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    navigate(`/customers/edit/${selectedCustomer.id}`);
+                  }}
+                >
+                  <Edit className="h-3.5 w-3.5" /> Edit Customer
+                </Button>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Confirm Dialog */}
       <ConfirmDialog
         open={confirmDialog.open}
         onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}

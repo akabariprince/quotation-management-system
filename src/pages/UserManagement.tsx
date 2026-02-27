@@ -11,6 +11,7 @@ import {
   Filter,
   Users,
   KeyRound,
+  Percent,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -104,9 +105,10 @@ const UserManagement: React.FC = () => {
     displayName: "",
     description: "",
     permissions: [] as string[],
+    discountMin: 0,
+    discountMax: 100,
     isActive: true,
   });
-
   // Confirm dialog
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -339,6 +341,8 @@ const UserManagement: React.FC = () => {
         displayName: r.displayName,
         description: r.description || "",
         permissions: [...r.permissions],
+        discountMin: (r as any).discountMin ?? 0,
+        discountMax: (r as any).discountMax ?? 100,
         isActive: r.isActive,
       });
     } else {
@@ -348,6 +352,8 @@ const UserManagement: React.FC = () => {
         displayName: "",
         description: "",
         permissions: [],
+        discountMin: 0,
+        discountMax: 100,
         isActive: true,
       });
     }
@@ -766,7 +772,14 @@ const UserManagement: React.FC = () => {
                       {r.description}
                     </p>
                   )}
-
+                  {/* Discount range */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-1.5 bg-orange-100/50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded text-xs font-medium">
+                      <Percent className="h-3 w-3" />
+                      Discount: {(r as any).discountMin ?? 0}% –{" "}
+                      {(r as any).discountMax ?? 100}%
+                    </div>
+                  </div>
                   <p className="text-sm text-muted-foreground mb-3">
                     {r.permissions.length} permissions
                   </p>
@@ -1008,6 +1021,7 @@ const UserManagement: React.FC = () => {
       </Dialog>
 
       {/* ===== ROLE MODAL ===== */}
+      {/* ===== ROLE MODAL ===== */}
       <Dialog open={showRoleModal} onOpenChange={setShowRoleModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1015,7 +1029,9 @@ const UserManagement: React.FC = () => {
               {editingRole ? "Edit Role" : "Create New Role"}
             </DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4 py-4">
+            {/* Role Name (slug) */}
             {!editingRole && (
               <div className="space-y-2">
                 <Label>Role Name (slug) *</Label>
@@ -1035,6 +1051,8 @@ const UserManagement: React.FC = () => {
                 </p>
               </div>
             )}
+
+            {/* Display Name */}
             <div className="space-y-2">
               <Label>Display Name *</Label>
               <Input
@@ -1045,6 +1063,8 @@ const UserManagement: React.FC = () => {
                 placeholder="e.g. Supervisor"
               />
             </div>
+
+            {/* Description */}
             <div className="space-y-2">
               <Label>Description</Label>
               <Input
@@ -1054,6 +1074,96 @@ const UserManagement: React.FC = () => {
                 }
                 placeholder="What this role does"
               />
+            </div>
+
+            {/* ── Discount Range Section ── */}
+            <div className="border rounded-lg p-4 bg-orange-50/50 dark:bg-orange-950/10 border-orange-200/30 space-y-3">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-orange-600" />
+                <Label className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                  Discount Range
+                </Label>
+              </div>
+             
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">
+                    Min Discount (%)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={roleForm.discountMin}
+                      onChange={(e) => {
+                        const val = Math.max(
+                          0,
+                          Math.min(
+                            roleForm.discountMax,
+                            Number(e.target.value),
+                          ),
+                        );
+                        setRoleForm((p) => ({ ...p, discountMin: val }));
+                      }}
+                      className="h-9"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      disabled={editingRole?.name === "admin"}
+                    />
+                    <Percent className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">
+                    Max Discount (%)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={roleForm.discountMax}
+                      onChange={(e) => {
+                        const val = Math.max(
+                          roleForm.discountMin,
+                          Math.min(100, Number(e.target.value)),
+                        );
+                        setRoleForm((p) => ({ ...p, discountMax: val }));
+                      }}
+                      className="h-9"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      disabled={editingRole?.name === "admin"}
+                    />
+                    <Percent className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual range bar */}
+              <div className="space-y-1">
+                <div className="h-2 bg-muted rounded-full overflow-hidden relative">
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full absolute"
+                    style={{
+                      left: `${roleForm.discountMin}%`,
+                      width: `${roleForm.discountMax - roleForm.discountMin}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0%</span>
+                  <span className="font-semibold text-orange-600">
+                    {roleForm.discountMin}% — {roleForm.discountMax}%
+                  </span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              {editingRole?.name === "admin" && (
+                <p className="text-[10px] text-amber-600 font-medium">
+                  Admin role always has full discount range (0% – 100%)
+                </p>
+              )}
             </div>
 
             {/* Permissions */}
@@ -1069,7 +1179,6 @@ const UserManagement: React.FC = () => {
                   const someSelected = perms.some((p) =>
                     roleForm.permissions.includes(p),
                   );
-
                   return (
                     <div key={group} className="border rounded-lg p-3 mb-2">
                       <label className="flex items-center gap-2 mb-2 cursor-pointer">
@@ -1106,6 +1215,7 @@ const UserManagement: React.FC = () => {
                 })}
             </div>
           </div>
+
           <DialogFooter>
             <Button
               variant="outline"

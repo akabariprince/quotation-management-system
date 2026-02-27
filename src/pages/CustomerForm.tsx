@@ -1,10 +1,12 @@
+// src/pages/CustomerForm.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Truck, Check } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -15,7 +17,6 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Form skeleton
 const FormSkeleton = () => (
   <div className="space-y-6 animate-pulse">
     <div className="page-header flex items-center justify-between">
@@ -32,45 +33,35 @@ const FormSkeleton = () => (
       <div className="form-section">
         <div className="h-5 bg-muted rounded w-36 mb-4" />
         <div className="form-grid">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className={`space-y-2 ${i === 4 ? "md:col-span-2 lg:col-span-3" : ""}`}
-            >
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="space-y-2">
               <div className="h-4 bg-muted rounded w-24" />
               <div className="h-11 bg-muted rounded" />
             </div>
           ))}
         </div>
       </div>
-      <div className="form-section mt-6">
-        <div className="h-5 bg-muted rounded w-40 mb-4" />
-        <div className="form-grid">
-          <div className="space-y-2 md:col-span-2 lg:col-span-3">
-            <div className="h-4 bg-muted rounded w-24" />
-            <div className="h-11 bg-muted rounded" />
-          </div>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-4 bg-muted rounded w-16" />
-              <div className="h-11 bg-muted rounded" />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex gap-4 mt-6">
-        <div className="h-10 bg-muted rounded w-24" />
-        <div className="h-10 bg-muted rounded w-36" />
-      </div>
     </div>
   </div>
 );
+
+const states = [
+  "Himachal Pradesh", "Punjab", "Uttarakhand", "Uttar Pradesh", "Haryana", "Rajasthan",
+  "Andhra Pradesh", "Karnataka", "Kerala", "Tamil Nadu", "Telangana",
+  "Bihar", "Jharkhand", "Odisha", "West Bengal",
+  "Goa", "Gujarat", "Maharashtra",
+  "Madhya Pradesh", "Chhattisgarh",
+  "Arunachal Pradesh", "Assam", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Tripura",
+];
+
+const regions = ["North", "South", "East", "West", "Central", "North-East"];
 
 const CustomerForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { hasPermission } = useAuth();
   const { fetchCustomerById, createCustomer, updateCustomer } = useCustomers();
+
   const requiredPermission = id ? "customer:edit" : "customer:create";
 
   useEffect(() => {
@@ -79,65 +70,32 @@ const CustomerForm: React.FC = () => {
       navigate("/customers");
     }
   }, [requiredPermission]);
+
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     mobile: "",
     email: "",
-    address: "",
-    gstin: "",
     contactPerson: "",
+    gstin: "",
+    // Billing address
+    address: "",
+    landmark: "",
     city: "",
     state: "",
     region: "",
+    pincode: "",
+    // Delivery address
+    deliverySameAsBilling: true,
+    deliveryAddress: "",
+    deliveryLandmark: "",
+    deliveryCity: "",
+    deliveryState: "",
+    deliveryPincode: "",
   });
 
-  const states = [
-    // North
-    "Himachal Pradesh",
-    "Punjab",
-    "Uttarakhand",
-    "Uttar Pradesh",
-    "Haryana",
-    "Rajasthan",
-
-    // South
-    "Andhra Pradesh",
-    "Karnataka",
-    "Kerala",
-    "Tamil Nadu",
-    "Telangana",
-
-    // East
-    "Bihar",
-    "Jharkhand",
-    "Odisha",
-    "West Bengal",
-
-    // West
-    "Goa",
-    "Gujarat",
-    "Maharashtra",
-
-    // Central
-    "Madhya Pradesh",
-    "Chhattisgarh",
-
-    // North-East
-    "Arunachal Pradesh",
-    "Assam",
-    "Manipur",
-    "Meghalaya",
-    "Mizoram",
-    "Nagaland",
-    "Sikkim",
-    "Tripura",
-  ];
-
-  const regions = ["North", "South", "East", "West", "Central", "North-East"];
-
-  // Load existing customer for edit
   useEffect(() => {
     const loadCustomer = async () => {
       if (id) {
@@ -148,12 +106,21 @@ const CustomerForm: React.FC = () => {
               name: customer.name || "",
               mobile: customer.mobile || "",
               email: customer.email || "",
-              address: customer.address || "",
-              gstin: customer.gstin || "",
               contactPerson: customer.contactPerson || "",
+              gstin: customer.gstin || "",
+              address: customer.address || "",
+              landmark: (customer as any).landmark || "",
               city: customer.city || "",
               state: customer.state || "",
               region: customer.region || "",
+              pincode: (customer as any).pincode || "",
+              deliverySameAsBilling:
+                (customer as any).deliverySameAsBilling !== false,
+              deliveryAddress: (customer as any).deliveryAddress || "",
+              deliveryLandmark: (customer as any).deliveryLandmark || "",
+              deliveryCity: (customer as any).deliveryCity || "",
+              deliveryState: (customer as any).deliveryState || "",
+              deliveryPincode: (customer as any).deliveryPincode || "",
             });
           } else {
             toast.error("Customer not found");
@@ -169,8 +136,24 @@ const CustomerForm: React.FC = () => {
     loadCustomer();
   }, [id]);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDeliverySameToggle = (checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      deliverySameAsBilling: checked,
+      ...(checked
+        ? {
+            deliveryAddress: "",
+            deliveryLandmark: "",
+            deliveryCity: "",
+            deliveryState: "",
+            deliveryPincode: "",
+          }
+        : {}),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,20 +163,14 @@ const CustomerForm: React.FC = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-
-    // Mobile validation
     if (formData.mobile.replace(/\D/g, "").length < 10) {
       toast.error("Please enter a valid mobile number");
       return;
     }
-
-    // Email validation
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       toast.error("Please enter a valid email address");
       return;
     }
-
-    // GSTIN validation
     if (formData.gstin && formData.gstin.length !== 15) {
       toast.error("GSTIN must be exactly 15 characters");
       return;
@@ -201,22 +178,41 @@ const CustomerForm: React.FC = () => {
 
     setSaving(true);
     try {
-      const payload = {
-        ...formData,
+      const payload: any = {
+        name: formData.name,
+        mobile: formData.mobile,
         email: formData.email || null,
-        address: formData.address || null,
-        gstin: formData.gstin || null,
         contactPerson: formData.contactPerson || null,
+        gstin: formData.gstin || null,
+        address: formData.address || null,
+        landmark: formData.landmark || null,
         city: formData.city || null,
         state: formData.state || null,
         region: formData.region || null,
+        pincode: formData.pincode || null,
+        deliverySameAsBilling: formData.deliverySameAsBilling,
+        deliveryAddress: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryAddress || null,
+        deliveryLandmark: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryLandmark || null,
+        deliveryCity: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryCity || null,
+        deliveryState: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryState || null,
+        deliveryPincode: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryPincode || null,
       };
 
       if (id) {
         await updateCustomer(id, payload);
         toast.success("Customer updated successfully");
       } else {
-        await createCustomer(payload as any);
+        await createCustomer(payload);
         toast.success("Customer added successfully");
       }
       navigate("/customers");
@@ -227,9 +223,7 @@ const CustomerForm: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <FormSkeleton />;
-  }
+  if (loading) return <FormSkeleton />;
 
   return (
     <div className="animate-fade-in">
@@ -262,7 +256,8 @@ const CustomerForm: React.FC = () => {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="max-w-3xl">
+      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+        {/* ──── Basic Information ──── */}
         <div className="form-section">
           <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
           <div className="form-grid">
@@ -320,16 +315,29 @@ const CustomerForm: React.FC = () => {
           </div>
         </div>
 
-        <div className="form-section mt-6">
-          <h2 className="text-lg font-semibold mb-4">Address Information</h2>
+        {/* ──── Billing Address ──── */}
+        <div className="form-section">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="h-5 w-5 text-accent" />
+            <h2 className="text-lg font-semibold">Billing Address</h2>
+          </div>
           <div className="form-grid">
             <div className="space-y-2 md:col-span-2 lg:col-span-3">
-              <Label htmlFor="address">Full Address</Label>
+              <Label htmlFor="address">Address Line *</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleChange("address", e.target.value)}
-                placeholder="Enter complete address"
+                placeholder="Street address, building, flat number"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2 lg:col-span-3">
+              <Label htmlFor="landmark">Near / Landmark</Label>
+              <Input
+                id="landmark"
+                value={formData.landmark}
+                onChange={(e) => handleChange("landmark", e.target.value)}
+                placeholder="Near landmark, area"
               />
             </div>
             <div className="space-y-2">
@@ -345,33 +353,43 @@ const CustomerForm: React.FC = () => {
               <Label htmlFor="state">State</Label>
               <Select
                 value={formData.state}
-                onValueChange={(value) => handleChange("state", value)}
+                onValueChange={(v) => handleChange("state", v)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
-                  {states.map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {state}
+                  {states.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="pincode">Pincode</Label>
+              <Input
+                id="pincode"
+                value={formData.pincode}
+                onChange={(e) => handleChange("pincode", e.target.value)}
+                placeholder="411014"
+                maxLength={6}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="region">Region</Label>
               <Select
                 value={formData.region}
-                onValueChange={(value) => handleChange("region", value)}
+                onValueChange={(v) => handleChange("region", v)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select region" />
                 </SelectTrigger>
                 <SelectContent>
-                  {regions.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {region}
+                  {regions.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -380,7 +398,119 @@ const CustomerForm: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex gap-4 mt-6">
+        {/* ──── Delivery Address ──── */}
+        <div className="form-section">
+          <div className="flex items-center gap-2 mb-4">
+            <Truck className="h-5 w-5 text-accent" />
+            <h2 className="text-lg font-semibold">Delivery Address</h2>
+          </div>
+
+          {/* Same as billing checkbox */}
+          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+            <Checkbox
+              id="deliverySameAsBilling"
+              checked={formData.deliverySameAsBilling}
+              onCheckedChange={(checked) =>
+                handleDeliverySameToggle(checked as boolean)
+              }
+            />
+            <Label
+              htmlFor="deliverySameAsBilling"
+              className="text-sm font-medium cursor-pointer flex items-center gap-2"
+            >
+              <Check className="h-4 w-4 text-success" />
+              Delivery address is same as billing address
+            </Label>
+          </div>
+
+          {!formData.deliverySameAsBilling && (
+            <div className="form-grid">
+              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="deliveryAddress">Address Line</Label>
+                <Input
+                  id="deliveryAddress"
+                  value={formData.deliveryAddress}
+                  onChange={(e) =>
+                    handleChange("deliveryAddress", e.target.value)
+                  }
+                  placeholder="Delivery street address"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="deliveryLandmark">Near / Landmark</Label>
+                <Input
+                  id="deliveryLandmark"
+                  value={formData.deliveryLandmark}
+                  onChange={(e) =>
+                    handleChange("deliveryLandmark", e.target.value)
+                  }
+                  placeholder="Near landmark"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryCity">City</Label>
+                <Input
+                  id="deliveryCity"
+                  value={formData.deliveryCity}
+                  onChange={(e) => handleChange("deliveryCity", e.target.value)}
+                  placeholder="Delivery city"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryState">State</Label>
+                <Select
+                  value={formData.deliveryState}
+                  onValueChange={(v) => handleChange("deliveryState", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {states.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryPincode">Pincode</Label>
+                <Input
+                  id="deliveryPincode"
+                  value={formData.deliveryPincode}
+                  onChange={(e) =>
+                    handleChange("deliveryPincode", e.target.value)
+                  }
+                  placeholder="411014"
+                  maxLength={6}
+                />
+              </div>
+            </div>
+          )}
+
+          {formData.deliverySameAsBilling && formData.address && (
+            <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">
+                Delivery will use billing address:
+              </p>
+              <p>
+                {[
+                  formData.address,
+                  formData.landmark,
+                  formData.city,
+                  formData.state,
+                  formData.pincode,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-4">
           <Button
             type="button"
             variant="outline"

@@ -248,29 +248,36 @@ const PDFPreview: React.FC = () => {
   const items = project.items || [];
 
   // ─── Company Header (reusable inline) ─────────────────────────────────
-
   const CompanyHeader = ({ rightLabel }: { rightLabel: string }) => (
     <div style={{ display: "flex", borderBottom: border }}>
-      <div style={{ flex: 1, padding: "16px 20px", borderRight: border }}>
-        <div
-          style={{
-            fontSize: "28px",
-            fontWeight: 800,
-            letterSpacing: "-1px",
-            lineHeight: 1,
-          }}
-        >
-          ecstatics<span>.</span>
+      <div
+        style={{
+          flex: 1,
+          padding: "12px 20px",
+          borderRight: border,
+          // display: "flex",
+          alignItems: "center",
+          // gap: "12px",
+        }}
+      >
+        {/* Logo */}
+        <div style={{ flexShrink: 0 }}>
+          <img
+            src="/logo.png"
+            alt="Ecstatics Logo"
+            style={{
+              height: "52px",
+              width: "auto",
+              objectFit: "contain",
+            }}
+            crossOrigin="anonymous"
+          />
         </div>
-        <div
-          style={{
-            fontSize: "9px",
-            marginTop: "6px",
-            color: "#333",
-            lineHeight: 1.5,
-          }}
-        >
-          <div>Ecstatics Spaces India Pvt. Ltd.</div>
+        {/* Company Info */}
+        <div style={{ fontSize: "9px", color: "#333", lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 600 }}>
+            Ecstatics Spaces India Pvt. Ltd.
+          </div>
           <div>3120, Ganga Trueno, Airport Road,</div>
           <div>Viman Nagar, Pune</div>
           <div style={{ marginTop: "2px" }}>GST No: 27AAFCE9942B1ZM</div>
@@ -483,7 +490,11 @@ const PDFPreview: React.FC = () => {
             <ArrowLeft className="h-4 w-4" />
             Back to Project
           </Button>
-          <Button onClick={() => downloadProjectPDF(project.id)} className="btn-accent gap-2" size="sm">
+          <Button
+            onClick={() => downloadProjectPDF(project.id)}
+            className="btn-accent gap-2"
+            size="sm"
+          >
             <Printer className="h-4 w-4" />
             Download PDF
           </Button>
@@ -630,7 +641,7 @@ const PDFPreview: React.FC = () => {
                             fontWeight: 500,
                           }}
                         >
-                          {item.quotationCode}
+                          {item.quotationName + "  (" + item.quotationCode + ")"}
                         </td>
                         <td
                           style={{
@@ -966,7 +977,7 @@ const PDFPreview: React.FC = () => {
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    Reference Image
+                    {item.quotationName}
                   </div>
                   <div style={{ display: "flex" }}>
                     <div
@@ -1139,7 +1150,9 @@ const PDFPreview: React.FC = () => {
                                     borderBottom: borderThin,
                                   }}
                                 >
-                                  :
+                                  {(item as any).quotation.length
+                                    ? (item as any).quotation.length + " (mm)"
+                                    : "—"}
                                 </td>
                               </tr>
                               <tr>
@@ -1158,7 +1171,9 @@ const PDFPreview: React.FC = () => {
                                     borderBottom: borderThin,
                                   }}
                                 >
-                                  :
+                                  {(item as any).quotation.width
+                                    ? (item as any).quotation.width + " (mm)"
+                                    : "—"}
                                 </td>
                               </tr>
                               <tr>
@@ -1169,7 +1184,7 @@ const PDFPreview: React.FC = () => {
                                     color: "#555",
                                   }}
                                 >
-                                  Height
+                                  Special Note
                                 </td>
                                 <td
                                   style={{
@@ -1177,7 +1192,7 @@ const PDFPreview: React.FC = () => {
                                     borderBottom: borderThin,
                                   }}
                                 >
-                                  :
+                                  {item.specialNote || "—"}
                                 </td>
                               </tr>
                             </>
@@ -1495,27 +1510,33 @@ const PDFPreview: React.FC = () => {
               {/* Header */}
               <div style={{ display: "flex", borderBottom: border }}>
                 <div
-                  style={{ flex: 1, padding: "16px 20px", borderRight: border }}
+                  style={{
+                    flex: 1,
+                    padding: "12px 20px",
+                    borderRight: border,
+                    // display: "flex",
+                    alignItems: "center",
+                    // gap: "12px",
+                  }}
                 >
-                  <div
-                    style={{
-                      fontSize: "28px",
-                      fontWeight: 800,
-                      letterSpacing: "-1px",
-                      lineHeight: 1,
-                    }}
-                  >
-                    ecstatics<span>.</span>
+                  <div style={{ flexShrink: 0 }}>
+                    <img
+                      src="/logo.png"
+                      alt="Ecstatics Logo"
+                      style={{
+                        height: "52px",
+                        width: "auto",
+                        objectFit: "contain",
+                      }}
+                      crossOrigin="anonymous"
+                    />
                   </div>
                   <div
-                    style={{
-                      fontSize: "9px",
-                      marginTop: "6px",
-                      color: "#333",
-                      lineHeight: 1.5,
-                    }}
+                    style={{ fontSize: "9px", color: "#333", lineHeight: 1.5 }}
                   >
-                    <div>Ecstatics Spaces India Pvt. Ltd.</div>
+                    <div style={{ fontWeight: 600 }}>
+                      Ecstatics Spaces India Pvt. Ltd.
+                    </div>
                   </div>
                 </div>
                 <div

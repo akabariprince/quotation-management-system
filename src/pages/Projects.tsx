@@ -1,3 +1,4 @@
+// src/pages/Projects.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -48,7 +49,6 @@ const Projects: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Confirm dialog
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -65,7 +65,6 @@ const Projects: React.FC = () => {
 
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch data
   const loadProjects = useCallback(
     (page?: number, search?: string, status?: string) => {
       const p = page ?? currentPage;
@@ -81,15 +80,13 @@ const Projects: React.FC = () => {
       if (st && st !== "all") params.status = st;
       fetchProjects(params);
     },
-    [currentPage, searchTerm, statusFilter, fetchProjects]
+    [currentPage, searchTerm, statusFilter, fetchProjects],
   );
 
-  // Initial load
   useEffect(() => {
     loadProjects(1);
   }, []);
 
-  // Reload on filter/page change
   useEffect(() => {
     loadProjects(currentPage);
   }, [currentPage]);
@@ -99,7 +96,6 @@ const Projects: React.FC = () => {
     loadProjects(1, searchTerm, statusFilter);
   }, [statusFilter]);
 
-  // Debounced search
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -174,7 +170,6 @@ const Projects: React.FC = () => {
   const totalPages = meta?.totalPages || 1;
   const totalCount = meta?.totalCount || 0;
 
-  // Page numbers
   const getPageNumbers = (): (number | string)[] => {
     const pages: (number | string)[] = [];
     if (totalPages <= 7) {
@@ -225,7 +220,7 @@ const Projects: React.FC = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by project number or customer name..."
+              placeholder="Search by project number, project name, or customer..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 h-11"
@@ -261,9 +256,9 @@ const Projects: React.FC = () => {
               <thead>
                 <tr>
                   <th>Project No</th>
+                  <th className="hidden lg:table-cell">Project Name</th>
                   <th className="hidden sm:table-cell">Customer</th>
                   <th className="hidden md:table-cell">Date</th>
-                  {/* <th className="hidden lg:table-cell">Items</th> */}
                   <th>Total Value</th>
                   <th className="hidden sm:table-cell">Status</th>
                   <th>Actions</th>
@@ -288,10 +283,30 @@ const Projects: React.FC = () => {
                       <td>
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-accent flex-shrink-0" />
-                          <span className="font-medium">
-                            {project.projectNo}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="font-medium block truncate">
+                              {project.projectNo}
+                            </span>
+                            {/* Show project name on mobile under project no */}
+                            {(project as any).projectName && (
+                              <span className="text-xs text-muted-foreground block truncate lg:hidden">
+                                {(project as any).projectName}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                      </td>
+                      {/* Project Name column - visible on lg+ */}
+                      <td className="hidden lg:table-cell">
+                        {(project as any).projectName ? (
+                          <span className="text-sm font-medium truncate block max-w-[200px]">
+                            {(project as any).projectName}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className="hidden sm:table-cell">
                         <div>
@@ -306,11 +321,6 @@ const Projects: React.FC = () => {
                       <td className="hidden md:table-cell text-muted-foreground">
                         {formatDate(project.date)}
                       </td>
-                      {/* <td className="hidden lg:table-cell">
-                        <span className="bg-muted px-2 py-1 rounded text-xs font-medium">
-                          —
-                        </span>
-                      </td> */}
                       <td className="font-semibold">
                         {formatCurrency(project.grandTotalWithGst)}
                       </td>
@@ -323,9 +333,7 @@ const Projects: React.FC = () => {
                       <td>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() =>
-                              navigate(`/projects/${project.id}`)
-                            }
+                            onClick={() => navigate(`/projects/${project.id}`)}
                             className="action-btn"
                             title="View"
                           >
@@ -408,9 +416,7 @@ const Projects: React.FC = () => {
                   <ChevronsLeft className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.max(1, p - 1))
-                  }
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                   className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Previous page"
@@ -438,7 +444,7 @@ const Projects: React.FC = () => {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
                 </div>
                 <button
@@ -465,12 +471,9 @@ const Projects: React.FC = () => {
         </div>
       )}
 
-      {/* Confirm Dialog */}
       <ConfirmDialog
         open={confirmDialog.open}
-        onClose={() =>
-          setConfirmDialog((prev) => ({ ...prev, open: false }))
-        }
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
         onConfirm={confirmDialog.onConfirm}
         title={confirmDialog.title}
         description={confirmDialog.description}

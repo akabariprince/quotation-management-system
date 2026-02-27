@@ -1,18 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* ═══ 4-Color Palette ═══
-       #FFFDF1 = hsl(51, 51%, 97%)  — Cream
-       #FFCE99 = hsl(31, 100%, 80%)  — Peach
-       #FF9644 = hsl(26, 100%, 63%)  — Orange
-       #562F00 = hsl(33, 100%, 17%)  — Dark Brown
+    /* ═══ Palette ═══
+       Cream   #FFFDF1  hsl(51,51%,97%)
+       Peach   #FFCE99  hsl(31,100%,80%)
+       Orange  #e06b0a  hsl(27,91%,46%)   ← main accent
+       Brown   #562F00  hsl(33,100%,17%)
     */
-
     --background: 0 0% 100%;
     --foreground: 33 100% 17%;
 
@@ -28,42 +26,42 @@
     --secondary: 31 100% 80%;
     --secondary-foreground: 33 100% 17%;
 
-    --accent: 26 100% 63%;
+    /* accent → #e06b0a */
+    --accent: 27 91% 46%;
     --accent-foreground: 0 0% 100%;
 
     --muted: 31 50% 93%;
     --muted-foreground: 33 50% 42%;
 
-    --destructive: 26 100% 50%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 33 100% 17%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 26 100% 63%;
+    --warning: 27 91% 46%;
     --warning-foreground: 33 100% 17%;
 
     --border: 33 30% 82%;
     --input: 33 30% 82%;
-    --ring: 26 100% 63%;
+    --ring: 27 91% 46%;
 
-    --radius: 0.625rem;
+    --radius: 0;
 
-    /* Sidebar */
+    /* Sidebar (kept for compatibility) */
     --sidebar-background: 48 80% 99%;
     --sidebar-foreground: 33 100% 17%;
     --sidebar-primary: 33 100% 17%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 26 100% 63%;
+    --sidebar-accent: 27 91% 46%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 33 30% 82%;
-    --sidebar-ring: 26 100% 63%;
+    --sidebar-ring: 27 91% 46%;
 
     /* Custom */
     --header-bg: 33 100% 17%;
     --table-header: 31 50% 93%;
     --table-border: 33 30% 82%;
-    --card-top-border: 33 100% 17%;
   }
 
   .dark {
@@ -82,35 +80,33 @@
     --secondary: 31 60% 30%;
     --secondary-foreground: 0 0% 100%;
 
-    --accent: 26 100% 55%;
+    --accent: 27 91% 50%;
     --accent-foreground: 0 0% 100%;
 
     --muted: 33 60% 16%;
     --muted-foreground: 31 40% 60%;
 
-    --destructive: 26 100% 45%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 31 100% 80%;
     --success-foreground: 33 100% 17%;
 
-    --warning: 26 100% 55%;
+    --warning: 27 91% 50%;
     --warning-foreground: 33 100% 17%;
 
     --border: 33 60% 20%;
     --input: 33 60% 20%;
-    --ring: 26 100% 55%;
+    --ring: 27 91% 50%;
 
     --sidebar-background: 33 80% 10%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
     --sidebar-primary-foreground: 33 100% 17%;
-    --sidebar-accent: 26 100% 55%;
+    --sidebar-accent: 27 91% 50%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 33 60% 20%;
-    --sidebar-ring: 26 100% 55%;
-
-    --card-top-border: 26 100% 55%;
+    --sidebar-ring: 27 91% 50%;
   }
 }
 
@@ -119,7 +115,7 @@
     @apply border-border;
   }
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -128,29 +124,31 @@
 }
 
 @layer components {
-  /* ═══ Enterprise Card — with top border ═══ */
+  /* ═══ Enterprise Card — NO top border, simple hover ═══ */
   .enterprise-card {
-    @apply bg-card rounded-xl border border-border shadow-sm
-           hover:shadow-md transition-shadow duration-200
-           relative overflow-hidden;
-    border-top: 3px solid hsl(var(--card-top-border));
+    @apply bg-card rounded-none border border-border shadow-sm
+           transition-all duration-200 relative overflow-hidden;
+  }
+  .enterprise-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
 
-  /* Card without top border accent */
+  /* Flat variant */
   .enterprise-card-flat {
-    @apply bg-card rounded-xl border border-border shadow-sm
-           hover:shadow-md transition-shadow duration-200;
+    @apply bg-card rounded-none border border-border shadow-sm
+           transition-all duration-200;
+  }
+  .enterprise-card-flat:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
 
-  /* ═══ Stat Card — top accent bar ═══ */
+  /* ═══ Stat Card ═══ */
   .stat-card {
     @apply enterprise-card p-6 flex flex-col gap-3;
   }
-
   .stat-value {
     @apply text-3xl font-bold text-foreground tracking-tight;
   }
-
   .stat-label {
     @apply text-sm text-muted-foreground font-medium;
   }
@@ -159,100 +157,84 @@
   .enterprise-table {
     @apply w-full border-collapse text-sm;
   }
-
   .enterprise-table thead {
     @apply sticky top-0 z-10;
   }
-
   .enterprise-table th {
     @apply bg-muted text-left text-xs font-semibold uppercase tracking-wider
            px-4 py-3 text-muted-foreground border-b-2 border-primary/20;
   }
-
   .enterprise-table td {
     @apply px-4 py-3 border-b border-border text-foreground;
   }
-
   .enterprise-table tbody tr:nth-child(even) {
     @apply bg-muted/20;
   }
-
   .enterprise-table tbody tr {
     @apply transition-colors duration-150;
   }
-
   .enterprise-table tbody tr:hover {
     @apply bg-secondary/20;
   }
-
   .table-container {
-    @apply overflow-x-auto rounded-xl;
+    @apply overflow-x-auto rounded-none;
   }
 
   /* ═══ PDF Styles ═══ */
   .pdf-container {
-    font-family: 'Inter', system-ui, sans-serif;
-    color: #562F00;
-    background: #FFFDF1;
+    font-family: "Inter", system-ui, sans-serif;
+    color: #562f00;
+    background: #fffdf1;
   }
-
   .pdf-page {
     width: 210mm;
     min-height: 297mm;
-    background: #FFFDF1;
+    background: #fffdf1;
     padding: 20mm;
     margin: 0 auto 2rem;
     box-shadow: 0 4px 20px rgba(86, 47, 0, 0.15);
     page-break-after: always;
   }
-
   .pdf-table {
     width: 100%;
     border-collapse: collapse;
-    border: 1px solid #562F00;
+    border: 1px solid #562f00;
   }
-
   .pdf-table th,
   .pdf-table td {
-    border: 1px solid #562F00;
+    border: 1px solid #562f00;
     padding: 8px 12px;
     font-size: 12px;
     text-align: left;
   }
-
   .pdf-table th {
-    background-color: #FFCE99;
+    background-color: #ffce99;
     font-weight: 600;
-    color: #562F00;
+    color: #562f00;
   }
 
   /* ═══ Form Sections ═══ */
   .form-section {
     @apply enterprise-card p-6;
   }
-
   .form-section-title {
     @apply text-lg font-semibold text-foreground mb-4 pb-3 border-b border-border;
   }
-
   .form-grid {
     @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
   }
-
   .form-group {
     @apply space-y-2;
   }
 
-  /* ═══ Navigation — Bigger items ═══ */
+  /* ═══ Navigation — kept for compatibility ═══ */
   .nav-item {
-    @apply flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium
+    @apply flex items-center gap-3 px-4 py-3.5 rounded-none text-sm font-medium
            transition-all duration-200;
   }
-
   .nav-item-active {
     @apply bg-accent text-accent-foreground shadow-md;
   }
-
   .nav-item-inactive {
     @apply text-muted-foreground hover:bg-secondary/30 hover:text-foreground;
   }
@@ -261,75 +243,63 @@
   .page-header {
     @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6;
   }
-
   .page-title {
     @apply text-2xl font-semibold text-foreground tracking-tight;
   }
 
   /* ═══ Button Variants ═══ */
   .btn-accent {
-    @apply bg-accent text-accent-foreground hover:bg-accent/90 shadow-md
-           font-semibold;
+    @apply bg-accent text-accent-foreground hover:bg-accent/90 shadow-md font-semibold;
   }
-
   .btn-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary/90;
   }
-
   .btn-outline-destructive {
     @apply border border-destructive text-destructive hover:bg-destructive/10;
   }
 
   /* ═══ Input Fields ═══ */
   .input-field {
-    @apply w-full h-11 px-3 py-2 text-sm border border-input rounded-xl
-           bg-background focus:outline-none focus:ring-2 focus:ring-accent
-           focus:border-transparent transition-all;
+    @apply w-full h-11 px-3 py-2 text-sm border border-input rounded-none bg-background
+           focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all;
   }
-
   .select-field {
-    @apply w-full h-11 px-3 py-2 text-sm border border-input rounded-xl
-           bg-background focus:outline-none focus:ring-2 focus:ring-accent
-           focus:border-transparent;
+    @apply w-full h-11 px-3 py-2 text-sm border border-input rounded-none bg-background
+           focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent;
   }
 
-  /* ═══ Badges — Theme colors only ═══ */
+  /* ═══ Badges ═══ */
   .badge-success {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs
-           font-medium bg-primary/10 text-primary border border-primary/20;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-xs font-medium
+           bg-primary/10 text-primary border border-primary/20;
   }
-
   .badge-warning {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs
-           font-medium bg-accent/15 text-accent border border-accent/20;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-xs font-medium
+           bg-accent/15 text-accent border border-accent/20;
   }
-
   .badge-error {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs
-           font-medium bg-destructive/10 text-destructive border border-destructive/20;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-xs font-medium
+           bg-destructive/10 text-destructive border border-destructive/20;
   }
-
   .badge-default {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs
-           font-medium bg-secondary/40 text-primary border border-secondary/50;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-xs font-medium
+           bg-secondary/40 text-primary border border-secondary/50;
   }
 
   /* ═══ OTP Input ═══ */
   .otp-input {
-    @apply w-12 h-12 text-center text-xl font-semibold border-2 border-input
-           rounded-xl focus:outline-none focus:ring-2 focus:ring-accent
-           focus:border-accent bg-background;
+    @apply w-12 h-12 text-center text-xl font-semibold border-2 border-input rounded-none
+           focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent bg-background;
   }
 
   /* ═══ Modal ═══ */
   .modal-backdrop {
-    @apply  fixed inset-0 bg-primary/20 backdrop-blur-sm z-50 mt-0
-           flex items-center justify-center p-4;  
+    @apply fixed inset-0 bg-primary/20 backdrop-blur-sm z-50 mt-0
+           flex items-center justify-center p-4;
   }
-
   .modal-content {
-    @apply bg-card rounded-2xl shadow-2xl w-full max-w-lg animate-scale-in
-           border-t-4 border-t-primary;
+    @apply bg-card rounded-none shadow-2xl w-full max-w-lg animate-scale-in
+           border-t-4 border-t-accent;
   }
 
   /* ═══ Scrollable Content ═══ */
@@ -340,13 +310,11 @@
 
   /* ═══ Action Buttons ═══ */
   .action-btn {
-    @apply p-2.5 rounded-xl transition-colors duration-150;
+    @apply p-2.5 rounded-none transition-colors duration-150;
   }
-
   .action-btn:hover {
     @apply bg-secondary/30;
   }
-
   .action-btn-danger:hover {
     @apply bg-destructive/10;
   }
@@ -356,45 +324,68 @@
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out;
   }
-
   .animate-scale-in {
     animation: scaleIn 0.2s ease-out;
   }
-
   .animate-slide-in {
     animation: slideIn 0.3s ease-out;
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-
   @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to   { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
-
   @keyframes slideIn {
-    from { transform: translateX(-100%); }
-    to   { transform: translateX(0); }
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
 
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
   }
-
-  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: hsl(var(--border));
-    border-radius: 3px;
+    border-radius: 0;
+  }
+
+  /* Force no border radius globally */
+  .no-radius,
+  .no-radius * {
+    border-radius: 0 !important;
   }
 }
 
 @media print {
-  body { overflow: visible !important; }
+  body {
+    overflow: visible !important;
+  }
   .pdf-page {
     box-shadow: none !important;
     margin: 0 !important;
@@ -402,15 +393,24 @@
     page-break-after: always;
     page-break-inside: avoid;
   }
-  .no-print { display: none !important; }
-  @page { size: A4; margin: 0; }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 0;
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
-  border-radius: 9999px;
+  border-radius: 0;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));

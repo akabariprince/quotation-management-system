@@ -1,11 +1,10 @@
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import AdminLayout from './AdminLayout';
-import RoleLayout from './RoleLayout';
-import { Loader2 } from 'lucide-react';
+import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import AdminLayout from "./AdminLayout";
+import { Loader2 } from "lucide-react";
 
 const MainLayout: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,9 +17,7 @@ const MainLayout: React.FC = () => {
     );
   }
 
-  const isAdmin = user?.role?.name === 'admin';
-
-  return isAdmin ? <AdminLayout /> : <RoleLayout />;
+  return <AdminLayout />;
 };
 
 export default MainLayout;

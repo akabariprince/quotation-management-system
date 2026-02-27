@@ -5,10 +5,14 @@ export interface Role {
   id: string;
   name: string;
   displayName: string;
+  description: string | null;
   permissions: string[];
-  isSystem: boolean;
+  discountMin: number;
+  discountMax: number;
   isActive: boolean;
-  description?: string;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PermissionsMeta {
