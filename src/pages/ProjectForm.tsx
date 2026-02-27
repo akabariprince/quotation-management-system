@@ -271,7 +271,7 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
             </span>
           ) : (
             <span className="text-sm text-muted-foreground italic truncate flex-1">
-              No project name — click to add
+              No project name
             </span>
           )}
           <button
