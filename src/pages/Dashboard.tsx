@@ -67,7 +67,7 @@ const Dashboard: React.FC = () => {
                     }}
                   >
                     <card.icon
-                      className="h-8 w-8"
+                      className="h-10 w-10"
                       style={{ color: "#d9d9d9" }}
                     />
                     <span

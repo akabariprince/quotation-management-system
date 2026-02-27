@@ -1474,7 +1474,7 @@ const Reports: React.FC = () => {
           </div>
 
           {/* GST Summary - using ACTUAL fields */}
-          <div className="enterprise-card p-5 md:p-6">
+          {/* <div className="enterprise-card p-5 md:p-6">
             <h3 className="font-semibold text-foreground mb-6">
               GST Summary Report
             </h3>
@@ -1565,7 +1565,7 @@ const Reports: React.FC = () => {
                 No GST data available
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Discount Summary */}
           <div className="enterprise-card p-5 md:p-6">
