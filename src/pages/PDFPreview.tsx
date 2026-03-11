@@ -10,7 +10,6 @@ import { getImageUrl } from "@/utils/reportHelpers";
 
 const PDFPreviewSkeleton: React.FC = () => (
   <div className="min-h-screen bg-gray-100">
-    {/* Toolbar Skeleton */}
     <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 shadow-sm">
       <div className="flex items-center gap-4">
         <Skeleton className="h-9 w-9 rounded-lg" />
@@ -21,30 +20,18 @@ const PDFPreviewSkeleton: React.FC = () => (
       </div>
       <Skeleton className="h-9 w-28 rounded-md" />
     </div>
-
-    {/* Page Skeletons */}
     <div className="p-4 md:p-8 flex flex-col items-center gap-8">
-      {/* Summary Page Skeleton */}
-      <div
-        className="bg-white shadow-lg"
-        style={{ width: "210mm", minHeight: "297mm" }}
-      >
+      <div className="bg-white shadow-lg" style={{ width: "210mm", minHeight: "297mm" }}>
         <div className="p-0">
           <div className="border-2 border-gray-200">
-            {/* Header */}
             <div className="flex border-b-2 border-gray-200">
-              <div className="flex-1 p-4 border-r-2 border-gray-200">
+              <div className="flex-1 p-4">
                 <Skeleton className="h-8 w-36" />
                 <Skeleton className="h-3 w-48 mt-3" />
                 <Skeleton className="h-3 w-44 mt-1" />
                 <Skeleton className="h-3 w-32 mt-1" />
               </div>
-              <div className="w-40 flex items-center justify-center">
-                <Skeleton className="h-6 w-24" />
-              </div>
             </div>
-
-            {/* Client Info */}
             <div className="flex border-b-2 border-gray-200">
               <div className="flex-1 p-3 border-r-2 border-gray-200 space-y-2">
                 <Skeleton className="h-4 w-48" />
@@ -55,13 +42,9 @@ const PDFPreviewSkeleton: React.FC = () => (
                 <Skeleton className="h-4 w-24 mt-1 ml-auto" />
               </div>
             </div>
-
-            {/* Title */}
             <div className="border-b-2 border-gray-200 p-3 flex justify-center">
               <Skeleton className="h-5 w-40" />
             </div>
-
-            {/* Table Header */}
             <div className="flex border-b-2 border-gray-200 bg-gray-50 p-2 gap-2">
               <Skeleton className="h-4 w-12" />
               <Skeleton className="h-4 flex-1" />
@@ -69,8 +52,6 @@ const PDFPreviewSkeleton: React.FC = () => (
               <Skeleton className="h-4 w-12" />
               <Skeleton className="h-4 w-20" />
             </div>
-
-            {/* Table Rows */}
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex border-b border-gray-100 p-2 gap-2">
                 <Skeleton className="h-4 w-12" />
@@ -80,30 +61,10 @@ const PDFPreviewSkeleton: React.FC = () => (
                 <Skeleton className="h-4 w-20" />
               </div>
             ))}
-
-            {/* Grand Total */}
             <div className="flex border-t-2 border-gray-200 bg-gray-50 p-3 gap-2">
               <Skeleton className="h-5 flex-1" />
               <Skeleton className="h-5 w-24" />
             </div>
-
-            {/* Bottom Section */}
-            <div className="flex border-t-2 border-gray-200">
-              <div className="flex-1 p-4 border-r-2 border-gray-200">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-4 w-32 mt-1" />
-              </div>
-              <div className="w-64 p-2 space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex justify-between px-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer */}
             <div className="border-t-2 border-gray-200 p-2 flex justify-between bg-gray-50">
               <Skeleton className="h-3 w-32" />
               <Skeleton className="h-3 w-24" />
@@ -111,49 +72,31 @@ const PDFPreviewSkeleton: React.FC = () => (
           </div>
         </div>
       </div>
-
-      {/* Product Page Skeletons */}
       {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className="bg-white shadow-lg"
-          style={{ width: "210mm", minHeight: "297mm" }}
-        >
+        <div key={i} className="bg-white shadow-lg" style={{ width: "210mm", minHeight: "297mm" }}>
           <div className="p-0">
             <div className="border-2 border-gray-200">
-              {/* Header */}
               <div className="flex border-b-2 border-gray-200">
-                <div className="flex-1 p-4 border-r-2 border-gray-200">
+                <div className="flex-1 p-4">
                   <Skeleton className="h-8 w-36" />
                   <Skeleton className="h-3 w-48 mt-3" />
                 </div>
-                <div className="w-40 flex items-center justify-center">
-                  <Skeleton className="h-6 w-24" />
-                </div>
               </div>
-
-              {/* Notes */}
               <div className="border-b-2 border-gray-200 p-3 space-y-1">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-3 w-64" />
-                <Skeleton className="h-3 w-56" />
               </div>
-
-              {/* Image Area */}
               <div className="border-b-2 border-gray-200 p-4 flex justify-center">
                 <Skeleton className="h-80 w-96 rounded" />
               </div>
-
-              {/* Bottom Details */}
               <div className="flex border-b-2 border-gray-200">
                 <div className="w-1/2 border-r-2 border-gray-200 p-3 space-y-2">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-3 w-40" />
                   <Skeleton className="h-3 w-36" />
-                  <Skeleton className="h-3 w-32" />
                 </div>
                 <div className="w-1/2 p-3 space-y-2">
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: 4 }).map((_, j) => (
                     <div key={j} className="flex justify-between px-2">
                       <Skeleton className="h-3 w-20" />
                       <Skeleton className="h-3 w-16" />
@@ -161,8 +104,6 @@ const PDFPreviewSkeleton: React.FC = () => (
                   ))}
                 </div>
               </div>
-
-              {/* Footer */}
               <div className="p-2 flex justify-between bg-gray-50">
                 <Skeleton className="h-3 w-32" />
                 <Skeleton className="h-3 w-24" />
@@ -197,44 +138,29 @@ const PDFPreview: React.FC = () => {
     load();
   }, [id]);
 
-  // ─── Loading ────────────────────────────────────────────────────────────
-
-  if (loading) {
-    return <PDFPreviewSkeleton />;
-  }
+  if (loading) return <PDFPreviewSkeleton />;
 
   const customer = project?.customer;
   const salesPersonName = project?.salesPerson?.name || "—";
-
-  // ─── Not Found ──────────────────────────────────────────────────────────
 
   if (!project || !customer) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground text-lg mb-4">
-            Project not found
-          </p>
-          <Button
-            onClick={() => navigate("/projects")}
-            variant="outline"
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Projects
+          <p className="text-muted-foreground text-lg mb-4">Project not found</p>
+          <Button onClick={() => navigate("/projects")} variant="outline" className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Back to Projects
           </Button>
         </div>
       </div>
     );
   }
 
-  // ─── Helpers ────────────────────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────────
 
   const formatCurrency = (amount: number | string) =>
-    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(
-      Number(amount) || 0,
-    );
+    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Number(amount) || 0);
 
   const formatDate = (date: string | Date) =>
     new Date(date).toLocaleDateString("en-IN", {
@@ -243,109 +169,108 @@ const PDFPreview: React.FC = () => {
       year: "numeric",
     });
 
+  const getPriceInclGst = (item: any) => {
+    const base = Number(item.basePrice) || 0;
+    const gstPct = Number(item.gstPercent) || 18;
+    return base + (base * gstPct) / 100;
+  };
+
+  const getPriceInclGstAfterDiscount = (item: any) => {
+    const priceInclGst = getPriceInclGst(item);
+    const discountPct = Number(item.discountPercent) || 0;
+    return priceInclGst - (priceInclGst * discountPct) / 100;
+  };
+
+  const getTotalInclGst = (item: any) => {
+    return getPriceInclGstAfterDiscount(item) * (Number(item.quantity) || 1);
+  };
+
   const border = "1.5px solid #000";
   const borderThin = "1px solid #000";
   const items = project.items || [];
+  const pdfFont = "'Lora', serif";
 
-  // ─── Company Header (reusable inline) ─────────────────────────────────
-  const CompanyHeader = ({ rightLabel }: { rightLabel: string }) => (
-    <div style={{ display: "flex", borderBottom: border }}>
-      <div
-        style={{
-          flex: 1,
-          padding: "12px 20px",
-          borderRight: border,
-          // display: "flex",
-          alignItems: "center",
-          // gap: "12px",
-        }}
-      >
-        {/* Logo */}
+  /*
+   * Font size map (original → +3px):
+   *   8px   → 11px
+   *   8.5px → 11.5px
+   *   9px   → 12px
+   *   9.5px → 12.5px
+   *   10px  → 13px
+   *   11px  → 14px
+   *   13px  → 16px
+   *   14px  → 17px
+   *   16px  → 19px
+   */
+
+  // ─── Company Header ──────────────────────────────────────────────────
+
+  const CompanyHeader = () => (
+    <div style={{ borderBottom: border }}>
+      <div style={{ padding: "13px 20px" }}>
         <div style={{ flexShrink: 0 }}>
           <img
             src="/logo.png"
             alt="Ecstatics Logo"
-            style={{
-              height: "52px",
-              width: "auto",
-              objectFit: "contain",
-            }}
+            style={{ height: "56px", width: "auto", objectFit: "contain" }}
             crossOrigin="anonymous"
           />
         </div>
-        {/* Company Info */}
-        <div style={{ fontSize: "9px", color: "#333", lineHeight: 1.5 }}>
-          <div style={{ fontWeight: 600 }}>
-            Ecstatics Spaces India Pvt. Ltd.
-          </div>
+        <div style={{ fontSize: "12px", color: "#333", lineHeight: 1.5, marginTop: "2px" }}>
+          <div style={{ fontWeight: 600 }}>Ecstatics Spaces India Pvt. Ltd.</div>
           <div>3120, Ganga Trueno, Airport Road,</div>
           <div>Viman Nagar, Pune</div>
           <div style={{ marginTop: "2px" }}>GST No: 27AAFCE9942B1ZM</div>
         </div>
       </div>
-      <div
-        style={{
-          width: "160px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "16px",
-        }}
-      >
-        <div
-          style={{ fontSize: "20px", fontWeight: 700, letterSpacing: "0.5px" }}
-        >
-          {rightLabel}
-        </div>
-      </div>
     </div>
   );
 
-  // ─── Client Info Row (reusable) ───────────────────────────────────────
+  // ─── Client Info Row ──────────────────────────────────────────────────
 
   const ClientInfoRow = () => (
     <div style={{ display: "flex", borderBottom: border }}>
       <div
         style={{
           flex: 1,
-          padding: "10px 20px",
+          padding: "11px 20px",
           borderRight: border,
-          fontSize: "10px",
+          fontSize: "13px",
         }}
       >
-        <div style={{ display: "flex", gap: "8px", marginBottom: "4px" }}>
-          <span style={{ color: "#666", minWidth: "75px" }}>Client name</span>
+        <div style={{ display: "flex", gap: "8px", marginBottom: "5px" }}>
+          <span style={{ color: "#666", minWidth: "95px" }}>Client name</span>
           <span style={{ fontWeight: 600 }}>{customer.name}</span>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <span style={{ color: "#666", minWidth: "75px" }}>Contact No</span>
+          <span style={{ color: "#666", minWidth: "95px" }}>Contact No</span>
           <span>{customer.mobile}</span>
         </div>
       </div>
       <div
         style={{
-          width: "160px",
-          padding: "10px 20px",
-          fontSize: "10px",
+          width: "170px",
+          padding: "11px 20px",
+          fontSize: "13px",
           textAlign: "right",
         }}
       >
-        <div style={{ color: "#666", marginBottom: "4px" }}>Date</div>
+        <div style={{ color: "#666", marginBottom: "5px" }}>Date</div>
         <div style={{ fontWeight: 600 }}>{formatDate(project.date)}</div>
       </div>
     </div>
   );
 
-  // ─── Page Footer (reusable) ───────────────────────────────────────────
+  // ─── Page Footer ──────────────────────────────────────────────────────
 
   const PageFooter = () => (
     <div
       style={{
         borderTop: border,
-        padding: "8px 20px",
+        padding: "9px 20px",
         display: "flex",
         justifyContent: "space-between",
-        fontSize: "9px",
+        fontSize: "12px",
         color: "#555",
         backgroundColor: "#fafafa",
       }}
@@ -381,90 +306,62 @@ const PDFPreview: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       <style>{`
         @media print {
-          @page {
-            size: A4;
-            margin: 12mm;   /* <<< match server margin */
-          }
+          @page { size: A4; margin: 12mm; }
           html, body {
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0 !important; padding: 0 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            overflow: visible !important;
-            height: auto !important;
+            overflow: visible !important; height: auto !important;
           }
-          /* Hide everything except the print container */
-          body > * {
-            display: none !important;
-          }
-          body > #root {
-            display: block !important;
-          }
-          #root > * {
-            display: none !important;
-          }
-          #root .print-root {
-            display: block !important;
-          }
-          .no-print {
-            display: none !important;
-          }
+          body > * { display: none !important; }
+          body > #root { display: block !important; }
+          #root > * { display: none !important; }
+          #root .print-root { display: block !important; }
+          .no-print { display: none !important; }
           .print-container {
-            display: block !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            overflow: visible !important;
-            height: auto !important;
-            width: auto !important;
+            display: block !important; padding: 0 !important;
+            margin: 0 !important; overflow: visible !important;
+            height: auto !important; width: auto !important;
           }
           .pdf-page {
-            width: 210mm !important;
-            height: 297mm !important;
-            min-height: 297mm !important;
-            max-height: 297mm !important;
-            padding: 12mm !important;    /* <<< added padding */
-            margin: 0 !important;
+            width: 210mm !important; height: 297mm !important;
+            min-height: 297mm !important; max-height: 297mm !important;
+            padding: 12mm !important; margin: 0 !important;
             box-shadow: none !important;
             page-break-after: always !important;
             page-break-inside: avoid !important;
             break-after: page !important;
             break-inside: avoid !important;
             overflow: hidden !important;
+            font-family: 'Lora', serif !important;
           }
           .pdf-page:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
           .pdf-pages-wrapper {
-            padding: 0 !important;
-            gap: 0 !important;
-            display: block !important;
-            overflow: visible !important;
+            padding: 0 !important; gap: 0 !important;
+            display: block !important; overflow: visible !important;
           }
-          /* Ensure images print */
           img {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* Remove any scroll containers */
           .min-h-screen {
-            min-height: auto !important;
-            overflow: visible !important;
+            min-height: auto !important; overflow: visible !important;
           }
         }
         @media screen {
           .pdf-page {
-            width: 210mm;
-            min-height: 297mm;
-            background: #fff;
+            width: 210mm; min-height: 297mm; background: #fff;
             margin: 0 auto;
             box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-            padding: 12mm; /* keep same visual spacing on screen */
+            padding: 12mm;
           }
         }
       `}</style>
 
-      {/* ─── Toolbar (hidden in print) ─────────────────────────────────── */}
+      {/* ─── Toolbar (hidden in print) ─────────────────────────────── */}
       <div className="no-print sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 shadow-sm">
         <div className="flex items-center gap-4">
           <button
@@ -487,36 +384,29 @@ const PDFPreview: React.FC = () => {
             size="sm"
             className="gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Project
+            <ArrowLeft className="h-4 w-4" /> Back to Project
           </Button>
           <Button
             onClick={() => downloadProjectPDF(project.id)}
             className="btn-accent gap-2"
             size="sm"
           >
-            <Printer className="h-4 w-4" />
-            Download PDF
+            <Printer className="h-4 w-4" /> Download PDF
           </Button>
         </div>
       </div>
 
-      {/* ─── Print Container ───────────────────────────────────────────── */}
+      {/* ─── Print Container ─────────────────────────────────────── */}
       <div
         ref={printRef}
         className="print-root print-container pdf-pages-wrapper p-4 md:p-8 flex flex-col items-center"
         style={{ gap: "2rem" }}
       >
-        {/* ════════════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════════
             PAGE 1: PROJECT SUMMARY
-            ════════════════════════════════════════════════════════════════ */}
-        <div
-          className="pdf-page"
-          style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
-        >
-          <div
-            style={{ height: "100%", display: "flex", flexDirection: "column" }}
-          >
+            ══════════════════════════════════════════════════════════ */}
+        <div className="pdf-page" style={{ fontFamily: pdfFont }}>
+          <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
             <div
               style={{
                 border,
@@ -526,20 +416,17 @@ const PDFPreview: React.FC = () => {
                 padding: "0",
               }}
             >
-              {/* Header */}
-              <CompanyHeader rightLabel="Quotation" />
-
-              {/* Client Info */}
+              <CompanyHeader />
               <ClientInfoRow />
 
               {/* Summary Title */}
               <div
                 style={{
                   borderBottom: border,
-                  padding: "8px 20px",
+                  padding: "9px 20px",
                   textAlign: "center",
                   fontWeight: 700,
-                  fontSize: "13px",
+                  fontSize: "16px",
                   backgroundColor: "#f9f9f9",
                 }}
               >
@@ -552,7 +439,7 @@ const PDFPreview: React.FC = () => {
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    fontSize: "10px",
+                    fontSize: "13px",
                   }}
                 >
                   <thead>
@@ -561,11 +448,11 @@ const PDFPreview: React.FC = () => {
                         style={{
                           borderBottom: border,
                           borderRight: borderThin,
-                          padding: "8px 12px",
+                          padding: "9px 12px",
                           textAlign: "center",
                           fontWeight: 700,
-                          width: "50px",
-                          fontSize: "9.5px",
+                          width: "55px",
+                          fontSize: "12.5px",
                         }}
                       >
                         Sr no
@@ -574,10 +461,10 @@ const PDFPreview: React.FC = () => {
                         style={{
                           borderBottom: border,
                           borderRight: borderThin,
-                          padding: "8px 12px",
+                          padding: "9px 12px",
                           textAlign: "left",
                           fontWeight: 700,
-                          fontSize: "9.5px",
+                          fontSize: "12.5px",
                         }}
                       >
                         Code
@@ -586,23 +473,26 @@ const PDFPreview: React.FC = () => {
                         style={{
                           borderBottom: border,
                           borderRight: borderThin,
-                          padding: "8px 12px",
+                          padding: "9px 12px",
                           textAlign: "right",
                           fontWeight: 700,
-                          fontSize: "9.5px",
+                          fontSize: "12.5px",
                         }}
                       >
-                        Final Price
+                        Price{" "}
+                        <span style={{ fontWeight: 400, fontSize: "11px", color: "#666" }}>
+                          (inc. of gst)
+                        </span>
                       </th>
                       <th
                         style={{
                           borderBottom: border,
                           borderRight: borderThin,
-                          padding: "8px 12px",
+                          padding: "9px 12px",
                           textAlign: "center",
                           fontWeight: 700,
-                          width: "60px",
-                          fontSize: "9.5px",
+                          width: "65px",
+                          fontSize: "12.5px",
                         }}
                       >
                         Units
@@ -610,13 +500,16 @@ const PDFPreview: React.FC = () => {
                       <th
                         style={{
                           borderBottom: border,
-                          padding: "8px 12px",
+                          padding: "9px 12px",
                           textAlign: "right",
                           fontWeight: 700,
-                          fontSize: "9.5px",
+                          fontSize: "12.5px",
                         }}
                       >
-                        Total
+                        Total{" "}
+                        <span style={{ fontWeight: 400, fontSize: "11px", color: "#666" }}>
+                          (incl. of gst)
+                        </span>
                       </th>
                     </tr>
                   </thead>
@@ -627,7 +520,7 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: "1px solid #ccc",
                             borderRight: borderThin,
-                            padding: "8px 12px",
+                            padding: "9px 12px",
                             textAlign: "center",
                           }}
                         >
@@ -637,7 +530,7 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: "1px solid #ccc",
                             borderRight: borderThin,
-                            padding: "8px 12px",
+                            padding: "9px 12px",
                             fontWeight: 500,
                           }}
                         >
@@ -647,17 +540,17 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: "1px solid #ccc",
                             borderRight: borderThin,
-                            padding: "8px 12px",
+                            padding: "9px 12px",
                             textAlign: "right",
                           }}
                         >
-                          {formatCurrency(item.finalPrice)}
+                          {formatCurrency(getPriceInclGst(item))}
                         </td>
                         <td
                           style={{
                             borderBottom: "1px solid #ccc",
                             borderRight: borderThin,
-                            padding: "8px 12px",
+                            padding: "9px 12px",
                             textAlign: "center",
                           }}
                         >
@@ -666,12 +559,12 @@ const PDFPreview: React.FC = () => {
                         <td
                           style={{
                             borderBottom: "1px solid #ccc",
-                            padding: "8px 12px",
+                            padding: "9px 12px",
                             textAlign: "right",
                             fontWeight: 500,
                           }}
                         >
-                          {formatCurrency(item.total)}
+                          {formatCurrency(item.totalWithGst)}
                         </td>
                       </tr>
                     ))}
@@ -681,24 +574,27 @@ const PDFPreview: React.FC = () => {
                         style={{
                           borderTop: border,
                           borderRight: borderThin,
-                          padding: "10px 12px",
+                          padding: "11px 12px",
                           textAlign: "center",
                           fontWeight: 800,
-                          fontSize: "11px",
+                          fontSize: "14px",
                         }}
                       >
-                        Grand Total
+                        Grand Total{" "}
+                        <span style={{ fontWeight: 500, fontSize: "12px", color: "#555" }}>
+                          (incl. of gst)
+                        </span>
                       </td>
                       <td
                         style={{
                           borderTop: border,
-                          padding: "10px 12px",
+                          padding: "11px 12px",
                           textAlign: "right",
                           fontWeight: 800,
-                          fontSize: "11px",
+                          fontSize: "14px",
                         }}
                       >
-                        {formatCurrency(project.grandTotal)}
+                        {formatCurrency(project.grandTotalWithGst)}
                       </td>
                     </tr>
                   </tbody>
@@ -710,176 +606,49 @@ const PDFPreview: React.FC = () => {
                 <div
                   style={{
                     flex: 1,
-                    padding: "12px 20px",
+                    padding: "13px 20px",
                     borderRight: border,
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "flex-end",
                   }}
                 >
-                  <div style={{ fontSize: "9px", color: "#666" }}>
-                    Sales Manager
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      marginTop: "2px",
-                    }}
-                  >
+                  <div style={{ fontSize: "12px", color: "#666" }}>Sales Manager</div>
+                  <div style={{ fontSize: "14px", fontWeight: 600, marginTop: "3px" }}>
                     {salesPersonName}
                   </div>
                 </div>
-                <div style={{ width: "260px" }}>
+                <div style={{ width: "270px" }}>
                   <table
                     style={{
                       width: "100%",
                       borderCollapse: "collapse",
-                      fontSize: "10px",
+                      fontSize: "13px",
                     }}
                   >
                     <tbody>
-                      <tr>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                            fontWeight: 500,
-                          }}
-                        >
-                          Grand Total
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 8px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "center",
-                            width: "45px",
-                          }}
-                        ></td>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "right",
-                            fontWeight: 500,
-                          }}
-                        >
-                          {formatCurrency(project.grandTotal)}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                          }}
-                        >
-                          IGST
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 8px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "center",
-                          }}
-                        >
-                          0%
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "right",
-                          }}
-                        >
-                          0
-                        </td>
-                      </tr>
-                      <tr>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                          }}
-                        >
-                          CGST
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 8px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "center",
-                          }}
-                        >
-                          9%
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "right",
-                          }}
-                        >
-                          {formatCurrency(project.cgst)}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                          }}
-                        >
-                          SGST
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 8px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "center",
-                          }}
-                        >
-                          9%
-                        </td>
-                        <td
-                          style={{
-                            padding: "6px 12px",
-                            borderBottom: "1px solid #ccc",
-                            textAlign: "right",
-                          }}
-                        >
-                          {formatCurrency(project.sgst)}
-                        </td>
-                      </tr>
                       <tr style={{ backgroundColor: "#f3f4f6" }}>
                         <td
                           style={{
-                            padding: "8px 12px",
+                            padding: "13px 12px",
                             fontWeight: 800,
-                            fontSize: "10px",
+                            fontSize: "14px",
                           }}
                         >
-                          Grand Total With GST
+                          Grand Total{" "}
+                          <span style={{ fontWeight: 500, fontSize: "11.5px", color: "#555" }}>
+                            (incl. of gst)
+                          </span>
                         </td>
                         <td
                           style={{
-                            padding: "8px 8px",
-                            textAlign: "center",
-                            fontWeight: 700,
-                          }}
-                        >
-                          18%
-                        </td>
-                        <td
-                          style={{
-                            padding: "8px 12px",
+                            padding: "13px 12px",
                             textAlign: "right",
                             fontWeight: 800,
-                            fontSize: "11px",
+                            fontSize: "16px",
                           }}
                         >
-                          {formatCurrency(project.grandTotalWithGst)}
+                          ₹{formatCurrency(project.grandTotalWithGst)}
                         </td>
                       </tr>
                     </tbody>
@@ -887,28 +656,17 @@ const PDFPreview: React.FC = () => {
                 </div>
               </div>
 
-              {/* Footer */}
               <PageFooter />
             </div>
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════════
             PRODUCT DETAIL PAGES
-            ════════════════════════════════════════════════════════════════ */}
+            ══════════════════════════════════════════════════════════ */}
         {items.map((item: any, index: number) => (
-          <div
-            key={item.id}
-            className="pdf-page"
-            style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
-          >
-            <div
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
+          <div key={item.id} className="pdf-page" style={{ fontFamily: pdfFont }}>
+            <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
               <div
                 style={{
                   border,
@@ -917,63 +675,34 @@ const PDFPreview: React.FC = () => {
                   flexDirection: "column",
                 }}
               >
-                {/* Header */}
-                <CompanyHeader rightLabel="Quotation" />
+                <CompanyHeader />
 
-                {/* Notes */}
-                <div
-                  style={{
-                    borderBottom: border,
-                    padding: "10px 20px",
-                    fontSize: "9.5px",
-                    lineHeight: 1.7,
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: "4px" }}>
-                    Notes:
+                {/* Note */}
+                {item.specialNote && (
+                  <div
+                    style={{
+                      borderBottom: border,
+                      padding: "9px 20px",
+                      fontSize: "12.5px",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700 }}>Note: </span>
+                    <span style={{ color: "#333" }}>{item.specialNote}</span>
                   </div>
-                  <div>1. {item.quotationName}</div>
-                  {item.woodName && (
-                    <div>
-                      2. Base frame & support
-                      <span
-                        style={{ display: "inline-block", width: "4px" }}
-                      ></span>
-                      : {item.woodName} with {item.polishName}
-                    </div>
-                  )}
-                  {item.fabricName && (
-                    <div>
-                      {item.woodName ? "3" : "2"}. Upholstery
-                      <span
-                        style={{ display: "inline-block", width: "4px" }}
-                      ></span>
-                      : {item.fabricName}
-                    </div>
-                  )}
-                  {item.notes &&
-                    item.notes.length > 0 &&
-                    !item.woodName &&
-                    !item.fabricName &&
-                    item.notes.map((note: string, i: number) => (
-                      <div key={i}>
-                        {i + 1}. {note}
-                      </div>
-                    ))}
-                </div>
+                )}
 
-                {/* Client Info */}
                 <ClientInfoRow />
 
-                {/* Reference Image Header + CODE */}
+                {/* Product Name + CODE */}
                 <div style={{ display: "flex", borderBottom: borderThin }}>
                   <div
                     style={{
                       flex: 1,
-                      padding: "6px 12px",
+                      padding: "7px 13px",
                       borderRight: borderThin,
                       fontWeight: 600,
-                      fontSize: "10px",
+                      fontSize: "13px",
                       backgroundColor: "#f9f9f9",
                     }}
                   >
@@ -982,10 +711,10 @@ const PDFPreview: React.FC = () => {
                   <div style={{ display: "flex" }}>
                     <div
                       style={{
-                        padding: "6px 12px",
+                        padding: "7px 13px",
                         borderRight: borderThin,
                         fontWeight: 700,
-                        fontSize: "10px",
+                        fontSize: "13px",
                         backgroundColor: "#f9f9f9",
                       }}
                     >
@@ -993,9 +722,9 @@ const PDFPreview: React.FC = () => {
                     </div>
                     <div
                       style={{
-                        padding: "6px 16px",
+                        padding: "7px 16px",
                         fontWeight: 600,
-                        fontSize: "10px",
+                        fontSize: "13px",
                       }}
                     >
                       {item.quotationCode}
@@ -1015,7 +744,7 @@ const PDFPreview: React.FC = () => {
                   {item.images?.[0] ? (
                     <img
                       src={getImageUrl(item.images[0])}
-                      alt={item.productName}
+                      alt={item.quotationName}
                       style={{
                         maxHeight: "400px",
                         width: "auto",
@@ -1029,7 +758,7 @@ const PDFPreview: React.FC = () => {
                     <div
                       style={{
                         color: "#999",
-                        fontSize: "14px",
+                        fontSize: "17px",
                         textAlign: "center",
                         padding: "40px",
                       }}
@@ -1039,51 +768,62 @@ const PDFPreview: React.FC = () => {
                   )}
                 </div>
 
-                {/* Bottom: Description + Pricing */}
+                {/* Bottom: Description (left) + Pricing (right) */}
                 <div style={{ display: "flex", borderBottom: border }}>
-                  {/* Left - Description */}
+                  {/* LEFT - Description */}
                   <div
                     style={{
                       width: "50%",
                       borderRight: border,
-                      fontSize: "10px",
+                      fontSize: "13px",
                     }}
                   >
-                    <table
-                      style={{ width: "100%", borderCollapse: "collapse" }}
-                    >
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <tbody>
                         <tr>
                           <td
                             colSpan={2}
                             style={{
-                              padding: "5px 12px",
+                              padding: "6px 13px",
                               borderBottom: borderThin,
                               fontWeight: 600,
-                              fontSize: "10px",
+                              fontSize: "13px",
                             }}
                           >
                             Description
                           </td>
                         </tr>
+
+                        {item.description && (
+                          <tr>
+                            <td
+                              colSpan={2}
+                              style={{
+                                padding: "5px 13px",
+                                borderBottom: borderThin,
+                                fontSize: "12px",
+                                color: "#444",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {item.description}
+                            </td>
+                          </tr>
+                        )}
+
                         {item.woodName && (
                           <tr>
                             <td
                               style={{
-                                padding: "4px 12px",
+                                padding: "5px 13px",
                                 borderBottom: borderThin,
                                 color: "#555",
-                                width: "100px",
+                                width: "110px",
                               }}
                             >
                               Wood
                             </td>
-                            <td
-                              style={{
-                                padding: "4px 12px",
-                                borderBottom: borderThin,
-                              }}
-                            >
+                            <td style={{ padding: "5px 13px", borderBottom: borderThin }}>
                               : {item.woodName}
                             </td>
                           </tr>
@@ -1092,19 +832,14 @@ const PDFPreview: React.FC = () => {
                           <tr>
                             <td
                               style={{
-                                padding: "4px 12px",
+                                padding: "5px 13px",
                                 borderBottom: borderThin,
                                 color: "#555",
                               }}
                             >
                               Polish
                             </td>
-                            <td
-                              style={{
-                                padding: "4px 12px",
-                                borderBottom: borderThin,
-                              }}
-                            >
+                            <td style={{ padding: "5px 13px", borderBottom: borderThin }}>
                               : {item.polishName}
                             </td>
                           </tr>
@@ -1113,108 +848,61 @@ const PDFPreview: React.FC = () => {
                           <tr>
                             <td
                               style={{
-                                padding: "4px 12px",
+                                padding: "5px 13px",
                                 borderBottom: borderThin,
                                 color: "#555",
                               }}
                             >
                               Fabric
                             </td>
-                            <td
-                              style={{
-                                padding: "4px 12px",
-                                borderBottom: borderThin,
-                              }}
-                            >
+                            <td style={{ padding: "5px 13px", borderBottom: borderThin }}>
                               : {item.fabricName}
                             </td>
                           </tr>
                         )}
-                        {!item.woodName &&
-                          !item.polishName &&
-                          !item.fabricName && (
-                            <>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderBottom: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Length
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderBottom: borderThin,
-                                  }}
-                                >
-                                  {(item as any).quotation.length
-                                    ? (item as any).quotation.length + " (mm)"
-                                    : "—"}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderBottom: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Width
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderBottom: borderThin,
-                                  }}
-                                >
-                                  {(item as any).quotation.width
-                                    ? (item as any).quotation.width + " (mm)"
-                                    : "—"}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderBottom: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Special Note
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderBottom: borderThin,
-                                  }}
-                                >
-                                  {item.specialNote || "—"}
-                                </td>
-                              </tr>
-                            </>
-                          )}
+
+                        {(item as any).quotation?.length && (
+                          <tr>
+                            <td
+                              style={{
+                                padding: "5px 13px",
+                                borderBottom: borderThin,
+                                color: "#555",
+                              }}
+                            >
+                              Length
+                            </td>
+                            <td style={{ padding: "5px 13px", borderBottom: borderThin }}>
+                              : {(item as any).quotation.length} (mm)
+                            </td>
+                          </tr>
+                        )}
+                        {(item as any).quotation?.width && (
+                          <tr>
+                            <td
+                              style={{
+                                padding: "5px 13px",
+                                borderBottom: borderThin,
+                                color: "#555",
+                              }}
+                            >
+                              Width
+                            </td>
+                            <td style={{ padding: "5px 13px", borderBottom: borderThin }}>
+                              : {(item as any).quotation.width} (mm)
+                            </td>
+                          </tr>
+                        )}
+
                         <tr>
                           <td
                             colSpan={2}
-                            style={{
-                              padding: "8px 12px",
-                              verticalAlign: "bottom",
-                            }}
+                            style={{ padding: "9px 13px", verticalAlign: "bottom" }}
                           >
-                            <div
-                              style={{
-                                fontSize: "9px",
-                                color: "#666",
-                                marginTop: "4px",
-                              }}
-                            >
+                            <div style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
                               Sales Manager
                             </div>
-                            <div style={{ fontWeight: 600, fontSize: "10px" }}>
+                            <div style={{ fontWeight: 600, fontSize: "13px" }}>
                               {salesPersonName}
                             </div>
                           </td>
@@ -1223,243 +911,118 @@ const PDFPreview: React.FC = () => {
                     </table>
                   </div>
 
-                  {/* Right - Pricing */}
-                  <div style={{ width: "50%", fontSize: "10px" }}>
-                    <table
-                      style={{ width: "100%", borderCollapse: "collapse" }}
-                    >
+                  {/* RIGHT - Pricing */}
+                  <div style={{ width: "50%", fontSize: "13px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <tbody>
+                        {/* Price (inc. of gst) */}
                         <tr>
                           <td
                             style={{
-                              padding: "5px 12px",
+                              padding: "7px 13px",
                               borderBottom: borderThin,
+                              fontWeight: 500,
                             }}
                           >
-                            Price
+                            Price{" "}
+                            <span style={{ fontSize: "11px", color: "#666", fontWeight: 400 }}>
+                              (inc. of gst)
+                            </span>
                           </td>
                           <td
                             style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                              textAlign: "center",
-                              width: "40px",
-                            }}
-                          ></td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
+                              padding: "7px 13px",
                               borderBottom: borderThin,
                               textAlign: "right",
+                              fontWeight: 600,
                             }}
                           >
-                            {formatCurrency(item.basePrice)}
+                            {formatCurrency(getPriceInclGst(item))}
                           </td>
                         </tr>
+
+                        {/* Discount */}
                         <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                            }}
-                          >
-                            Discount
+                          <td style={{ padding: "7px 13px", borderBottom: borderThin }}>
+                            Discount{" "}
+                            <span style={{ fontSize: "12px", color: "#666" }}>
+                              ({Number(item.discountPercent)}%)
+                            </span>
                           </td>
                           <td
                             style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                              textAlign: "center",
-                            }}
-                          >
-                            {Number(item.discountPercent)}%
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
+                              padding: "7px 13px",
                               borderBottom: borderThin,
                               textAlign: "right",
+                              color: "#c00",
+                              fontWeight: 500,
                             }}
                           >
-                            {formatCurrency(item.discountAmount)}
+                            -
+                            {formatCurrency(
+                              (getPriceInclGst(item) *
+                                (Number(item.discountPercent) || 0)) /
+                                100,
+                            )}
                           </td>
                         </tr>
+
+                        {/* Units */}
                         <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                            }}
-                          >
-                            Final Price
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                            }}
-                          ></td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                              textAlign: "right",
-                            }}
-                          >
-                            {formatCurrency(item.finalPrice)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                            }}
-                          >
+                          <td style={{ padding: "7px 13px", borderBottom: borderThin }}>
                             Units
                           </td>
                           <td
                             style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                            }}
-                          ></td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
+                              padding: "7px 13px",
                               borderBottom: borderThin,
                               textAlign: "right",
+                              fontWeight: 500,
                             }}
                           >
                             {item.quantity}
                           </td>
                         </tr>
-                        <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                              fontWeight: 600,
-                            }}
-                          >
-                            Total
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                            }}
-                          ></td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                              textAlign: "right",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {formatCurrency(item.total)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                            }}
-                          >
-                            IGST
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                              textAlign: "center",
-                            }}
-                          >
-                            0%
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                              textAlign: "right",
-                            }}
-                          >
-                            0
-                          </td>
-                        </tr>
-                        <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                            }}
-                          >
-                            CGST
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                              textAlign: "center",
-                            }}
-                          >
-                            9%
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              borderBottom: borderThin,
-                              textAlign: "right",
-                            }}
-                          >
-                            {formatCurrency(item.cgst)}
-                          </td>
-                        </tr>
+
+                        {/* Final Price (incl. of gst) */}
                         <tr style={{ backgroundColor: "#f9f9f9" }}>
                           <td
                             style={{
-                              padding: "5px 12px",
+                              padding: "9px 13px",
                               borderBottom: borderThin,
                               fontWeight: 700,
+                              fontSize: "14px",
                             }}
                           >
-                            Total With GST
+                            Final Price{" "}
+                            <span style={{ fontSize: "11px", color: "#555", fontWeight: 500 }}>
+                              (incl. of gst)
+                            </span>
                           </td>
                           <td
                             style={{
-                              padding: "5px 8px",
-                              borderBottom: borderThin,
-                            }}
-                          ></td>
-                          <td
-                            style={{
-                              padding: "5px 12px",
+                              padding: "9px 13px",
                               borderBottom: borderThin,
                               textAlign: "right",
                               fontWeight: 700,
+                              fontSize: "14px",
                             }}
                           >
-                            {formatCurrency(item.totalWithGst)}
+                            {formatCurrency(getTotalInclGst(item))}
                           </td>
                         </tr>
+
+                        {/* Quotation Number */}
                         <tr>
-                          <td
-                            style={{
-                              padding: "5px 12px",
-                              textAlign: "center",
-                            }}
-                            colSpan={2}
-                          >
+                          <td style={{ padding: "7px 13px", textAlign: "left" }}>
                             Quotation
                           </td>
                           <td
                             style={{
-                              padding: "5px 12px",
+                              padding: "7px 13px",
                               textAlign: "right",
                               fontWeight: 700,
-                              fontSize: "13px",
+                              fontSize: "16px",
                             }}
                           >
                             {index + 1}
@@ -1473,10 +1036,10 @@ const PDFPreview: React.FC = () => {
                 {/* Footer */}
                 <div
                   style={{
-                    padding: "8px 20px",
+                    padding: "9px 20px",
                     display: "flex",
                     justifyContent: "space-between",
-                    fontSize: "9px",
+                    fontSize: "12px",
                     color: "#555",
                     backgroundColor: "#fafafa",
                   }}
@@ -1489,16 +1052,11 @@ const PDFPreview: React.FC = () => {
           </div>
         ))}
 
-        {/* ════════════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════════
             TERMS & CONDITIONS PAGE
-            ════════════════════════════════════════════════════════════════ */}
-        <div
-          className="pdf-page"
-          style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
-        >
-          <div
-            style={{ height: "100%", display: "flex", flexDirection: "column" }}
-          >
+            ══════════════════════════════════════════════════════════ */}
+        <div className="pdf-page" style={{ fontFamily: pdfFont }}>
+          <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
             <div
               style={{
                 border,
@@ -1508,46 +1066,31 @@ const PDFPreview: React.FC = () => {
               }}
             >
               {/* Header */}
-              <div style={{ display: "flex", borderBottom: border }}>
+              <div style={{ borderBottom: border }}>
                 <div
                   style={{
-                    flex: 1,
-                    padding: "12px 20px",
-                    borderRight: border,
-                    // display: "flex",
-                    alignItems: "center",
-                    // gap: "12px",
-                  }}
-                >
-                  <div style={{ flexShrink: 0 }}>
-                    <img
-                      src="/logo.png"
-                      alt="Ecstatics Logo"
-                      style={{
-                        height: "52px",
-                        width: "auto",
-                        objectFit: "contain",
-                      }}
-                      crossOrigin="anonymous"
-                    />
-                  </div>
-                  <div
-                    style={{ fontSize: "9px", color: "#333", lineHeight: 1.5 }}
-                  >
-                    <div style={{ fontWeight: 600 }}>
-                      Ecstatics Spaces India Pvt. Ltd.
-                    </div>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: "200px",
+                    padding: "13px 20px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
+                    justifyContent: "space-between",
                   }}
                 >
-                  <div style={{ fontSize: "16px", fontWeight: 700 }}>
+                  <div>
+                    <div style={{ flexShrink: 0 }}>
+                      <img
+                        src="/logo.png"
+                        alt="Ecstatics Logo"
+                        style={{ height: "56px", width: "auto", objectFit: "contain" }}
+                        crossOrigin="anonymous"
+                      />
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#333", lineHeight: 1.5 }}>
+                      <div style={{ fontWeight: 600 }}>
+                        Ecstatics Spaces India Pvt. Ltd.
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "19px", fontWeight: 700 }}>
                     Terms & Conditions
                   </div>
                 </div>
@@ -1557,25 +1100,21 @@ const PDFPreview: React.FC = () => {
               <div
                 style={{
                   flex: 1,
-                  padding: "20px 24px",
-                  fontSize: "10px",
+                  padding: "22px 26px",
+                  fontSize: "13px",
                   lineHeight: 1.8,
                   color: "#222",
                 }}
               >
-                <ol style={{ paddingLeft: "18px", margin: 0 }}>
+                <ol style={{ paddingLeft: "20px", margin: 0 }}>
                   {termsAndConditions.map((term, i) => (
-                    <li
-                      key={i}
-                      style={{ marginBottom: "8px", paddingLeft: "4px" }}
-                    >
+                    <li key={i} style={{ marginBottom: "9px", paddingLeft: "5px" }}>
                       {term}
                     </li>
                   ))}
                 </ol>
               </div>
 
-              {/* Footer */}
               <PageFooter />
             </div>
           </div>
