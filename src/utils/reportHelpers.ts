@@ -1,69 +1,4 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-export const formatDate = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
-export const formatNumber = (num: number): string => {
-  return new Intl.NumberFormat('en-IN').format(num);
-};
-
-export const getStatusBadgeClass = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case 'approved':
-    case 'active':
-    case 'completed':
-      return 'badge-success';
-    case 'sent':
-    case 'pending':
-    case 'in_progress':
-      return 'badge-warning';
-    case 'expired':
-    case 'cancelled':
-    case 'rejected':
-      return 'badge-error';
-    default:
-      return 'badge-default';
-  }
-};
-
-export const generateCSV = (data: any[], filename: string): void => {
-  if (!data.length) return;
-
-  const headers = Object.keys(data[0]);
-  const csvContent = [
-    headers.join(','),
-    ...data.map(row =>
-      headers
-        .map(header => {
-          const value = row[header];
-          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-            return `"${value.replace(/"/g, '""')}"`;
-          }
-          return value ?? '';
-        })
-        .join(',')
-    ),
-  ].join('\n');
-
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-};
 
 export const aggregateByMonth = (
   data: { date: string; value: number }[]
@@ -178,9 +113,90 @@ export const groupByRegion = (
     .map(([region, count]) => ({ region, count }));
 };
 
-  export const getImageUrl = (imagePath: string) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
-      return imagePath;
-    return `${API_BASE_URL}/${imagePath}`;
+export const getImageUrl = (imagePath: string) => {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
+    return imagePath;
+  return `${API_BASE_URL}/${imagePath}`;
+};
+
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+export const formatDate = (date: string): string => {
+  if (!date) return "-";
+  const d = new Date(date);
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+export const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat("en-IN").format(value);
+};
+
+export const getStatusBadgeClass = (status: string): string => {
+  const map: Record<string, string> = {
+    draft:
+      "px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700",
+    sent: "px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800",
+    approved:
+      "px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800",
+    expired:
+      "px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700",
+    Converted:
+      "px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800",
+    Pending:
+      "px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800",
+    Lost: "px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700",
   };
+  return (
+    map[status] ||
+    "px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
+  );
+};
+
+export const getDaysPendingClass = (days: number): string => {
+  if (days > 14) return "text-red-600 font-bold";
+  if (days > 7) return "text-amber-600 font-semibold";
+  return "text-green-700";
+};
+
+export const generateCSV = (data: any[], filename: string): void => {
+  if (!data.length) return;
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(","),
+    ...data.map((row) =>
+      headers
+        .map((h) => {
+          const val = row[h] ?? "";
+          return typeof val === "string" && val.includes(",")
+            ? `"${val}"`
+            : val;
+        })
+        .join(",")
+    ),
+  ].join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${filename}_${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+export const truncateId = (id: string | null): string => {
+  if (!id) return "-";
+  return id.length > 8 ? id.substring(0, 8) + "…" : id;
+};

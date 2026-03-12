@@ -1,4 +1,3 @@
-// src/pages/ProjectForm.tsx
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -19,6 +18,7 @@ import {
   Check,
   Pencil,
   FolderOpen,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, ProjectDetail } from "@/hooks/useProjects";
@@ -26,6 +26,10 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { Quotation, useQuotations } from "@/hooks/useQuotations";
 import { useMaterials } from "@/hooks/useMaterials";
 import { useSalesPersons } from "@/hooks/useSalesPersons";
+import { useCategories } from "@/hooks/useCategories";
+import { useCategoryNos } from "@/hooks/useCategoryNos";
+import { useQuotationTypes } from "@/hooks/useQuotationTypes";
+import { useVariants } from "@/hooks/useVariants";
 import { useApi } from "@/hooks/useApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +48,7 @@ import QuotationCard from "@/components/project/QuotationCard";
 import CustomerSearchSelect from "@/components/common/CustomerSearchSelect";
 import { toast } from "sonner";
 import { getImageUrl } from "@/utils/reportHelpers";
-import QuotationSearchSelect from "@/components/common/QuotationSearchSelect";
+// import QuotationSearchSelect from "@/components/common/QuotationSearchSelect"; // Replaced with 4-field filter
 
 /* ── Interfaces ── */
 interface ProjectItemLocal {
@@ -142,6 +146,15 @@ const states = [
   "Tripura",
 ];
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const getQuotationImageUrl = (imagePath: string) => {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
+    return imagePath;
+  return `${API_BASE_URL}/${imagePath}`;
+};
+
 /* ── Form Page Skeleton ── */
 const FormPageSkeleton = () => (
   <div className="space-y-6 animate-pulse">
@@ -178,9 +191,7 @@ const FormPageSkeleton = () => (
   </div>
 );
 
-/* ────────────────────────────────────────────────────────────── */
-/* Inline Editable Project Name                                  */
-/* ────────────────────────────────────────────────────────────── */
+/* ── Inline Editable Project Name (unchanged) ── */
 interface InlineProjectNameProps {
   value: string;
   onChange: (value: string) => void;
@@ -199,7 +210,6 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
   useEffect(() => {
     setEditValue(value);
   }, [value]);
-
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -210,9 +220,8 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
   const handleSave = () => {
     onChange(editValue.trim());
     setIsEditing(false);
-    if (editValue.trim() && editValue.trim() !== value) {
+    if (editValue.trim() && editValue.trim() !== value)
       toast.success("Project name updated");
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -231,9 +240,7 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
           Project Name
         </span>
       </div>
-
       <div className="h-4 w-px bg-border flex-shrink-0" />
-
       {isEditing ? (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Input
@@ -283,9 +290,7 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
           </button>
         </div>
       )}
-
       <div className="h-4 w-px bg-border flex-shrink-0 hidden sm:block" />
-
       <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           No:
@@ -298,9 +303,7 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
   );
 };
 
-/* ────────────────────────────────────────────────────────────── */
-/* Email Send Modal                                              */
-/* ────────────────────────────────────────────────────────────── */
+/* ── Email Send Modal (unchanged) ── */
 interface EmailSendModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -366,9 +369,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
       if (res.success) {
         setSent(true);
         toast.success(`Email sent successfully to ${toEmail}`);
-      } else {
-        toast.error(res.message || "Failed to send email");
-      }
+      } else toast.error(res.message || "Failed to send email");
     } catch (err: any) {
       toast.error(err?.message || "Failed to send email.");
     } finally {
@@ -389,7 +390,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-card  shadow-2xl w-full max-w-2xl p-6 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-card shadow-2xl w-full max-w-2xl p-6 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-accent/10 rounded-lg">
@@ -545,9 +546,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   );
 };
 
-/* ────────────────────────────────────────────────────────────── */
-/* Delivery Address Editor                                       */
-/* ────────────────────────────────────────────────────────────── */
+/* ── Delivery Address Editor (unchanged) ── */
 interface DeliveryAddressEditorProps {
   deliverySameAsBilling: boolean;
   onToggleSame: (checked: boolean) => void;
@@ -574,11 +573,10 @@ const DeliveryAddressEditor: React.FC<DeliveryAddressEditorProps> = ({
         htmlFor="deliverySame"
         className="text-sm font-medium cursor-pointer flex items-center gap-2"
       >
-        <Check className="h-4 w-4 text-success" />
-        Delivery address same as billing
+        <Check className="h-4 w-4 text-success" /> Delivery address same as
+        billing
       </Label>
     </div>
-
     {deliverySameAsBilling && billingAddress && (
       <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
         <span className="font-medium text-foreground">
@@ -587,7 +585,6 @@ const DeliveryAddressEditor: React.FC<DeliveryAddressEditorProps> = ({
         {billingAddress}
       </p>
     )}
-
     {!deliverySameAsBilling && (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1 sm:col-span-2">
@@ -650,9 +647,10 @@ const DeliveryAddressEditor: React.FC<DeliveryAddressEditorProps> = ({
   </div>
 );
 
-/* ────────────────────────────────────────────────────────────── */
-/* Main ProjectForm Component                                    */
-/* ────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════ */
+/*                   Main ProjectForm Component                  */
+/* ══════════════════════════════════════════════════════════════ */
+
 const ProjectForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -673,27 +671,29 @@ const ProjectForm: React.FC = () => {
     updateProject,
   } = useProjects();
   const { customers, fetchCustomers } = useCustomers();
-  const { fetchQuotations } = useQuotations();
-  const [allQuotations, setAllQuotations] = useState<Quotation[]>([]);
-
-  useEffect(() => {
-    const loadQuotations = async () => {
-      const data = await fetchQuotations({
-        limit: 1000,
-        sortBy: "name",
-        sortOrder: "ASC",
-      });
-      setAllQuotations(data.data);
-    };
-    loadQuotations();
-  }, []);
-
-  useEffect(() => {
-    fetchCustomers({ limit: 20, sortBy: "updatedAt", sortOrder: "DESC" });
-  }, []);
-
+  const { findByPartCodeFilters } = useQuotations();
   const { woods, polishes, fabrics } = useMaterials();
   const { salesPersons } = useSalesPersons();
+
+  // ── Load master data for filter dropdowns ──
+  const { categories: allCategories, fetchCategories: fetchAllCats } =
+    useCategories();
+  const { categoryNos: allCategoryNos, fetchCategoryNos: fetchAllCatNos } =
+    useCategoryNos();
+  const {
+    quotationTypes: allQuotationTypes,
+    fetchQuotationTypes: fetchAllTypes,
+  } = useQuotationTypes();
+  const { variants: allVariants, fetchVariants: fetchAllVariants } =
+    useVariants();
+
+  useEffect(() => {
+    fetchAllCats({ limit: 1000 });
+    fetchAllCatNos({ limit: 1000 });
+    fetchAllTypes({ limit: 1000 });
+    fetchAllVariants({ limit: 1000 });
+    fetchCustomers({ limit: 20, sortBy: "updatedAt", sortOrder: "DESC" });
+  }, []);
 
   /* ── State ── */
   const [existingProject, setExistingProject] = useState<ProjectDetail | null>(
@@ -734,15 +734,67 @@ const ProjectForm: React.FC = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [savedProject, setSavedProject] = useState<any>(null);
 
-  // Quotation add
+  // ── Quotation add — 4-field filter (NEW) ──
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterCategoryNo, setFilterCategoryNo] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterVariant, setFilterVariant] = useState("");
+  const [matchedQuotation, setMatchedQuotation] = useState<Quotation | null>(
+    null,
+  );
+  const [matchLoading, setMatchLoading] = useState(false);
   const [newlyAddedItemId, setNewlyAddedItemId] = useState<string | null>(null);
-  const [selectedQuotationId, setSelectedQuotationId] = useState("");
 
   // Loading
   const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // ── Filtered dropdown options ──
+  const activeCats = allCategories.filter((c) => c.status === "active");
+  const filteredCatNos = allCategoryNos.filter(
+    (cn) => cn.categoryId === filterCategory && cn.status === "active",
+  );
+  const filteredTypes = allQuotationTypes.filter(
+    (qt) => qt.categoryId === filterCategory && qt.status === "active",
+  );
+  const activeVariants = allVariants.filter((v) => v.status === "active");
+
+  // ── Reset dependent filters on category change ──
+  useEffect(() => {
+    setFilterCategoryNo("");
+    setFilterType("");
+    setMatchedQuotation(null);
+  }, [filterCategory]);
+
+  useEffect(() => {
+    setMatchedQuotation(null);
+  }, [filterCategoryNo, filterType, filterVariant]);
+
+  // ── Search for matching quotation when all 4 are filled ──
+  useEffect(() => {
+    if (filterCategory && filterCategoryNo && filterType && filterVariant) {
+      const search = async () => {
+        setMatchLoading(true);
+        const result = await findByPartCodeFilters({
+          categoryId: filterCategory,
+          categoryNoId: filterCategoryNo,
+          quotationTypeId: filterType,
+          variantId: filterVariant,
+        });
+        setMatchedQuotation(result);
+        setMatchLoading(false);
+      };
+      search();
+    }
+  }, [
+    filterCategory,
+    filterCategoryNo,
+    filterType,
+    filterVariant,
+    findByPartCodeFilters,
+  ]);
 
   /* ── Load existing project or generate next number ── */
   useEffect(() => {
@@ -755,7 +807,6 @@ const ProjectForm: React.FC = () => {
           setProjectName((p as any).projectName || "");
           setCustomerId(p.customerId);
           setSalesPersonId(p.salesPersonId || "");
-
           const pAny = p as any;
           if (pAny.deliveryAddress) {
             setDeliverySameAsBilling(false);
@@ -769,7 +820,6 @@ const ProjectForm: React.FC = () => {
           } else {
             setDeliverySameAsBilling(true);
           }
-
           setItems(
             (p.items || []).map((item: any, i: number) =>
               recalculateItem({
@@ -843,14 +893,14 @@ const ProjectForm: React.FC = () => {
 
   const billingAddressString = selectedCustomer
     ? [
-        selectedCustomer.address,
-        (selectedCustomer as any).landmark,
-        selectedCustomer.city,
-        selectedCustomer.state,
-        (selectedCustomer as any).pincode,
-      ]
-        .filter(Boolean)
-        .join(", ")
+      selectedCustomer.address,
+      (selectedCustomer as any).landmark,
+      selectedCustomer.city,
+      selectedCustomer.state,
+      (selectedCustomer as any).pincode,
+    ]
+      .filter(Boolean)
+      .join(", ")
     : "";
 
   /* ── Recalculate Item ── */
@@ -932,16 +982,17 @@ const ProjectForm: React.FC = () => {
       `${materialType.charAt(0).toUpperCase() + materialType.slice(1)} updated`,
     );
   };
+
   const discountRange = {
     min: Number((user as any)?.role?.discountMin) || 0,
     max: Number((user as any)?.role?.discountMax) || 100,
   };
+
   const handleDiscountChange = (itemId: string, newDiscount: number) => {
     if (!hasPermission("discount:edit")) {
       toast.error("No permission to edit discount");
       return;
     }
-    // Clamp to allowed range
     const clamped = Math.max(
       discountRange.min,
       Math.min(discountRange.max, newDiscount),
@@ -984,18 +1035,19 @@ const ProjectForm: React.FC = () => {
     toast.success("Quotation removed");
   };
 
-  const handleInlineAddQuotation = () => {
-    if (!selectedQuotationId) {
-      toast.error("Please select a quotation");
+  // ── Add matched quotation to cart (NEW) ──
+  const handleAddMatchedQuotation = () => {
+    if (!matchedQuotation) {
+      toast.error("No matching product found");
       return;
     }
-    const quotation = allQuotations.find((q) => q.id === selectedQuotationId);
-    if (!quotation) return;
-    if (items.find((item) => item.quotationId === quotation.id)) {
+
+    if (items.find((item) => item.quotationId === matchedQuotation.id)) {
       toast.error("Quotation already added. Update quantity instead.");
       return;
     }
 
+    const quotation = matchedQuotation;
     const quantity = 1;
     const amount = quotation.basePrice * quantity;
     const gstAmount = (amount * quotation.gstPercent) / 100;
@@ -1003,8 +1055,8 @@ const ProjectForm: React.FC = () => {
     const discountPercent = quotation.defaultDiscount || 0;
     const discountAmount = (amount * discountPercent) / 100;
     const grandTotalItem = subtotalWithGst - discountAmount;
-    const newIndex = items.length;
 
+    const newIndex = items.length;
     const newItem: ProjectItemLocal = {
       id: Date.now().toString(),
       quotationId: quotation.id,
@@ -1041,7 +1093,14 @@ const ProjectForm: React.FC = () => {
 
     setItems((prev) => [...prev, newItem]);
     setNewlyAddedItemId(newItem.id);
-    setSelectedQuotationId("");
+
+    // Reset filters
+    setFilterCategory("");
+    setFilterCategoryNo("");
+    setFilterType("");
+    setFilterVariant("");
+    setMatchedQuotation(null);
+
     toast.success("Quotation added to project");
   };
 
@@ -1260,7 +1319,6 @@ const ProjectForm: React.FC = () => {
                 <Plus className="h-3.5 w-3.5" /> Add New Customer
               </Button>
             </div>
-
             <div className="form-grid">
               <div className="space-y-2 lg:col-span-2">
                 <Label>Search & Select Customer *</Label>
@@ -1370,23 +1428,21 @@ const ProjectForm: React.FC = () => {
                           : "Edit"}
                     </Button>
                   </div>
-
                   {!showDeliveryEditor && (
                     <p className="font-medium">
                       {deliverySameAsBilling
                         ? "Same as billing address"
                         : [
-                            deliveryAddr.address,
-                            deliveryAddr.landmark,
-                            deliveryAddr.city,
-                            deliveryAddr.state,
-                            deliveryAddr.pincode,
-                          ]
-                            .filter(Boolean)
-                            .join(", ") || "Not specified"}
+                          deliveryAddr.address,
+                          deliveryAddr.landmark,
+                          deliveryAddr.city,
+                          deliveryAddr.state,
+                          deliveryAddr.pincode,
+                        ]
+                          .filter(Boolean)
+                          .join(", ") || "Not specified"}
                     </p>
                   )}
-
                   {showDeliveryEditor && (
                     <DeliveryAddressEditor
                       deliverySameAsBilling={deliverySameAsBilling}
@@ -1427,7 +1483,7 @@ const ProjectForm: React.FC = () => {
       {step === 2 && (
         <>
           {/* Sticky Customer Info Bar */}
-          <div className="sticky top-0 z-30 bg-card border border-border  shadow-sm mt-4 mb-0">
+          <div className="sticky top-0 z-30 bg-card border border-border shadow-sm mt-4 mb-0">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-5 min-w-0 overflow-hidden">
                 <div className="min-w-0">
@@ -1484,42 +1540,154 @@ const ProjectForm: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Main Quotation List */}
             <div className="lg:col-span-3 space-y-5">
-              {/* Add Quotation Bar */}
-              <div className="sticky top-[60px] z-20 bg-card border border-border  shadow-sm mb-6">
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="flex items-center gap-2 flex-shrink-0">
+              {/* ══ NEW: 4-Field Filter Add Quotation Bar ══ */}
+              <div className="sticky top-[60px] z-20 bg-card border border-border shadow-sm mb-6">
+                <div className="px-4 py-3 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-accent" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
-                      Add Quotation
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Add Product by Code
                     </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <QuotationSearchSelect
-                      value={selectedQuotationId}
-                      onChange={setSelectedQuotationId}
-                      getImageUrl={getImageUrl}
-                      formatCurrency={formatCurrency}
-                    />
+
+                  {/* 4 Filter Dropdowns */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* Category */}
+                    <Select
+                      value={filterCategory}
+                      onValueChange={setFilterCategory}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeCats.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Category No */}
+                    <Select
+                      value={filterCategoryNo}
+                      onValueChange={setFilterCategoryNo}
+                      disabled={!filterCategory}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="No" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredCatNos.map((cn) => (
+                          <SelectItem key={cn.id} value={cn.id}>
+                            {cn.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Type */}
+                    <Select
+                      value={filterType}
+                      onValueChange={setFilterType}
+                      disabled={!filterCategory}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredTypes.map((qt) => (
+                          <SelectItem key={qt.id} value={qt.id}>
+                            {qt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Variant */}
+                    <Select
+                      value={filterVariant}
+                      onValueChange={setFilterVariant}
+                      disabled={!filterCategory}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Variant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeVariants.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Button
-                    onClick={handleInlineAddQuotation}
-                    className="btn-accent gap-2 flex-shrink-0 h-10"
-                    disabled={!selectedQuotationId}
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Add Cart</span>
-                  </Button>
+
+                  {/* Match Result + Add Button */}
+                  {filterCategory &&
+                    filterCategoryNo &&
+                    filterType &&
+                    filterVariant && (
+                      <div className="flex items-center gap-3 pt-1">
+                        {matchLoading ? (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-1">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Searching...
+                          </div>
+                        ) : matchedQuotation ? (
+                          <>
+                            <div className="flex items-center gap-3 flex-1 min-w-0 bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
+                              {matchedQuotation.images?.[0] && (
+                                <div className="w-12 aspect-[16/9] rounded overflow-hidden border bg-muted flex-shrink-0">
+                                  <img
+                                    src={getQuotationImageUrl(
+                                      matchedQuotation.images[0],
+                                    )}
+                                    alt={matchedQuotation.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold font-mono text-accent truncate">
+                                  {matchedQuotation.partCode}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  {matchedQuotation.name}
+                                </p>
+                              </div>
+                              <span className="text-xs font-semibold text-accent flex-shrink-0">
+                                {formatCurrency(matchedQuotation.basePrice)}
+                              </span>
+                            </div>
+                            <Button
+                              onClick={handleAddMatchedQuotation}
+                              className="btn-accent gap-2 flex-shrink-0 h-10"
+                            >
+                              <Plus className="h-4 w-4" />
+                              <span className="hidden sm:inline">Add Cart</span>
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="flex-1 text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2 text-center">
+                            No matching product found for this combination
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>
 
               {items.length === 0 ? (
-                <div className="border border-dashed border-border  p-14 text-center">
+                <div className="border border-dashed border-border p-14 text-center">
                   <Package className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
                   <h3 className="font-semibold text-lg mb-1">
                     No quotations added
                   </h3>
                   <p className="text-muted-foreground text-sm mb-5">
-                    Use the quotation bar above to search and add quotations to
+                    Use the filter dropdowns above to find and add products to
                     your project
                   </p>
                 </div>
@@ -1558,11 +1726,10 @@ const ProjectForm: React.FC = () => {
                       <button
                         key={item.id}
                         onClick={() => scrollToItem(item.id)}
-                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${
-                          highlightedItemId === item.id
+                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${highlightedItemId === item.id
                             ? "bg-primary/10 border-l-2 border-l-primary"
                             : "hover:bg-muted/60"
-                        }`}
+                          }`}
                       >
                         <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                           {item.itemNumber || i + 1}

@@ -29,10 +29,11 @@ import { Textarea } from "@/components/ui/textarea";
 import OTPModal from "@/components/common/OTPModal";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { toast } from "sonner";
-
 import { useCategories, Category } from "@/hooks/useCategories";
+import { useCategoryNos, CategoryNo } from "@/hooks/useCategoryNos";
 import { useQuotationTypes, QuotationType } from "@/hooks/useQuotationTypes";
 import { useQuotationModels, QuotationModel } from "@/hooks/useQuotationModels";
+import { useVariants, Variant } from "@/hooks/useVariants";
 import { useWoods, Wood } from "@/hooks/useWoods";
 import { usePolishes, Polish } from "@/hooks/usePolishes";
 import { useFabrics, Fabric } from "@/hooks/useFabrics";
@@ -53,9 +54,7 @@ const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
         {Array.from({ length: columns }).map((_, colIdx) => (
           <td key={colIdx}>
             <div
-              className={`h-4 bg-muted rounded ${
-                colIdx === 0 ? "w-32" : "w-20"
-              }`}
+              className={`h-4 bg-muted rounded ${colIdx === 0 ? "w-32" : "w-20"}`}
             />
           </td>
         ))}
@@ -113,6 +112,16 @@ const Masters: React.FC = () => {
   } = useCategories();
 
   const {
+    categoryNos,
+    meta: categoryNosMeta,
+    loading: categoryNosLoading,
+    fetchCategoryNos,
+    createCategoryNo,
+    updateCategoryNo,
+    deleteCategoryNo,
+  } = useCategoryNos();
+
+  const {
     quotationTypes,
     meta: quotationTypesMeta,
     loading: quotationTypesLoading,
@@ -131,6 +140,16 @@ const Masters: React.FC = () => {
     updateQuotationModel,
     deleteQuotationModel,
   } = useQuotationModels();
+
+  const {
+    variants,
+    meta: variantsMeta,
+    loading: variantsLoading,
+    fetchVariants,
+    createVariant,
+    updateVariant,
+    deleteVariant,
+  } = useVariants();
 
   const {
     woods,
@@ -175,17 +194,20 @@ const Masters: React.FC = () => {
   const tabParam = searchParams.get("tab");
   const validTabs = [
     "category",
+    "categoryNo",
     "quotationType",
+    "variant",
+    "quotation",
+    // Hidden tabs kept for backend compatibility
     "quotationModel",
     "wood",
     "polish",
     "fabric",
-    "quotation",
   ];
   const initialTab =
     tabParam && validTabs.includes(tabParam) ? tabParam : "category";
-
   const [activeTab, setActiveTab] = useState(initialTab);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [selectedParent, setSelectedParent] = useState("");
@@ -193,17 +215,17 @@ const Masters: React.FC = () => {
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Edit modal state for simple masters
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editItemName, setEditItemName] = useState("");
   const [editSelectedParent, setEditSelectedParent] = useState("");
 
-  // Search / Filter / Pagination state per tab
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({
     category: "",
+    categoryNo: "",
     quotationType: "",
     quotationModel: "",
+    variant: "",
     wood: "",
     polish: "",
     fabric: "",
@@ -211,8 +233,10 @@ const Masters: React.FC = () => {
   });
   const [statusFilters, setStatusFilters] = useState<Record<string, string>>({
     category: "",
+    categoryNo: "",
     quotationType: "",
     quotationModel: "",
+    variant: "",
     wood: "",
     polish: "",
     fabric: "",
@@ -220,23 +244,22 @@ const Masters: React.FC = () => {
   });
   const [currentPages, setCurrentPages] = useState<Record<string, number>>({
     category: 1,
+    categoryNo: 1,
     quotationType: 1,
     quotationModel: 1,
+    variant: 1,
     wood: 1,
     polish: 1,
     fabric: 1,
     quotation: 1,
   });
 
-  // Debounce timer
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Image upload state
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
 
-  // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -247,18 +270,15 @@ const Masters: React.FC = () => {
     open: false,
     title: "",
     description: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
     loading: false,
   });
 
-  // Update tab when URL changes
   useEffect(() => {
-    if (tabParam && validTabs.includes(tabParam)) {
-      setActiveTab(tabParam);
-    }
+    if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
 
-  // Fetch helper that respects search/filter/page
+  // ── Fetch helper ──
   const fetchTabData = useCallback(
     (tab: string, page?: number, search?: string, status?: string) => {
       const p = page ?? currentPages[tab] ?? 1;
@@ -267,14 +287,17 @@ const Masters: React.FC = () => {
       const params: any = { page: p, limit: PAGE_LIMIT };
       if (s) params.search = s;
       if (st) params.status = st;
-
       switch (tab) {
         case "category":
           return fetchCategories(params);
+        case "categoryNo":
+          return fetchCategoryNos(params);
         case "quotationType":
           return fetchQuotationTypes(params);
         case "quotationModel":
           return fetchQuotationModels(params);
+        case "variant":
+          return fetchVariants(params);
         case "wood":
           return fetchWoods(params);
         case "polish":
@@ -290,8 +313,10 @@ const Masters: React.FC = () => {
       searchQueries,
       statusFilters,
       fetchCategories,
+      fetchCategoryNos,
       fetchQuotationTypes,
       fetchQuotationModels,
+      fetchVariants,
       fetchWoods,
       fetchPolishes,
       fetchFabrics,
@@ -299,22 +324,22 @@ const Masters: React.FC = () => {
     ],
   );
 
-  // Initial load + refetch on tab/page/filter change
   useEffect(() => {
     fetchTabData(activeTab);
   }, [activeTab, currentPages[activeTab], statusFilters[activeTab]]);
 
-  // Also load categories & quotationTypes always (for dropdowns)
+  // Load all for dropdowns
   useEffect(() => {
     fetchCategories({ limit: 1000 });
+    fetchCategoryNos({ limit: 1000 });
     fetchQuotationTypes({ limit: 1000 });
     fetchQuotationModels({ limit: 1000 });
+    fetchVariants({ limit: 1000 });
     fetchWoods({ limit: 1000 });
     fetchPolishes({ limit: 1000 });
     fetchFabrics({ limit: 1000 });
   }, []);
 
-  // Search with debounce
   const handleSearchChange = (tab: string, value: string) => {
     setSearchQueries((prev) => ({ ...prev, [tab]: value }));
     setCurrentPages((prev) => ({ ...prev, [tab]: 1 }));
@@ -324,14 +349,12 @@ const Masters: React.FC = () => {
     }, 400);
   };
 
-  // Status filter
   const handleStatusChange = (tab: string, value: string) => {
     const actualValue = value === "all" ? "" : value;
     setStatusFilters((prev) => ({ ...prev, [tab]: actualValue }));
     setCurrentPages((prev) => ({ ...prev, [tab]: 1 }));
   };
 
-  // Pagination
   const handlePageChange = (tab: string, page: number) => {
     setCurrentPages((prev) => ({ ...prev, [tab]: page }));
   };
@@ -340,7 +363,7 @@ const Masters: React.FC = () => {
     await fetchTabData(activeTab);
   };
 
-  // Quotation form state
+  // ── Quotation form state ──
   const [showQuotationForm, setShowQuotationForm] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(
     null,
@@ -349,8 +372,10 @@ const Masters: React.FC = () => {
     name: "",
     partCode: "",
     categoryId: "",
+    categoryNoId: "",
     quotationTypeId: "",
     quotationModelId: "",
+    variantId: "",
     woodId: "",
     polishId: "",
     fabricId: "",
@@ -369,8 +394,10 @@ const Masters: React.FC = () => {
       name: "",
       partCode: "",
       categoryId: "",
+      categoryNoId: "",
       quotationTypeId: "",
       quotationModelId: "",
+      variantId: "",
       woodId: "",
       polishId: "",
       fabricId: "",
@@ -389,7 +416,54 @@ const Masters: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Add simple master
+  // ── Filtered lists for quotation form ──
+  const filteredCategoryNos = categoryNos.filter(
+    (cn) =>
+      cn.categoryId === quotationForm.categoryId && cn.status === "active",
+  );
+
+  const filteredQuotationTypes = quotationTypes.filter(
+    (qt) =>
+      qt.categoryId === quotationForm.categoryId && qt.status === "active",
+  );
+
+  const filteredQuotationModels = quotationModels.filter(
+    (qm) =>
+      qm.quotationTypeId === quotationForm.quotationTypeId &&
+      qm.status === "active",
+  );
+
+  const activeVariants = variants.filter((v) => v.status === "active");
+
+  // ── Auto-generate part code ──
+  useEffect(() => {
+    const { categoryId, categoryNoId, quotationTypeId, variantId } =
+      quotationForm;
+    if (categoryId && categoryNoId && quotationTypeId && variantId) {
+      const cat = categories.find((c) => c.id === categoryId);
+      const catNo = categoryNos.find((cn) => cn.id === categoryNoId);
+      const qType = quotationTypes.find((qt) => qt.id === quotationTypeId);
+      const vrnt = variants.find((v) => v.id === variantId);
+      if (cat && catNo && qType && vrnt) {
+        const generatedCode = `${cat.name}-${catNo.name}-${qType.name}-${vrnt.name}`;
+        setQuotationForm((prev) => ({
+          ...prev,
+          partCode: generatedCode,
+        }));
+      }
+    }
+  }, [
+    quotationForm.categoryId,
+    quotationForm.categoryNoId,
+    quotationForm.quotationTypeId,
+    quotationForm.variantId,
+    categories,
+    categoryNos,
+    quotationTypes,
+    variants,
+  ]);
+
+  // ── Add simple master ──
   const handleAdd = async () => {
     if (!newItemName.trim()) {
       toast.error("Please enter a name");
@@ -402,6 +476,18 @@ const Masters: React.FC = () => {
         case "category":
           newItem = await createCategory({
             name: newItemName,
+            status: "pending",
+          });
+          break;
+        case "categoryNo":
+          if (!selectedParent) {
+            toast.error("Please select a category");
+            setSubmitting(false);
+            return;
+          }
+          newItem = await createCategoryNo({
+            name: newItemName,
+            categoryId: selectedParent,
             status: "pending",
           });
           break;
@@ -429,11 +515,14 @@ const Masters: React.FC = () => {
             status: "pending",
           });
           break;
-        case "wood":
-          newItem = await createWood({
+        case "variant":
+          newItem = await createVariant({
             name: newItemName,
             status: "pending",
           });
+          break;
+        case "wood":
+          newItem = await createWood({ name: newItemName, status: "pending" });
           break;
         case "polish":
           newItem = await createPolish({
@@ -461,11 +550,11 @@ const Masters: React.FC = () => {
     }
   };
 
-  // Edit simple master
+  // ── Edit simple master ──
   const handleEditClick = (item: any, type: string) => {
     setEditingItem({ ...item, type });
     setEditItemName(item.name);
-    if (type === "quotationType") {
+    if (type === "quotationType" || type === "categoryNo") {
       setEditSelectedParent(item.categoryId || "");
     } else if (type === "quotationModel") {
       setEditSelectedParent(item.quotationTypeId || "");
@@ -483,22 +572,26 @@ const Masters: React.FC = () => {
     setSubmitting(true);
     try {
       const updateData: any = { name: editItemName };
-      if (editingItem.type === "quotationType" && editSelectedParent) {
+      if (
+        (editingItem.type === "quotationType" ||
+          editingItem.type === "categoryNo") &&
+        editSelectedParent
+      ) {
         updateData.categoryId = editSelectedParent;
       }
       if (editingItem.type === "quotationModel" && editSelectedParent) {
         updateData.quotationTypeId = editSelectedParent;
       }
-
       const updateFn: Record<string, Function> = {
         category: updateCategory,
+        categoryNo: updateCategoryNo,
         quotationType: updateQuotationType,
         quotationModel: updateQuotationModel,
+        variant: updateVariant,
         wood: updateWood,
         polish: updatePolish,
         fabric: updateFabric,
       };
-
       await updateFn[editingItem.type]?.(editingItem.id, updateData);
       toast.success(`${getTabLabel(editingItem.type)} updated successfully`);
       setShowEditModal(false);
@@ -513,7 +606,7 @@ const Masters: React.FC = () => {
     }
   };
 
-  // Image handling
+  // ── Image handling ──
   const handleAddFiles = (files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files);
@@ -533,14 +626,14 @@ const Masters: React.FC = () => {
     setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Quotation submit
+  // ── Quotation submit ──
   const handleQuotationSubmit = async () => {
     if (!quotationForm.name.trim()) {
       toast.error("Please enter quotation name");
       return;
     }
     if (!quotationForm.partCode.trim()) {
-      toast.error("Please enter part code");
+      toast.error("Please select all 4 fields to generate part code");
       return;
     }
     if (!quotationForm.categoryId) {
@@ -548,23 +641,26 @@ const Masters: React.FC = () => {
       return;
     }
     if (!quotationForm.quotationTypeId) {
-      toast.error("Please select a quotation type");
+      toast.error("Please select a type");
       return;
     }
     if (quotationForm.basePrice <= 0) {
       toast.error("Please enter a valid base price");
       return;
     }
-
     setSubmitting(true);
     try {
       const formData = new FormData();
       formData.append("name", quotationForm.name);
       formData.append("partCode", quotationForm.partCode);
       formData.append("categoryId", quotationForm.categoryId);
+      if (quotationForm.categoryNoId)
+        formData.append("categoryNoId", quotationForm.categoryNoId);
       formData.append("quotationTypeId", quotationForm.quotationTypeId);
       if (quotationForm.quotationModelId)
         formData.append("quotationModelId", quotationForm.quotationModelId);
+      if (quotationForm.variantId)
+        formData.append("variantId", quotationForm.variantId);
       if (quotationForm.woodId) formData.append("woodId", quotationForm.woodId);
       if (quotationForm.polishId)
         formData.append("polishId", quotationForm.polishId);
@@ -578,14 +674,12 @@ const Masters: React.FC = () => {
       formData.append("defaultDiscount", String(quotationForm.defaultDiscount));
       formData.append("gstPercent", String(quotationForm.gstPercent));
       formData.append("status", "pending");
-
       selectedFiles.forEach((file) => {
         formData.append("images", file);
       });
       if (existingImages.length > 0) {
         formData.append("existingImages", JSON.stringify(existingImages));
       }
-
       if (editingQuotation) {
         await updateQuotation(editingQuotation.id, formData);
         toast.success("Quotation updated successfully");
@@ -610,8 +704,10 @@ const Masters: React.FC = () => {
       name: quotation.name,
       partCode: quotation.partCode,
       categoryId: quotation.categoryId,
+      categoryNoId: (quotation as any).categoryNoId || "",
       quotationTypeId: quotation.quotationTypeId,
       quotationModelId: quotation.quotationModelId || "",
+      variantId: (quotation as any).variantId || "",
       woodId: quotation.woodId || "",
       polishId: quotation.polishId || "",
       fabricId: quotation.fabricId || "",
@@ -634,20 +730,21 @@ const Masters: React.FC = () => {
     setShowQuotationForm(true);
   };
 
-  // OTP
+  // ── OTP ──
   const handleOTPVerify = async (otp: string, otpLogId: string) => {
     if (pendingItem) {
       try {
         const updateFn: Record<string, Function> = {
           category: updateCategory,
+          categoryNo: updateCategoryNo,
           quotationType: updateQuotationType,
           quotationModel: updateQuotationModel,
+          variant: updateVariant,
           wood: updateWood,
           polish: updatePolish,
           fabric: updateFabric,
           quotation: updateQuotation,
         };
-
         await updateFn[pendingItem.type]?.(pendingItem.id, {
           status: "active",
         });
@@ -661,7 +758,7 @@ const Masters: React.FC = () => {
     setPendingItem(null);
   };
 
-  // Delete with custom confirm
+  // ── Delete ──
   const handleDelete = (id: string, type: string, itemName?: string) => {
     const label = itemName || "this item";
     setConfirmDialog({
@@ -674,8 +771,10 @@ const Masters: React.FC = () => {
         try {
           const deleteFn: Record<string, Function> = {
             category: deleteCategory,
+            categoryNo: deleteCategoryNo,
             quotationType: deleteQuotationType,
             quotationModel: deleteQuotationModel,
+            variant: deleteVariant,
             wood: deleteWood,
             polish: deletePolish,
             fabric: deleteFabric,
@@ -697,7 +796,7 @@ const Masters: React.FC = () => {
     });
   };
 
-  // Helpers
+  // ── Helpers ──
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -712,21 +811,13 @@ const Masters: React.FC = () => {
     return `${API_BASE_URL}/${imagePath}`;
   };
 
-  const filteredQuotationTypes = quotationTypes.filter(
-    (qt) =>
-      qt.categoryId === quotationForm.categoryId && qt.status === "active",
-  );
-  const filteredQuotationModels = quotationModels.filter(
-    (qm) =>
-      qm.quotationTypeId === quotationForm.quotationTypeId &&
-      qm.status === "active",
-  );
-
   const getTabLabel = (tab: string) => {
     const labels: Record<string, string> = {
       category: "Category",
-      quotationType: "Product Type",
+      categoryNo: "Category No",
+      quotationType: "Type",
       quotationModel: "Product Model",
+      variant: "Variant",
       wood: "Wood",
       polish: "Polish",
       fabric: "Fabric",
@@ -742,15 +833,18 @@ const Masters: React.FC = () => {
     } else setShowAddModal(true);
   };
 
-  // Get meta/loading for tab
   const getMetaForTab = (tab: string) => {
     switch (tab) {
       case "category":
         return categoriesMeta;
+      case "categoryNo":
+        return categoryNosMeta;
       case "quotationType":
         return quotationTypesMeta;
       case "quotationModel":
         return quotationModelsMeta;
+      case "variant":
+        return variantsMeta;
       case "wood":
         return woodsMeta;
       case "polish":
@@ -768,10 +862,14 @@ const Masters: React.FC = () => {
     switch (tab) {
       case "category":
         return categoriesLoading;
+      case "categoryNo":
+        return categoryNosLoading;
       case "quotationType":
         return quotationTypesLoading;
       case "quotationModel":
         return quotationModelsLoading;
+      case "variant":
+        return variantsLoading;
       case "wood":
         return woodsLoading;
       case "polish":
@@ -785,18 +883,16 @@ const Masters: React.FC = () => {
     }
   };
 
-  // Pagination Component
+  // ── Pagination Component ──
   const renderPagination = (tab: string, meta: any) => {
     if (!meta || meta.totalPages <= 1) return null;
     const page = currentPages[tab] || 1;
     const totalPages = meta.totalPages || 1;
     const totalCount = meta.totalCount || meta.totalItems || 0;
-
     const pages: number[] = [];
     const start = Math.max(1, page - 2);
     const end = Math.min(totalPages, page + 2);
     for (let i = start; i <= end; i++) pages.push(i);
-
     return (
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-border">
         <p className="text-sm text-muted-foreground">
@@ -863,7 +959,7 @@ const Masters: React.FC = () => {
     );
   };
 
-  // Search + Filter Bar
+  // ── Search + Filter Bar ──
   const renderSearchBar = (tab: string) => (
     <div className="flex flex-col sm:flex-row gap-3 mb-4">
       <div className="relative flex-1">
@@ -894,12 +990,11 @@ const Masters: React.FC = () => {
     </div>
   );
 
-  // Render simple master table (with edit icon added)
+  // ── Render simple master table ──
   const renderTable = (items: any[], type: string, parentKey?: string) => {
     const isLoading = getLoadingForTab(type);
     const meta = getMetaForTab(type);
     const colCount = parentKey ? 4 : 3;
-
     return (
       <div>
         {renderSearchBar(type)}
@@ -937,12 +1032,12 @@ const Masters: React.FC = () => {
                       <td className="font-medium">{item.name}</td>
                       {parentKey && (
                         <td className="hidden sm:table-cell text-muted-foreground">
-                          {type === "quotationType"
+                          {type === "quotationType" || type === "categoryNo"
                             ? categories.find((c) => c.id === item.categoryId)
-                                ?.name
+                              ?.name
                             : quotationTypes.find(
-                                (qt) => qt.id === item.quotationTypeId,
-                              )?.name}
+                              (qt) => qt.id === item.quotationTypeId,
+                            )?.name}
                         </td>
                       )}
                       <td>
@@ -955,11 +1050,13 @@ const Masters: React.FC = () => {
                         >
                           {item.status === "active" ? (
                             <>
-                              <Check className="h-3 w-3" /> Active
+                              <Check className="h-3 w-3" />
+                              Active
                             </>
                           ) : (
                             <>
-                              <Clock className="h-3 w-3" /> Pending
+                              <Clock className="h-3 w-3" />
+                              Pending
                             </>
                           )}
                         </span>
@@ -970,10 +1067,7 @@ const Masters: React.FC = () => {
                             hasPermission("master:manage") && (
                               <button
                                 onClick={() => {
-                                  setPendingItem({
-                                    ...item,
-                                    type,
-                                  });
+                                  setPendingItem({ ...item, type });
                                   setShowOTPModal(true);
                                 }}
                                 className="text-xs text-accent hover:underline font-medium"
@@ -1015,10 +1109,9 @@ const Masters: React.FC = () => {
     );
   };
 
-  // Quotations table (formerly products table)
+  // ── Quotations table ──
   const renderQuotationsTable = () => {
     const meta = quotationsMeta;
-
     return (
       <div>
         {renderSearchBar("quotation")}
@@ -1092,11 +1185,13 @@ const Masters: React.FC = () => {
                         >
                           {quotation.status === "active" ? (
                             <>
-                              <Check className="h-3 w-3" /> Active
+                              <Check className="h-3 w-3" />
+                              Active
                             </>
                           ) : (
                             <>
-                              <Clock className="h-3 w-3" /> Pending
+                              <Clock className="h-3 w-3" />
+                              Pending
                             </>
                           )}
                         </span>
@@ -1162,7 +1257,7 @@ const Masters: React.FC = () => {
         <div>
           <h1 className="page-title">Master Management</h1>
           <p className="text-muted-foreground mt-1">
-            Manage categories, product types, materials, and products
+            Manage categories, product types, variants, and products
           </p>
         </div>
         {hasPermission("master:manage") && (
@@ -1184,32 +1279,36 @@ const Masters: React.FC = () => {
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-auto">
             <TabsTrigger value="category">Category</TabsTrigger>
+            <TabsTrigger value="categoryNo">Category No</TabsTrigger>
             <TabsTrigger value="quotationType">Type</TabsTrigger>
-            <TabsTrigger value="quotationModel">Model</TabsTrigger>
-            <TabsTrigger value="wood">Wood</TabsTrigger>
-            <TabsTrigger value="polish">Polish</TabsTrigger>
-            <TabsTrigger value="fabric">Fabric</TabsTrigger>
+            <TabsTrigger value="variant">Variant</TabsTrigger>
             <TabsTrigger value="quotation">Products</TabsTrigger>
+            {/* Hidden tabs - kept for backend compatibility */}
+            {/* <TabsTrigger value="quotationModel">Model</TabsTrigger> */}
+            {/* <TabsTrigger value="wood">Wood</TabsTrigger> */}
+            {/* <TabsTrigger value="polish">Polish</TabsTrigger> */}
+            {/* <TabsTrigger value="fabric">Fabric</TabsTrigger> */}
           </TabsList>
         </div>
 
         <TabsContent value="category">
           {renderTable(categories, "category")}
         </TabsContent>
+        <TabsContent value="categoryNo">
+          {renderTable(categoryNos, "categoryNo", "categoryId")}
+        </TabsContent>
         <TabsContent value="quotationType">
           {renderTable(quotationTypes, "quotationType", "categoryId")}
         </TabsContent>
-        <TabsContent value="quotationModel">
-          {renderTable(quotationModels, "quotationModel", "quotationTypeId")}
-        </TabsContent>
-        <TabsContent value="wood">{renderTable(woods, "wood")}</TabsContent>
-        <TabsContent value="polish">
-          {renderTable(polishes, "polish")}
-        </TabsContent>
-        <TabsContent value="fabric">
-          {renderTable(fabrics, "fabric")}
+        <TabsContent value="variant">
+          {renderTable(variants, "variant")}
         </TabsContent>
         <TabsContent value="quotation">{renderQuotationsTable()}</TabsContent>
+        {/* Hidden tab content - kept for backend compatibility */}
+        {/* <TabsContent value="quotationModel">{renderTable(quotationModels, "quotationModel", "quotationTypeId")}</TabsContent> */}
+        {/* <TabsContent value="wood">{renderTable(woods, "wood")}</TabsContent> */}
+        {/* <TabsContent value="polish">{renderTable(polishes, "polish")}</TabsContent> */}
+        {/* <TabsContent value="fabric">{renderTable(fabrics, "fabric")}</TabsContent> */}
       </Tabs>
 
       {/* Add Modal for simple masters */}
@@ -1231,28 +1330,30 @@ const Masters: React.FC = () => {
               </button>
             </div>
             <div className="space-y-4">
-              {activeTab === "quotationType" && (
-                <div className="space-y-2">
-                  <Label>Select Category</Label>
-                  <Select
-                    value={selectedParent}
-                    onValueChange={setSelectedParent}
-                  >
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories
-                        .filter((c) => c.status === "active")
-                        .map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Show category selector for quotationType and categoryNo */}
+              {(activeTab === "quotationType" ||
+                activeTab === "categoryNo") && (
+                  <div className="space-y-2">
+                    <Label>Select Category</Label>
+                    <Select
+                      value={selectedParent}
+                      onValueChange={setSelectedParent}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories
+                          .filter((c) => c.status === "active")
+                          .map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               {activeTab === "quotationModel" && (
                 <div className="space-y-2">
                   <Label>Select Product Type</Label>
@@ -1335,28 +1436,29 @@ const Masters: React.FC = () => {
               </button>
             </div>
             <div className="space-y-4">
-              {editingItem.type === "quotationType" && (
-                <div className="space-y-2">
-                  <Label>Select Category</Label>
-                  <Select
-                    value={editSelectedParent}
-                    onValueChange={setEditSelectedParent}
-                  >
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories
-                        .filter((c) => c.status === "active")
-                        .map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {(editingItem.type === "quotationType" ||
+                editingItem.type === "categoryNo") && (
+                  <div className="space-y-2">
+                    <Label>Select Category</Label>
+                    <Select
+                      value={editSelectedParent}
+                      onValueChange={setEditSelectedParent}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories
+                          .filter((c) => c.status === "active")
+                          .map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               {editingItem.type === "quotationModel" && (
                 <div className="space-y-2">
                   <Label>Select Product Type</Label>
@@ -1451,44 +1553,29 @@ const Masters: React.FC = () => {
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Product Name *</Label>
-                    <Input
-                      value={quotationForm.name}
-                      onChange={(e) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g., Sectional Sofa - Living Room"
-                      className="h-11"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Part Code *</Label>
-                    <Input
-                      value={quotationForm.partCode}
-                      onChange={(e) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          partCode: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g., S00_Vx(Sx)"
-                      className="h-11 font-mono"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label>Product Name *</Label>
+                  <Input
+                    value={quotationForm.name}
+                    onChange={(e) =>
+                      setQuotationForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., Sectional Sofa - Living Room"
+                    className="h-11"
+                  />
                 </div>
               </div>
 
-              {/* Classification */}
+              {/* Classification — Category, CategoryNo, Type, Variant → auto partCode */}
               <div className="space-y-4">
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
-                  Classification
+                  Classification & Part Code
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Category */}
                   <div className="space-y-2">
                     <Label>Category *</Label>
                     <Select
@@ -1497,6 +1584,7 @@ const Masters: React.FC = () => {
                         setQuotationForm((prev) => ({
                           ...prev,
                           categoryId: v,
+                          categoryNoId: "",
                           quotationTypeId: "",
                           quotationModelId: "",
                         }))
@@ -1516,8 +1604,36 @@ const Masters: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Category No */}
                   <div className="space-y-2">
-                    <Label>Product Type *</Label>
+                    <Label>Category No *</Label>
+                    <Select
+                      value={quotationForm.categoryNoId}
+                      onValueChange={(v) =>
+                        setQuotationForm((prev) => ({
+                          ...prev,
+                          categoryNoId: v,
+                        }))
+                      }
+                      disabled={!quotationForm.categoryId}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select no" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredCategoryNos.map((cn) => (
+                          <SelectItem key={cn.id} value={cn.id}>
+                            {cn.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Type */}
+                  <div className="space-y-2">
+                    <Label>Type *</Label>
                     <Select
                       value={quotationForm.quotationTypeId}
                       onValueChange={(v) =>
@@ -1541,115 +1657,60 @@ const Masters: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Variant */}
                   <div className="space-y-2">
-                    <Label>Product Model</Label>
+                    <Label>Variant *</Label>
                     <Select
-                      value={quotationForm.quotationModelId}
+                      value={quotationForm.variantId}
                       onValueChange={(v) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          quotationModelId: v,
-                        }))
+                        setQuotationForm((prev) => ({ ...prev, variantId: v }))
                       }
-                      disabled={!quotationForm.quotationTypeId}
                     >
                       <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select model" />
+                        <SelectValue placeholder="Select variant" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredQuotationModels.map((qm) => (
-                          <SelectItem key={qm.id} value={qm.id}>
-                            {qm.name}
+                        {activeVariants.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+
+                {/* Auto-generated Part Code */}
+                <div className="space-y-2">
+                  <Label>Part Code (auto-generated)</Label>
+                  <Input
+                    value={quotationForm.partCode}
+                    readOnly
+                    placeholder="Select all 4 fields above to generate part code"
+                    className="h-11 font-mono bg-muted/50"
+                  />
+                </div>
               </div>
 
-              {/* Materials */}
+              {/* Hidden: Model, Materials */}
               {/* <div className="space-y-4">
-                <h3 className="font-medium text-foreground border-b border-border pb-2">
-                  Materials (Optional)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Wood</Label>
-                    <Select
-                      value={quotationForm.woodId}
-                      onValueChange={(v) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          woodId: v,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select wood" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {woods
-                          .filter((w) => w.status === "active")
-                          .map((w) => (
-                            <SelectItem key={w.id} value={w.id}>
-                              {w.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Polish</Label>
-                    <Select
-                      value={quotationForm.polishId}
-                      onValueChange={(v) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          polishId: v,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select polish" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {polishes
-                          .filter((p) => p.status === "active")
-                          .map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fabric</Label>
-                    <Select
-                      value={quotationForm.fabricId}
-                      onValueChange={(v) =>
-                        setQuotationForm((prev) => ({
-                          ...prev,
-                          fabricId: v,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select fabric" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fabrics
-                          .filter((f) => f.status === "active")
-                          .map((f) => (
-                            <SelectItem key={f.id} value={f.id}>
-                              {f.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <h3 className="font-medium text-foreground border-b border-border pb-2">Product Model</h3>
+                <Select value={quotationForm.quotationModelId}
+                  onValueChange={(v) => setQuotationForm((prev) => ({ ...prev, quotationModelId: v }))}
+                  disabled={!quotationForm.quotationTypeId}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Select model" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredQuotationModels.map((qm) => (
+                      <SelectItem key={qm.id} value={qm.id}>{qm.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div> */}
+
+              {/* <div className="space-y-4">
+                <h3 className="font-medium text-foreground border-b border-border pb-2">Materials (Optional)</h3>
+                ... wood, polish, fabric dropdowns ...
               </div> */}
 
               {/* Dimensions */}
@@ -1755,14 +1816,11 @@ const Masters: React.FC = () => {
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
                   Images
                 </h3>
-
-                {/* Existing Images */}
                 {existingImages.length > 0 && (
                   <div className="space-y-4">
                     <Label className="text-sm text-muted-foreground">
                       Current Images
                     </Label>
-
                     <div className="space-y-4">
                       {existingImages.map((img, idx) => (
                         <div key={`existing-${idx}`} className="relative group">
@@ -1773,7 +1831,6 @@ const Masters: React.FC = () => {
                               className="w-full h-full object-cover"
                             />
                           </div>
-
                           <button
                             type="button"
                             onClick={() => handleRemoveExistingImage(idx)}
@@ -1786,14 +1843,11 @@ const Masters: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* New Images */}
                 {selectedFiles.length > 0 && (
                   <div className="space-y-4">
                     <Label className="text-sm text-muted-foreground">
                       New Images ({selectedFiles.length})
                     </Label>
-
                     <div className="space-y-4">
                       {selectedFiles.map((file, idx) => (
                         <div key={`new-${idx}`} className="relative group">
@@ -1804,7 +1858,6 @@ const Masters: React.FC = () => {
                               className="w-full h-full object-cover"
                             />
                           </div>
-
                           <button
                             type="button"
                             onClick={() => handleRemoveNewImage(idx)}
@@ -1812,7 +1865,6 @@ const Masters: React.FC = () => {
                           >
                             <X className="h-4 w-4" />
                           </button>
-
                           <p className="text-xs text-muted-foreground mt-2 truncate">
                             {file.name}
                           </p>
@@ -1821,8 +1873,6 @@ const Masters: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Hidden File Input */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1831,8 +1881,6 @@ const Masters: React.FC = () => {
                   onChange={(e) => handleAddFiles(e.target.files)}
                   className="hidden"
                 />
-
-                {/* Upload Box */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all"

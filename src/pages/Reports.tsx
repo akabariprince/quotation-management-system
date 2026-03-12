@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   BarChart,
   Bar,
@@ -11,16 +18,9 @@ import {
   Pie,
   Cell,
   Legend,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
 } from "recharts";
 import { useReports } from "@/hooks/useReports";
-import { useCategories } from "@/hooks/useCategories";
-import { useQuotations, Quotation } from "@/hooks/useQuotations";
-import { useCustomers } from "@/hooks/useCustomers";
-import { useAuth } from "@/contexts/AuthContext";
+import { useApi } from "@/hooks/useApi";
 import {
   FileText,
   Users,
@@ -31,6 +31,13 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Clock,
+  Search,
+  X,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,813 +49,1250 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   formatCurrency,
   formatDate,
   formatNumber,
   getStatusBadgeClass,
+  getDaysPendingClass,
   generateCSV,
-  aggregateByMonth,
-  aggregateByStatus,
-  groupByRegion,
 } from "@/utils/reportHelpers";
+
+/* ─── Utility ─── */
+const cn = (...classes: (string | boolean | undefined | null)[]) =>
+  classes.filter(Boolean).join(" ");
 
 const COLORS = [
   "#111827",
   "#A16207",
-  "#6B7280",
   "#166534",
-  "#92400E",
+  "#DC2626",
+  "#6B7280",
   "#7C3AED",
   "#0891B2",
 ];
+const TODAY_STR = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+})();
 
-const Reports: React.FC = () => {
-  const { user } = useAuth();
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-  const {
-    salesReport,
-    quotationReport,
-    customerReport,
-    loading: reportsLoading,
-    error,
-    fetchSalesReport,
-    fetchQuotationReport,
-    fetchCustomerReport,
-    fetchAllReports,
-  } = useReports();
+/* ═══════════════════════════════════════════════════════════
+   DatePickerInput — Custom Calendar Popover
+   ═══════════════════════════════════════════════════════════ */
 
-  const { categories, fetchAllCategories } = useCategories();
-  const {
-    quotations,
-    loading: quotationsLoading,
-    fetchAllQuotations,
-  } = useQuotations();
-  const {
-    customers,
-    loading: customersLoading,
-    fetchCustomers,
-  } = useCustomers();
+interface DatePickerInputProps {
+  value: string;
+  onChange: (val: string) => void;
+  minDate?: string;
+  maxDate?: string;
+  disabled?: boolean;
+  placeholder?: string;
+}
 
-  const [dateRange, setDateRange] = useState<
-    "daily" | "weekly" | "monthly" | "yearly"
-  >("monthly");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [customStartDate, setCustomStartDate] = useState<string>("");
-  const [customEndDate, setCustomEndDate] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<string>("quotations");
-  const [initialLoaded, setInitialLoaded] = useState(false);
-  const [allQuotations, setAllQuotations] = useState<Quotation[]>([]);
-
-  const loading = reportsLoading || quotationsLoading || customersLoading;
-
-  // ============ INITIAL LOAD ============
-  useEffect(() => {
-    const loadInitialData = async () => {
-      const [, , , allQ] = await Promise.allSettled([
-        fetchAllReports({ dateRange: "monthly" }),
-        fetchAllCategories(),
-        fetchCustomers({ limit: 10000 }),
-        fetchAllQuotations(),
-      ]);
-      if (allQ.status === "fulfilled") {
-        setAllQuotations(allQ.value || []);
-      }
-      setInitialLoaded(true);
-    };
-    loadInitialData();
-  }, []);
-
-  // ============ FILTER-BASED REFETCH ============
-  useEffect(() => {
-    if (!initialLoaded) return;
-
-    const filters: any = {};
-
-    // Use custom dates if provided, otherwise use preset
-    if (customStartDate && customEndDate) {
-      filters.startDate = customStartDate;
-      filters.endDate = customEndDate;
-    } else {
-      filters.dateRange = dateRange;
-    }
-
-    if (statusFilter !== "all") filters.status = statusFilter;
-
-    switch (activeTab) {
-      case "quotations":
-      case "financial":
-        fetchSalesReport(filters);
-        break;
-      case "customers":
-        fetchCustomerReport(filters);
-        break;
-      case "products":
-        fetchQuotationReport(filters);
-        break;
-    }
-  }, [
-    dateRange,
-    statusFilter,
-    customStartDate,
-    customEndDate,
-    activeTab,
-    initialLoaded,
-  ]);
-
-  // ============ DERIVED DATA ============
-
-  const monthlyChartData = useMemo(() => {
-    if (!salesReport?.projects) return [];
-    return aggregateByMonth(
-      salesReport.projects.map((p) => ({
-        date: p.date,
-        value: Number(p.grandTotalWithGst) || 0,
-      })),
-    );
-  }, [salesReport]);
-
-  const statusDistribution = useMemo(() => {
-    if (!salesReport?.projects) return [];
-    return aggregateByStatus(salesReport.projects);
-  }, [salesReport]);
-
-  const expiredProjects = useMemo(() => {
-    if (!salesReport?.projects) return [];
-    return salesReport.projects.filter((p) => p.status === "expired");
-  }, [salesReport]);
-
-  const topCustomers = useMemo(() => {
-    if (!customerReport) return [];
-    return [...customerReport]
-      .sort((a, b) => Number(b.totalValue) - Number(a.totalValue))
-      .slice(0, 10);
-  }, [customerReport]);
-
-  const regionData = useMemo(() => {
-    if (!customerReport) return [];
-    const stateData = customerReport
-      .filter((c) => c.customer)
-      .map((c) => ({ state: c.customer.state, city: c.customer.city }));
-    return groupByRegion(stateData);
-  }, [customerReport]);
-
-  const quotationFrequency = useMemo(() => {
-    if (!quotationReport) return [];
-    return [...quotationReport]
-      .sort((a, b) => Number(b.totalRevenue) - Number(a.totalRevenue))
-      .slice(0, 10);
-  }, [quotationReport]);
-
-  const categoryDistribution = useMemo(() => {
-    if (!categories.length || !allQuotations.length) return [];
-    return categories
-      .map((cat) => ({
-        name: cat.name,
-        quotations: allQuotations.filter((q) => q.categoryId === cat.id).length,
-      }))
-      .filter((c) => c.quotations > 0);
-  }, [categories, allQuotations]);
-
-  const highValueQuotations = useMemo(() => {
-    if (!allQuotations.length) return [];
-    return [...allQuotations]
-      .sort((a, b) => (Number(b.basePrice) || 0) - (Number(a.basePrice) || 0))
-      .slice(0, 10);
-  }, [allQuotations]);
-
-  // Use ACTUAL GST fields from backend instead of estimating
-  const financialSummary = useMemo(() => {
-    if (!salesReport?.summary) {
-      return {
-        totalValue: 0,
-        totalDiscount: 0,
-        avgOrderValue: 0,
-        totalProjects: 0,
-        totalCgst: 0,
-        totalSgst: 0,
-        totalIgst: 0,
-        discountRate: 0,
-      };
-    }
-    const s = salesReport.summary;
-    return {
-      totalValue: s.totalValue,
-      totalDiscount: s.totalDiscount,
-      avgOrderValue: s.avgOrderValue,
-      totalProjects: s.totalProjects,
-      totalCgst: s.totalCgst || 0,
-      totalSgst: s.totalSgst || 0,
-      totalIgst: s.totalIgst || 0,
-      discountRate:
-        s.totalValue > 0
-          ? (s.totalDiscount / (s.totalValue + s.totalDiscount)) * 100
-          : 0,
-    };
-  }, [salesReport]);
-
-  // GST monthly from actual project fields
-  const gstMonthlyData = useMemo(() => {
-    if (!salesReport?.projects) return [];
-    const monthMap: Record<
-      string,
-      { cgst: number; sgst: number; igst: number }
-    > = {};
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-
-    salesReport.projects.forEach((p) => {
-      const date = new Date(p.date);
-      const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
-      if (!monthMap[key]) monthMap[key] = { cgst: 0, sgst: 0, igst: 0 };
-      monthMap[key].cgst += Number(p.cgst) || 0;
-      monthMap[key].sgst += Number(p.sgst) || 0;
-      monthMap[key].igst += Number(p.igst) || 0;
-    });
-
-    return Object.entries(monthMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, val]) => {
-        const [, monthIndex] = key.split("-");
-        return {
-          month: monthNames[parseInt(monthIndex)],
-          cgst: Math.round(val.cgst),
-          sgst: Math.round(val.sgst),
-          igst: Math.round(val.igst),
-        };
-      });
-  }, [salesReport]);
-
-  const masterSummary = useMemo(
-    () => ({
-      categories: categories.length,
-      quotations: allQuotations.length,
-      customers: customers.length,
-      totalProjects: salesReport?.summary?.totalProjects || 0,
-    }),
-    [categories, allQuotations, customers, salesReport],
+const DatePickerInput: React.FC<DatePickerInputProps> = ({
+  value,
+  onChange,
+  minDate,
+  maxDate,
+  disabled,
+  placeholder = "Pick a date",
+}) => {
+  const [open, setOpen] = useState(false);
+  const [viewDate, setViewDate] = useState<Date>(
+    () => new Date(value ? value + "T00:00:00" : Date.now()),
   );
 
-  // ============ EXPORT HANDLERS ============
+  useEffect(() => {
+    if (value) setViewDate(new Date(value + "T00:00:00"));
+  }, [value]);
 
-  const handleExportSales = useCallback(() => {
-    if (!salesReport?.projects?.length) {
-      toast.error("No data to export");
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const cells: { day: number; current: boolean; dateStr: string }[] = [];
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = prevMonthDays - i;
+    const pm = month === 0 ? 11 : month - 1;
+    const py = month === 0 ? year - 1 : year;
+    cells.push({
+      day: d,
+      current: false,
+      dateStr: `${py}-${String(pm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+    });
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    cells.push({
+      day: i,
+      current: true,
+      dateStr: `${year}-${String(month + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`,
+    });
+  }
+  const total = cells.length <= 35 ? 35 : 42;
+  const remaining = total - cells.length;
+  for (let i = 1; i <= remaining; i++) {
+    const nm = month === 11 ? 0 : month + 1;
+    const ny = month === 11 ? year + 1 : year;
+    cells.push({
+      day: i,
+      current: false,
+      dateStr: `${ny}-${String(nm + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`,
+    });
+  }
+
+  const isDateDisabled = (ds: string) => {
+    if (minDate && ds < minDate) return true;
+    if (maxDate && ds > maxDate) return true;
+    return false;
+  };
+
+  const pick = (ds: string) => {
+    onChange(ds);
+    setOpen(false);
+  };
+
+  const formatDisplay = (v: string) => {
+    if (!v) return "";
+    const d = new Date(v + "T00:00:00");
+    return d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "flex h-9 w-[160px] items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm transition-colors",
+            "hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            disabled && "opacity-50 cursor-not-allowed",
+            !value ? "text-muted-foreground" : "text-foreground",
+          )}
+        >
+          <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="truncate text-left flex-1">
+            {value ? formatDisplay(value) : placeholder}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+        <div className="p-3 w-[280px]">
+          {/* Month / Year navigation */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={() => setViewDate(new Date(year, month - 1, 1))}
+              className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-semibold select-none">
+              {MONTH_NAMES[month]} {year}
+            </span>
+            <button
+              type="button"
+              onClick={() => setViewDate(new Date(year, month + 1, 1))}
+              className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Day-of-week headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAY_LABELS.map((d) => (
+              <div
+                key={d}
+                className="h-8 flex items-center justify-center text-[11px] font-medium text-muted-foreground uppercase"
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7">
+            {cells.map((cell, i) => {
+              const selected = value === cell.dateStr;
+              const today = cell.dateStr === TODAY_STR;
+              const dis = !cell.current || isDateDisabled(cell.dateStr);
+              return (
+                <div key={i} className="flex items-center justify-center p-0.5">
+                  <button
+                    type="button"
+                    disabled={dis}
+                    onClick={() => !dis && pick(cell.dateStr)}
+                    className={cn(
+                      "h-8 w-8 rounded-md text-sm flex items-center justify-center transition-colors",
+                      !cell.current && "text-muted-foreground/20",
+                      cell.current &&
+                      !selected &&
+                      !dis &&
+                      "hover:bg-muted text-foreground",
+                      selected && "bg-foreground text-background font-semibold",
+                      today &&
+                      !selected &&
+                      cell.current &&
+                      "ring-1 ring-foreground/20 font-medium",
+                      dis &&
+                      cell.current &&
+                      "text-muted-foreground/25 cursor-not-allowed",
+                    )}
+                  >
+                    {cell.day}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+            <button
+              type="button"
+              onClick={() => {
+                if (!isDateDisabled(TODAY_STR)) pick(TODAY_STR);
+              }}
+              className={cn(
+                "text-xs font-medium hover:underline",
+                isDateDisabled(TODAY_STR)
+                  ? "text-muted-foreground/40 cursor-not-allowed"
+                  : "text-foreground",
+              )}
+            >
+              Today
+            </button>
+            {value && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
+   StatCard — Icon Right, Value + Label Left
+   ═══════════════════════════════════════════════════════════ */
+
+interface StatCardProps {
+  icon: React.ElementType;
+  value: string | number;
+  label: string;
+  iconColor?: string;
+  iconBg?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({
+  icon: Icon,
+  value,
+  label,
+  iconColor = "text-accent",
+  iconBg = "bg-accent/10",
+}) => (
+  <div className="flex items-center justify-between p-4 md:p-5 bg-card border border-border  shadow-sm hover:shadow-md transition-shadow">
+    <div className="space-y-1 min-w-0 flex-1">
+      <p className="text-xl md:text-2xl font-bold text-foreground tracking-tight truncate">
+        {value}
+      </p>
+      <p className="text-xs md:text-sm text-muted-foreground font-medium">
+        {label}
+      </p>
+    </div>
+    <div
+      className={cn(
+        "h-10 w-10 md:h-12 md:w-12  flex items-center justify-center flex-shrink-0 ml-3",
+        iconBg,
+      )}
+    >
+      <Icon className={cn("h-5 w-5 md:h-6 md:w-6", iconColor)} />
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   MiniStatCard — For tab-level summary cards
+   ═══════════════════════════════════════════════════════════ */
+
+interface MiniStatCardProps {
+  value: string | number;
+  label: string;
+  icon?: React.ElementType;
+  className?: string;
+  valueClassName?: string;
+}
+
+const MiniStatCard: React.FC<MiniStatCardProps> = ({
+  value,
+  label,
+  icon: Icon,
+  className = "",
+  valueClassName = "",
+}) => (
+  <div
+    className={cn(
+      "p-4  text-center border border-border bg-card",
+      className,
+    )}
+  >
+    {Icon && (
+      <Icon className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground" />
+    )}
+    <p className={cn("text-xl md:text-2xl font-bold", valueClassName)}>
+      {value}
+    </p>
+    <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   CustomerSearchSelect — Portal + Live API Search
+   ═══════════════════════════════════════════════════════════ */
+
+interface CustomerSearchSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  apiFn: (url: string) => Promise<any>;
+}
+
+const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
+  value,
+  onChange,
+  placeholder = "Search customer…",
+  apiFn,
+}) => {
+  const [search, setSearch] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+  const [selectedName, setSelectedName] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!value || value === "all") {
+      setSelectedName("");
       return;
     }
-    const exportData = salesReport.projects.map((p) => ({
-      "Project No": p.projectNo,
-      Date: formatDate(p.date),
-      Customer: p.customer?.name || "-",
-      City: p.customer?.city || "-",
-      State: p.customer?.state || "-",
-      Status: p.status,
-      Subtotal: p.subtotal,
-      Discount: p.totalDiscount,
-      CGST: p.cgst,
-      SGST: p.sgst,
-      IGST: p.igst,
-      "Grand Total": p.grandTotal,
-      "Grand Total (GST)": p.grandTotalWithGst,
-    }));
-    generateCSV(exportData, "sales_report");
-    toast.success("Sales report exported successfully");
-  }, [salesReport]);
-
-  const handleExportCustomers = useCallback(() => {
-    if (!customerReport?.length) {
-      toast.error("No data to export");
+    const found = results.find((c) => c.id === value);
+    if (found) {
+      setSelectedName(found.name);
       return;
     }
-    const exportData = customerReport.map((c) => ({
-      Customer: c.customer?.name || "-",
-      City: c.customer?.city || "-",
-      State: c.customer?.state || "-",
-      Mobile: c.customer?.mobile || "-",
-      Email: c.customer?.email || "-",
-      "Total Projects": c.totalProjects,
-      "Total Value": c.totalValue,
-    }));
-    generateCSV(exportData, "customer_report");
-    toast.success("Customer report exported successfully");
-  }, [customerReport]);
+    (async () => {
+      try {
+        const res = await apiFn(`/customers/${value}`);
+        if (res?.data?.name) setSelectedName(res.data.name);
+      } catch {
+        setSelectedName("");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
-  const handleExportQuotations = useCallback(() => {
-    if (!quotationReport?.length) {
-      toast.error("No data to export");
-      return;
+  const updatePosition = useCallback(() => {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    setDropdownPos({
+      top: rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      width: Math.max(rect.width, 300),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    const handler = () => updatePosition();
+    window.addEventListener("scroll", handler, true);
+    window.addEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("scroll", handler, true);
+      window.removeEventListener("resize", handler);
+    };
+  }, [isOpen, updatePosition]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      const dd = document.getElementById("cust-search-portal");
+      if (dd?.contains(target)) return;
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen]);
+
+  const searchCustomers = useCallback(
+    async (query: string) => {
+      try {
+        setSearching(true);
+        const params = new URLSearchParams();
+        params.set("page", "1");
+        params.set("limit", "10");
+        params.set("sortBy", "createdAt");
+        params.set("sortOrder", "DESC");
+        if (query.trim()) params.set("search", query.trim());
+        const res = await apiFn(`/customers?${params.toString()}`);
+        let data: any[] = [];
+        if (Array.isArray(res?.data)) data = res.data;
+        else if (res?.data?.customers) data = res.data.customers;
+        else if (res?.data?.rows) data = res.data.rows;
+        else if (res?.data?.data) {
+          if (Array.isArray(res.data.data)) data = res.data.data;
+          else if (res.data.data?.customers) data = res.data.data.customers;
+          else if (res.data.data?.rows) data = res.data.data.rows;
+        }
+        setResults(data);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [apiFn],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchCustomers(search), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [search, isOpen, searchCustomers]);
+
+  const handleFocus = () => {
+    setIsOpen(true);
+    setSearch("");
+    updatePosition();
+    searchCustomers("");
+  };
+
+  const handleSelect = (id: string, name?: string) => {
+    onChange(id);
+    setSelectedName(id === "all" ? "" : name || "");
+    setSearch("");
+    setIsOpen(false);
+    inputRef.current?.blur();
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("all");
+    setSelectedName("");
+    setSearch("");
+    setIsOpen(false);
+  };
+
+  const dropdown = isOpen
+    ? createPortal(
+      <div
+        id="cust-search-portal"
+        style={{
+          position: "absolute",
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          width: dropdownPos.width,
+          zIndex: 9999,
+        }}
+        className="bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-auto animate-in fade-in-0 zoom-in-95 duration-100"
+      >
+        <button
+          type="button"
+          onClick={() => handleSelect("all")}
+          className={cn(
+            "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/50",
+            value === "all"
+              ? "bg-accent/5 text-accent font-medium"
+              : "text-muted-foreground",
+          )}
+        >
+          All Customers
+        </button>
+        <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30 font-medium flex items-center justify-between sticky top-0">
+          <span>
+            {search.trim()
+              ? `${results.length} result${results.length !== 1 ? "s" : ""}`
+              : "Recent Customers"}
+          </span>
+          {searching && (
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {!searching && results.length === 0 ? (
+          <div className="px-3 py-8 text-sm text-muted-foreground text-center">
+            {search.trim()
+              ? "No customers found"
+              : "No customers available"}
+          </div>
+        ) : (
+          results.map((c: any) => (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => handleSelect(c.id, c.name)}
+              className={cn(
+                "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/10 last:border-0",
+                value === c.id ? "bg-accent/10 text-accent" : "",
+              )}
+            >
+              <div className="font-medium truncate">{c.name}</div>
+              {(c.mobile || c.city || c.email) && (
+                <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {[c.mobile, c.city, c.email].filter(Boolean).join(" · ")}
+                </div>
+              )}
+            </button>
+          ))
+        )}
+        {searching && results.length > 0 && (
+          <div className="px-3 py-2 text-center">
+            <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+          </div>
+        )}
+      </div>,
+      document.body,
+    )
+    : null;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={isOpen ? search : selectedName || ""}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={handleFocus}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setIsOpen(false);
+              inputRef.current?.blur();
+            }
+          }}
+          placeholder={placeholder}
+          autoComplete="off"
+          className="flex h-9 w-56 rounded-md border border-input bg-transparent pl-8 pr-8 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        {selectedName && !isOpen && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {dropdown}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
+   Main Reports Component
+   ═══════════════════════════════════════════════════════════ */
+
+const Reports: React.FC = () => {
+  const api = useApi();
+  const {
+    masterReport,
+    quotationSummary,
+    conversionReport,
+    pendingReport,
+    salesmanReport,
+    customerHistory,
+    productReport,
+    discountReport,
+    loading,
+    error,
+    fetchMasterReport,
+    fetchQuotationSummary,
+    fetchConversionReport,
+    fetchPendingReport,
+    fetchSalesmanReport,
+    fetchCustomerHistory,
+    fetchProductReport,
+    fetchDiscountReport,
+  } = useReports();
+
+  /* ─── State ─── */
+  const [activeTab, setActiveTab] = useState("overview");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("all");
+  const [custHistoryCustomerId, setCustHistoryCustomerId] = useState("all");
+  const [custHistoryStart, setCustHistoryStart] = useState("");
+  const [custHistoryEnd, setCustHistoryEnd] = useState("");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [filtersApplied, setFiltersApplied] = useState(false);
+
+  /* ─── Initial Load ─── */
+  useEffect(() => {
+    const load = async () => {
+      await Promise.allSettled([fetchMasterReport(), fetchQuotationSummary()]);
+      setInitialLoaded(true);
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ─── Tab Data ─── */
+  useEffect(() => {
+    if (!initialLoaded) return;
+    switch (activeTab) {
+      case "overview":
+        fetchMasterReport();
+        break;
+      case "quotation-summary":
+        fetchQuotationSummary();
+        break;
+      case "conversion":
+        fetchConversionReport();
+        break;
+      case "pending":
+        fetchPendingReport();
+        break;
+      case "sales-performance":
+        fetchSalesmanReport();
+        break;
+      case "customer-history":
+        fetchCustomerHistory({
+          customerId:
+            custHistoryCustomerId !== "all"
+              ? custHistoryCustomerId
+              : undefined,
+          startDate: custHistoryStart || undefined,
+          endDate: custHistoryEnd || undefined,
+        });
+        break;
+      case "product":
+        fetchProductReport();
+        break;
+      case "discounts":
+        fetchDiscountReport();
+        break;
     }
-    const exportData = quotationReport.map((q) => ({
-      "Quotation ID": q.quotationId,
-      "Quotation Name": q.quotationName,
-      "Times Used": q.timesUsed,
-      "Total Quantity": q.totalQuantity,
-      "Total Revenue": q.totalRevenue,
-    }));
-    generateCSV(exportData, "quotation_usage_report");
-    toast.success("Quotation report exported successfully");
-  }, [quotationReport]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, initialLoaded]);
 
-  const handleExportQuotationMaster = useCallback(() => {
-    if (!allQuotations.length) {
-      toast.error("No data to export");
-      return;
-    }
-    const exportData = allQuotations.map((q) => ({
-      "Part Code": q.partCode,
-      Name: q.name,
-      Category:
-        q.category?.name ||
-        categories.find((c) => c.id === q.categoryId)?.name ||
-        "-",
-      Type: q.quotationType?.name || "-",
-      Model: q.quotationModel?.name || "-",
-      "Base Price": q.basePrice,
-      "GST %": q.gstPercent,
-      "Default Discount": q.defaultDiscount,
-      Status: q.status,
-    }));
-    generateCSV(exportData, "quotation_master_report");
-    toast.success("Quotation master exported successfully");
-  }, [allQuotations, categories]);
-
-  const handleExportAll = useCallback(() => {
-    handleExportSales();
-    handleExportCustomers();
-    handleExportQuotations();
-    handleExportQuotationMaster();
-  }, [
-    handleExportSales,
-    handleExportCustomers,
-    handleExportQuotations,
-    handleExportQuotationMaster,
-  ]);
-
-  const handleRefresh = useCallback(() => {
+  /* ─── Helpers ─── */
+  const buildCurrentFilters = useCallback(() => {
     const filters: any = {};
-    if (customStartDate && customEndDate) {
-      filters.startDate = customStartDate;
-      filters.endDate = customEndDate;
-    } else {
-      filters.dateRange = dateRange;
-    }
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
     if (statusFilter !== "all") filters.status = statusFilter;
+    if (searchText) filters.search = searchText;
+    if (selectedCustomerId && selectedCustomerId !== "all")
+      filters.customerId = selectedCustomerId;
+    return filters;
+  }, [startDate, endDate, statusFilter, searchText, selectedCustomerId]);
 
-    fetchAllReports(filters);
-    fetchAllQuotations().then((data) => setAllQuotations(data || []));
-    toast.success("Reports refreshed");
-  }, [
-    dateRange,
-    statusFilter,
-    customStartDate,
-    customEndDate,
-    fetchAllReports,
-    fetchAllQuotations,
-  ]);
+  const applyFilters = useCallback(() => {
+    const filters = buildCurrentFilters();
+    setFiltersApplied(true);
+    switch (activeTab) {
+      case "quotation-summary":
+        fetchQuotationSummary(filters);
+        break;
+      case "conversion":
+        fetchConversionReport(filters);
+        break;
+      case "pending":
+        fetchPendingReport(filters);
+        break;
+      case "sales-performance":
+        fetchSalesmanReport(filters);
+        break;
+      case "product":
+        fetchProductReport(filters);
+        break;
+      case "discounts":
+        fetchDiscountReport(filters);
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, buildCurrentFilters]);
 
-  // ============ LOADING STATE ============
+  const clearFilters = useCallback(() => {
+    setStartDate("");
+    setEndDate("");
+    setStatusFilter("all");
+    setSearchText("");
+    setSelectedCustomerId("all");
+    setFiltersApplied(false);
+  }, []);
+
+  // When start date clears, clear end date too
+  const handleStartDateChange = useCallback(
+    (val: string) => {
+      setStartDate(val);
+      if (!val) setEndDate("");
+      setFiltersApplied(false);
+    },
+    [],
+  );
+
+  const handleEndDateChange = useCallback((val: string) => {
+    setEndDate(val);
+    setFiltersApplied(false);
+  }, []);
+
+  const handleCustHistoryStartChange = useCallback(
+    (val: string) => {
+      setCustHistoryStart(val);
+      if (!val) setCustHistoryEnd("");
+    },
+    [],
+  );
+
+  const toggleRow = (id: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const hasActiveFilters =
+    startDate ||
+    endDate ||
+    statusFilter !== "all" ||
+    searchText ||
+    selectedCustomerId !== "all";
+
+  /* ─── Exports ─── */
+  const exportQuotationSummary = useCallback(() => {
+    if (!quotationSummary?.projects?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      quotationSummary.projects.map((p) => ({
+        "Quote No": p.projectNo,
+        Date: formatDate(p.date),
+        Customer: p.customer?.name || "-",
+        Amount: p.grandTotalWithGst,
+        Status: p.status,
+        Salesperson: p.salesPerson?.name || "-",
+        "Project Name": p.projectName || "-",
+      })),
+      "quotation_summary",
+    );
+    toast.success("Exported successfully");
+  }, [quotationSummary]);
+
+  const exportConversion = useCallback(() => {
+    if (!conversionReport?.data?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      conversionReport.data.map((r) => ({
+        "Quote No": r.quoteNo,
+        Customer: r.customer,
+        "Quote Amount": r.quoteAmount,
+        "Order No": r.orderNo || "-",
+        "Order Amount": r.orderAmount || "-",
+        Status: r.status,
+        Salesperson: r.salesPersonName,
+        "Project Name": r.projectName,
+      })),
+      "conversion_report",
+    );
+    toast.success("Exported successfully");
+  }, [conversionReport]);
+
+  const exportPending = useCallback(() => {
+    if (!pendingReport?.data?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      pendingReport.data.map((r) => ({
+        "Quote No": r.quoteNo,
+        Customer: r.customer,
+        Amount: r.amount,
+        "Days Pending": r.daysPending,
+        "Follow-up Date": formatDate(r.followUpDate),
+        Salesperson: r.salesPersonName,
+      })),
+      "pending_quotations",
+    );
+    toast.success("Exported successfully");
+  }, [pendingReport]);
+
+  const exportSalesman = useCallback(() => {
+    if (!salesmanReport?.data?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      salesmanReport.data.map((r) => ({
+        Salesperson: r.salesPersonName,
+        Email: r.salesPersonEmail,
+        Quotations: r.totalQuotations,
+        Converted: r.converted,
+        "Conversion %": r.conversionPercent + "%",
+        Revenue: r.totalRevenue,
+      })),
+      "salesman_performance",
+    );
+    toast.success("Exported successfully");
+  }, [salesmanReport]);
+
+  const exportCustomerHistory = useCallback(() => {
+    if (!customerHistory?.quotations?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      customerHistory.quotations.map((q) => ({
+        Date: formatDate(q.date),
+        "Quote No": q.quoteNo,
+        Amount: q.amount,
+        "Discount %": q.discountPercent,
+        Status: q.status,
+        Salesperson: q.salesPersonName,
+      })),
+      "customer_history",
+    );
+    toast.success("Exported successfully");
+  }, [customerHistory]);
+
+  const exportProduct = useCallback(() => {
+    if (!productReport?.details?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      productReport.details.map((d: any) => ({
+        Date: formatDate(d.project?.date),
+        "Quote No": d.project?.projectNo || "-",
+        Product: d.quotationName,
+        Qty: d.quantity,
+        Rate: d.finalPrice,
+        Amount: d.totalWithGst,
+        Salesperson: d.project?.salesPerson?.name || "-",
+      })),
+      "product_report",
+    );
+    toast.success("Exported successfully");
+  }, [productReport]);
+
+  const exportDiscount = useCallback(() => {
+    if (!discountReport?.items?.length)
+      return toast.error("No data to export");
+    generateCSV(
+      discountReport.items.map((i: any) => ({
+        "Quote No": i.project?.projectNo || "-",
+        Product: i.quotationName,
+        "Discount %": i.discountPercent,
+        "Discount Amt": i.discountAmount,
+        Customer: i.project?.customer?.name || "-",
+        Salesperson: i.project?.salesPerson?.name || "-",
+        Date: formatDate(i.project?.date),
+      })),
+      "discount_report",
+    );
+    toast.success("Exported successfully");
+  }, [discountReport]);
+
+  /* ─── Loading ─── */
   if (!initialLoaded && loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-accent" />
-          <p className="text-muted-foreground">Loading reports...</p>
+          <p className="text-muted-foreground">Loading reports…</p>
         </div>
       </div>
     );
   }
 
+  /* ════════════════════════ RENDER ════════════════════════ */
   return (
-    <div className="animate-fade-in">
-      {/* PAGE HEADER */}
-      <div className="page-header">
+    <div className="space-y-6 animate-fade-in">
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="page-title">MIS Reports</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            MIS Reports
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Comprehensive analytics and business intelligence
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={handleExportAll}
-            disabled={loading}
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Export All</span>
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            fetchMasterReport();
+            toast.success("Reports refreshed");
+          }}
+          disabled={loading}
+          className="gap-2 h-9"
+        >
+          <RefreshCw
+            className={cn("h-4 w-4", loading && "animate-spin")}
+          />
+          Refresh
+        </Button>
       </div>
 
-      {/* ERROR BANNER */}
+      {/* ── Error Banner ── */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+        <div className="bg-destructive/10 border border-destructive/20  p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
           <p className="text-sm text-destructive">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            className="ml-auto"
-          >
-            Retry
-          </Button>
         </div>
       )}
 
-      {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="stat-card">
-          <FileText className="h-5 w-5 text-accent" />
-          <p className="stat-value">
-            {formatNumber(financialSummary.totalProjects)}
-          </p>
-          <p className="stat-label">Total Projects</p>
-        </div>
-        <div className="stat-card">
-          <TrendingUp className="h-5 w-5 text-success" />
-          <p className="stat-value text-xl md:text-3xl">
-            {formatCurrency(financialSummary.totalValue)}
-          </p>
-          <p className="stat-label">Total Value</p>
-        </div>
-        <div className="stat-card">
-          <Users className="h-5 w-5 text-primary" />
-          <p className="stat-value">{formatNumber(masterSummary.customers)}</p>
-          <p className="stat-label">Total Customers</p>
-        </div>
-        <div className="stat-card">
-          <Package className="h-5 w-5 text-warning" />
-          <p className="stat-value">{formatNumber(masterSummary.quotations)}</p>
-          <p className="stat-label">Active Quotations</p>
-        </div>
+      {/* ── Master Summary Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={FileText}
+          value={formatNumber(masterReport?.totalProjects || 0)}
+          label="Total Quotations"
+          iconColor="text-blue-600"
+          iconBg="bg-blue-100 dark:bg-blue-900/30"
+        />
+        <StatCard
+          icon={TrendingUp}
+          value={formatCurrency(masterReport?.totalRevenue || 0)}
+          label="Total Revenue"
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-100 dark:bg-emerald-900/30"
+        />
+        <StatCard
+          icon={Users}
+          value={formatNumber(masterReport?.totalCustomers || 0)}
+          label="Total Customers"
+          iconColor="text-violet-600"
+          iconBg="bg-violet-100 dark:bg-violet-900/30"
+        />
+        <StatCard
+          icon={Package}
+          value={formatNumber(masterReport?.totalItems || 0)}
+          label="Total Items"
+          iconColor="text-amber-600"
+          iconBg="bg-amber-100 dark:bg-amber-900/30"
+        />
       </div>
 
-      {/* GLOBAL FILTERS */}
-      <div className="enterprise-card p-4 mt-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">
-            Filters:
-          </span>
-
-          <Select
-            value={dateRange}
-            onValueChange={(v: any) => {
-              setDateRange(v);
-              setCustomStartDate("");
-              setCustomEndDate("");
-            }}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="expired">Expired</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              value={customStartDate}
-              onChange={(e) => setCustomStartDate(e.target.value)}
-              className="w-36 text-sm"
-            />
-            <span className="text-muted-foreground text-sm">to</span>
-            <Input
-              type="date"
-              value={customEndDate}
-              onChange={(e) => setCustomEndDate(e.target.value)}
-              className="w-36 text-sm"
-            />
-          </div>
-
-          {(customStartDate || customEndDate || statusFilter !== "all") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setCustomStartDate("");
-                setCustomEndDate("");
-                setStatusFilter("all");
-                setDateRange("monthly");
-              }}
-            >
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* TABS */}
+      {/* ═══════ TABS ═══════ */}
       <Tabs
-        defaultValue="quotations"
-        className="space-y-6 mt-4"
-        onValueChange={setActiveTab}
+        value={activeTab}
+        className="space-y-6"
+        onValueChange={(v) => {
+          setActiveTab(v);
+          clearFilters();
+        }}
       >
-        <div className="overflow-x-auto">
-          <TabsList className="inline-flex">
-            <TabsTrigger value="masters">Masters</TabsTrigger>
-            <TabsTrigger value="quotations">Sales / Projects</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="products">Quotations</TabsTrigger>
-            <TabsTrigger value="financial">Financial</TabsTrigger>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList className="inline-flex h-10">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="quotation-summary"
+              className="text-xs sm:text-sm"
+            >
+              Quotation Summary
+            </TabsTrigger>
+            <TabsTrigger value="conversion" className="text-xs sm:text-sm">
+              Conversion
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              Pending
+            </TabsTrigger>
+            <TabsTrigger
+              value="sales-performance"
+              className="text-xs sm:text-sm"
+            >
+              Sales Performance
+            </TabsTrigger>
+            <TabsTrigger
+              value="customer-history"
+              className="text-xs sm:text-sm"
+            >
+              Customer History
+            </TabsTrigger>
+            <TabsTrigger value="product" className="text-xs sm:text-sm">
+              Product
+            </TabsTrigger>
+            <TabsTrigger value="discounts" className="text-xs sm:text-sm">
+              Discounts
+            </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* ======== MASTER REPORTS ======== */}
-        <TabsContent value="masters" className="space-y-6">
-          <h2 className="text-lg font-semibold">Master Reports</h2>
-
+        {/* ─────── 1. OVERVIEW ─────── */}
+        <TabsContent value="overview" className="space-y-6">
+          <h2 className="text-lg font-semibold">
+            Master Report – Hierarchy
+          </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Status Breakdown */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
-                Summary Overview
+                Status Breakdown
               </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: "Categories", value: masterSummary.categories },
-                  { label: "Quotations", value: masterSummary.quotations },
-                  { label: "Customers", value: masterSummary.customers },
-                  {
-                    label: "Total Projects",
-                    value: masterSummary.totalProjects,
-                  },
-                ].map((item) => (
+              <div className="grid grid-cols-2 gap-3">
+                {(masterReport?.statusCounts || []).map((sc: any) => (
                   <div
-                    key={item.label}
-                    className="p-4 bg-muted/50 rounded-lg text-center"
+                    key={sc.status}
+                    className="p-4 bg-muted/40  text-center border border-border"
                   >
-                    <p className="text-2xl font-bold">{item.value}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.label}
+                    <p className="text-2xl font-bold">{sc.count}</p>
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {sc.status}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatCurrency(Number(sc.value) || 0)}
                     </p>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Report Hierarchy */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
-                Quotations by Category
+                Report Hierarchy
               </h3>
-              {categoryDistribution.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={categoryDistribution}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar
-                      dataKey="quotations"
-                      fill="#A16207"
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-muted-foreground py-12">
-                  No category data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quotation Master Table */}
-          <div className="enterprise-card p-5 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">
-                Quotation Master ({allQuotations.length})
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportQuotationMaster}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-            <div className="table-container max-h-72">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Part Code</th>
-                    <th>Name</th>
-                    <th className="hidden sm:table-cell">Category</th>
-                    <th className="hidden md:table-cell">Base Price</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allQuotations.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        No quotations found
-                      </td>
-                    </tr>
-                  ) : (
-                    allQuotations.slice(0, 20).map((q) => (
-                      <tr key={q.id}>
-                        <td className="font-mono text-xs">{q.partCode}</td>
-                        <td className="font-medium max-w-[150px] truncate">
-                          {q.name}
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {q.category?.name ||
-                            categories.find((c) => c.id === q.categoryId)
-                              ?.name ||
-                            "-"}
-                        </td>
-                        <td className="hidden md:table-cell">
-                          {formatCurrency(Number(q.basePrice) || 0)}
-                        </td>
-                        <td>
-                          <span className={getStatusBadgeClass(q.status)}>
-                            {q.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* User Access Report */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              User Access Report
-            </h3>
-            <div className="table-container">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Role</th>
-                    <th>Add Customer</th>
-                    <th>Create Project</th>
-                    <th className="hidden sm:table-cell">Edit Masters</th>
-                    <th className="hidden md:table-cell">Approve OTP</th>
-                    <th className="hidden lg:table-cell">View Reports</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    {
-                      role: "Data Entry",
-                      perms: [true, true, false, false, false],
-                    },
-                    {
-                      role: "Creator",
-                      perms: [true, true, false, false, false],
-                    },
-                    { role: "Master", perms: [true, true, true, false, false] },
-                    { role: "Admin", perms: [true, true, true, true, true] },
-                  ].map((r) => (
-                    <tr key={r.role}>
-                      <td className="font-medium">{r.role}</td>
-                      {r.perms.map((p, i) => (
-                        <td
-                          key={i}
-                          className={`${i >= 2 ? (i === 2 ? "hidden sm:table-cell" : i === 3 ? "hidden md:table-cell" : "hidden lg:table-cell") : ""} ${p ? "text-success" : "text-destructive"}`}
-                        >
-                          {p ? "✓" : "✗"}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="space-y-2">
+                {[
+                  {
+                    name: "Quotation Summary Report",
+                    tab: "quotation-summary",
+                  },
+                  { name: "Conversion Report", tab: "conversion" },
+                  { name: "Pending Quotation Report", tab: "pending" },
+                  {
+                    name: "Salesman Performance Report",
+                    tab: "sales-performance",
+                  },
+                  {
+                    name: "Customer History Report",
+                    tab: "customer-history",
+                  },
+                  { name: "Product Report", tab: "product" },
+                  { name: "Discount Approval Report", tab: "discounts" },
+                ].map((r) => (
+                  <button
+                    key={r.tab}
+                    onClick={() => setActiveTab(r.tab)}
+                    className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition flex items-center justify-between group"
+                  >
+                    <span className="font-medium text-sm">{r.name}</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </TabsContent>
 
-        {/* ======== SALES / PROJECTS ======== */}
-        <TabsContent value="quotations" className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-lg font-semibold">
-              Sales / Project Reports
-              {reportsLoading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+        {/* ─────── 2. QUOTATION SUMMARY ─────── */}
+        <TabsContent value="quotation-summary" className="space-y-6">
+          {/* Filters */}
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Date From
+                </label>
+                <DatePickerInput
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  maxDate={endDate || TODAY_STR}
+                  placeholder="Start date"
+                  disabled={filtersApplied}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Date To
+                </label>
+                <DatePickerInput
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate}
+                  maxDate={TODAY_STR}
+                  disabled={!startDate || filtersApplied}
+                  placeholder="End date"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Customer
+                </label>
+                <CustomerSearchSelect
+                  value={selectedCustomerId}
+                  onChange={setSelectedCustomerId}
+                  placeholder="Search customer…"
+                  apiFn={api.get}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Status
+                </label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                  disabled={filtersApplied}
+                >
+                  <SelectTrigger className="w-32 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Quote no / project…"
+                    className="pl-8 w-44 h-9 text-sm"
+                    disabled={filtersApplied}
+                  />
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={applyFilters}
+                disabled={filtersApplied}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
               )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportSales}
-              disabled={!salesReport?.projects?.length}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportQuotationSummary}
+                className="ml-auto h-9 gap-1.5"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            </div>
           </div>
 
-          {salesReport?.summary && (
+          {/* Summary Cards */}
+          {quotationSummary?.summary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                {
-                  label: "Total Projects",
-                  value: salesReport.summary.totalProjects,
-                  format: false,
-                },
-                {
-                  label: "Total Value",
-                  value: salesReport.summary.totalValue,
-                  format: true,
-                },
-                {
-                  label: "Total Discount",
-                  value: salesReport.summary.totalDiscount,
-                  format: true,
-                },
-                {
-                  label: "Avg Order Value",
-                  value: salesReport.summary.avgOrderValue,
-                  format: true,
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="p-4 bg-muted/50 rounded-lg text-center border border-border"
-                >
-                  <p className="text-xl font-bold">
-                    {item.format ? formatCurrency(item.value) : item.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                </div>
-              ))}
+              <MiniStatCard
+                value={formatNumber(
+                  quotationSummary.summary.totalQuotations,
+                )}
+                label="Total Quotations"
+              />
+              <MiniStatCard
+                value={formatCurrency(quotationSummary.summary.totalValue)}
+                label="Total Value"
+              />
+              <MiniStatCard
+                value={formatCurrency(
+                  quotationSummary.summary.totalDiscount,
+                )}
+                label="Total Discount"
+              />
+              <MiniStatCard
+                value={formatCurrency(quotationSummary.summary.avgValue)}
+                label="Avg Value"
+              />
             </div>
           )}
 
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Bar – Monthly Value */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
-                Project Value Summary ({dateRange})
+                Monthly Quotation Value
               </h3>
-              {monthlyChartData.length > 0 ? (
+              {(quotationSummary?.monthlyChartData?.length || 0) > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyChartData}>
+                  <BarChart data={quotationSummary!.monthlyChartData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="hsl(var(--border))"
@@ -881,24 +1325,25 @@ const Reports: React.FC = () => {
                 </ResponsiveContainer>
               ) : (
                 <div className="text-center text-muted-foreground py-16">
-                  {reportsLoading ? (
+                  {loading ? (
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   ) : (
-                    "No data available for selected period"
+                    "No data available"
                   )}
                 </div>
               )}
             </div>
 
+            {/* Pie – Status Distribution */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
-                Status-wise Distribution
+                Status Distribution
               </h3>
-              {statusDistribution.length > 0 ? (
+              {(quotationSummary?.statusDistribution?.length || 0) > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={statusDistribution}
+                      data={quotationSummary!.statusDistribution}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
@@ -909,210 +1354,13 @@ const Reports: React.FC = () => {
                       }
                       labelLine={false}
                     >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
+                      {quotationSummary!.statusDistribution.map(
+                        (entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ),
+                      )}
                     </Pie>
                     <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-muted-foreground py-16">
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Projects Table */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Project Details ({salesReport?.projects?.length || 0} records)
-            </h3>
-            <div className="table-container max-h-96">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Project No</th>
-                    <th className="hidden sm:table-cell">Customer</th>
-                    <th className="hidden md:table-cell">Date</th>
-                    <th>Status</th>
-                    <th>Discount</th>
-                    <th>Value (GST)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!salesReport?.projects?.length ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {reportsLoading
-                          ? "Loading..."
-                          : "No projects found for selected filters"}
-                      </td>
-                    </tr>
-                  ) : (
-                    salesReport.projects.map((p) => (
-                      <tr key={p.id}>
-                        <td className="font-medium">{p.projectNo}</td>
-                        <td className="hidden sm:table-cell">
-                          {p.customer?.name || "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {formatDate(p.date)}
-                        </td>
-                        <td>
-                          <span className={getStatusBadgeClass(p.status)}>
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="text-muted-foreground">
-                          {Number(p.totalDiscount) > 0
-                            ? formatCurrency(Number(p.totalDiscount))
-                            : "-"}
-                        </td>
-                        <td className="font-semibold">
-                          {formatCurrency(Number(p.grandTotalWithGst))}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {expiredProjects.length > 0 && (
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Expired Projects ({expiredProjects.length})
-              </h3>
-              <div className="table-container max-h-72">
-                <table className="enterprise-table text-sm">
-                  <thead>
-                    <tr>
-                      <th>Project No</th>
-                      <th className="hidden sm:table-cell">Customer</th>
-                      <th className="hidden md:table-cell">Date</th>
-                      <th>Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {expiredProjects.map((p) => (
-                      <tr key={p.id}>
-                        <td className="font-medium">{p.projectNo}</td>
-                        <td className="hidden sm:table-cell">
-                          {p.customer?.name || "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {formatDate(p.date)}
-                        </td>
-                        <td>{formatCurrency(Number(p.grandTotalWithGst))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ======== CUSTOMER REPORTS ======== */}
-        <TabsContent value="customers" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Customer Reports
-              {reportsLoading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCustomers}
-              disabled={!customerReport?.length}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Region-wise Distribution
-              </h3>
-              {regionData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={regionData} layout="vertical">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      type="number"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      dataKey="region"
-                      type="category"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar dataKey="count" fill="#111827" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-muted-foreground py-16">
-                  No regional data available
-                </div>
-              )}
-            </div>
-
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Top Customers by Value
-              </h3>
-              {topCustomers.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={topCustomers.slice(0, 5).map((c) => ({
-                        name: c.customer?.name || "Unknown",
-                        value: Number(c.totalValue) || 0,
-                      }))}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label
-                    >
-                      {topCustomers.slice(0, 5).map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v: number) => formatCurrency(v)}
                       contentStyle={{
                         background: "hsl(var(--card))",
                         border: "1px solid hsl(var(--border))",
@@ -1130,593 +1378,1361 @@ const Reports: React.FC = () => {
             </div>
           </div>
 
-          {/* Top 10 Table */}
+          {/* Table */}
           <div className="enterprise-card p-5 md:p-6">
             <h3 className="font-semibold text-foreground mb-4">
-              Top 10 Customers by Value
+              Quotation Details (
+              {quotationSummary?.projects?.length || 0} records)
             </h3>
-            <div className="table-container max-h-72">
+            <div className="table-container max-h-96">
               <table className="enterprise-table text-sm">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Customer</th>
-                    <th className="hidden sm:table-cell">City</th>
-                    <th className="hidden md:table-cell">State</th>
-                    <th>Projects</th>
-                    <th>Total Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topCustomers.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {reportsLoading ? "Loading..." : "No data available"}
-                      </td>
-                    </tr>
-                  ) : (
-                    topCustomers.map((c, index) => (
-                      <tr key={c.customerId}>
-                        <td className="font-medium">{index + 1}</td>
-                        <td className="font-medium">
-                          {c.customer?.name || "-"}
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {c.customer?.city || "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {c.customer?.state || "-"}
-                        </td>
-                        <td>{c.totalProjects}</td>
-                        <td className="font-semibold text-accent">
-                          {formatCurrency(Number(c.totalValue))}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Full Customer List */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Customer-wise Summary ({customerReport.length})
-            </h3>
-            <div className="table-container max-h-72">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th className="hidden sm:table-cell">Mobile</th>
-                    <th className="hidden md:table-cell">Email</th>
-                    <th className="hidden lg:table-cell">City</th>
-                    <th>Projects</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customerReport.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {reportsLoading ? "Loading..." : "No data found"}
-                      </td>
-                    </tr>
-                  ) : (
-                    customerReport.map((c) => (
-                      <tr key={c.customerId}>
-                        <td className="font-medium">
-                          {c.customer?.name || "-"}
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {c.customer?.mobile || "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {c.customer?.email || "-"}
-                        </td>
-                        <td className="hidden lg:table-cell text-muted-foreground">
-                          {c.customer?.city || "-"}
-                        </td>
-                        <td>{c.totalProjects}</td>
-                        <td className="font-semibold">
-                          {formatCurrency(Number(c.totalValue))}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ======== QUOTATION REPORTS ======== */}
-        <TabsContent value="products" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Quotation Reports
-              {reportsLoading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportQuotations}
-              disabled={!quotationReport?.length}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Quotations by Category
-            </h3>
-            {categoryDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={categoryDistribution}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar
-                    dataKey="quotations"
-                    fill="#A16207"
-                    radius={[6, 6, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center text-muted-foreground py-16">
-                No data available
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Quotation-wise Revenue
-              </h3>
-              <div className="table-container max-h-72">
-                <table className="enterprise-table text-sm">
-                  <thead>
-                    <tr>
-                      <th>Quotation</th>
-                      <th className="hidden sm:table-cell">Name</th>
-                      <th>Used</th>
-                      <th>Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quotationFrequency.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="text-center text-muted-foreground py-8"
-                        >
-                          {reportsLoading ? "Loading..." : "No data available"}
-                        </td>
-                      </tr>
-                    ) : (
-                      quotationFrequency.map((q, index) => (
-                        <tr key={index}>
-                          <td className="font-mono text-xs">
-                            {q.quotationId?.substring(0, 8)}...
-                          </td>
-                          <td className="hidden sm:table-cell font-medium max-w-[120px] truncate">
-                            {q.quotationName}
-                          </td>
-                          <td>
-                            <span className="bg-accent/10 text-accent px-2 py-0.5 rounded text-xs font-medium">
-                              {q.timesUsed}x
-                            </span>
-                          </td>
-                          <td className="font-semibold text-accent">
-                            {formatCurrency(Number(q.totalRevenue))}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                High Value Quotations
-              </h3>
-              <div className="table-container max-h-72">
-                <table className="enterprise-table text-sm">
-                  <thead>
-                    <tr>
-                      <th>Part Code</th>
-                      <th className="hidden sm:table-cell">Name</th>
-                      <th>Base Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {highValueQuotations.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="text-center text-muted-foreground py-8"
-                        >
-                          No quotations found
-                        </td>
-                      </tr>
-                    ) : (
-                      highValueQuotations.map((q) => (
-                        <tr key={q.id}>
-                          <td className="font-mono text-xs">{q.partCode}</td>
-                          <td className="hidden sm:table-cell font-medium max-w-[120px] truncate">
-                            {q.name}
-                          </td>
-                          <td className="font-semibold text-accent">
-                            {formatCurrency(Number(q.basePrice) || 0)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Full Quotation Master */}
-          <div className="enterprise-card p-5 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">
-                Quotation Master ({allQuotations.length})
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportQuotationMaster}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-            <div className="table-container max-h-72">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Part Code</th>
-                    <th>Name</th>
-                    <th className="hidden sm:table-cell">Category</th>
-                    <th className="hidden md:table-cell">Type</th>
-                    <th>Price</th>
-                    <th className="hidden lg:table-cell">GST</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allQuotations.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        No quotations found
-                      </td>
-                    </tr>
-                  ) : (
-                    allQuotations.map((q) => (
-                      <tr key={q.id}>
-                        <td className="font-mono text-xs">{q.partCode}</td>
-                        <td className="font-medium max-w-[150px] truncate">
-                          {q.name}
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {q.category?.name ||
-                            categories.find((c) => c.id === q.categoryId)
-                              ?.name ||
-                            "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {q.quotationType?.name || "-"}
-                        </td>
-                        <td>{formatCurrency(Number(q.basePrice) || 0)}</td>
-                        <td className="hidden lg:table-cell">
-                          {q.gstPercent || 18}%
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ======== FINANCIAL REPORTS ======== */}
-        <TabsContent value="financial" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Financial Reports
-              {reportsLoading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportSales}
-              disabled={!salesReport?.projects?.length}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-
-          {/* GST Summary - using ACTUAL fields */}
-          {/* <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-6">
-              GST Summary Report
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 md:gap-6 mb-6">
-              {[
-                { label: "Total CGST", value: financialSummary.totalCgst },
-                { label: "Total SGST", value: financialSummary.totalSgst },
-                { label: "Total IGST", value: financialSummary.totalIgst },
-                {
-                  label: "Total GST",
-                  value:
-                    financialSummary.totalCgst +
-                    financialSummary.totalSgst +
-                    financialSummary.totalIgst,
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="p-5 bg-muted/50 rounded-xl text-center border border-border"
-                >
-                  <p className="text-2xl md:text-3xl font-bold text-foreground">
-                    {formatCurrency(item.value)}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {gstMonthlyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={gstMonthlyData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="month"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => formatCurrency(v)}
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="cgst"
-                    stackId="1"
-                    stroke="#166534"
-                    fill="#166534"
-                    fillOpacity={0.6}
-                    name="CGST"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sgst"
-                    stackId="1"
-                    stroke="#A16207"
-                    fill="#A16207"
-                    fillOpacity={0.6}
-                    name="SGST"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="igst"
-                    stackId="1"
-                    stroke="#0891B2"
-                    fill="#0891B2"
-                    fillOpacity={0.6}
-                    name="IGST"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center text-muted-foreground py-16">
-                No GST data available
-              </div>
-            )}
-          </div> */}
-
-          {/* Discount Summary */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-6">
-              Discount Summary Report
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
-              {[
-                {
-                  label: "Total Discount",
-                  value: formatCurrency(financialSummary.totalDiscount),
-                },
-                {
-                  label: "Avg Discount Rate",
-                  value: `${financialSummary.discountRate.toFixed(1)}%`,
-                },
-                {
-                  label: "Avg Order Value",
-                  value: formatCurrency(financialSummary.avgOrderValue),
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="p-5 bg-muted/50 rounded-xl text-center border border-border"
-                >
-                  <p className="text-2xl md:text-3xl font-bold text-foreground">
-                    {item.value}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <h4 className="font-medium text-foreground mb-3">
-              Projects with Discounts
-            </h4>
-            <div className="table-container max-h-72">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Project No</th>
+                    <th>Quote No</th>
+                    <th>Date</th>
                     <th className="hidden sm:table-cell">Customer</th>
-                    <th className="hidden md:table-cell">Date</th>
-                    <th>Discount</th>
-                    <th>Final Value</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th className="hidden md:table-cell">Salesperson</th>
+                    <th className="hidden lg:table-cell">Project Name</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(() => {
-                    const discounted =
-                      salesReport?.projects?.filter(
-                        (p) => Number(p.totalDiscount) > 0,
-                      ) || [];
-                    if (!salesReport?.projects?.length) {
-                      return (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            className="text-center text-muted-foreground py-8"
-                          >
-                            {reportsLoading
-                              ? "Loading..."
-                              : "No data available"}
-                          </td>
-                        </tr>
-                      );
-                    }
-                    if (discounted.length === 0) {
-                      return (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            className="text-center text-muted-foreground py-8"
-                          >
-                            No projects with discounts found
-                          </td>
-                        </tr>
-                      );
-                    }
-                    return discounted.slice(0, 15).map((p) => (
+                  {!quotationSummary?.projects?.length ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading ? "Loading…" : "No quotations found"}
+                      </td>
+                    </tr>
+                  ) : (
+                    quotationSummary.projects.map((p) => (
                       <tr key={p.id}>
                         <td className="font-medium">{p.projectNo}</td>
-                        <td className="hidden sm:table-cell">
-                          {p.customer?.name || "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
+                        <td className="text-muted-foreground">
                           {formatDate(p.date)}
                         </td>
-                        <td className="text-destructive font-medium">
-                          -{formatCurrency(Number(p.totalDiscount))}
+                        <td className="hidden sm:table-cell">
+                          {p.customer?.name || "-"}
                         </td>
                         <td className="font-semibold">
                           {formatCurrency(Number(p.grandTotalWithGst))}
                         </td>
+                        <td>
+                          <span className={getStatusBadgeClass(p.status)}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="hidden md:table-cell text-muted-foreground">
+                          {p.salesPerson?.name || "-"}
+                        </td>
+                        <td className="hidden lg:table-cell text-muted-foreground">
+                          {p.projectName || "-"}
+                        </td>
                       </tr>
-                    ));
-                  })()}
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─────── 3. CONVERSION REPORT ─────── */}
+        <TabsContent value="conversion" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h2 className="text-lg font-semibold">
+              Quotation vs Order Conversion
+              {loading && (
+                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+              )}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportConversion}
+              disabled={!conversionReport?.data?.length}
+              className="h-9 gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
+
+          {/* Filters */}
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  From
+                </label>
+                <DatePickerInput
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  maxDate={endDate || TODAY_STR}
+                  placeholder="Start date"
+                  disabled={filtersApplied}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  To
+                </label>
+                <DatePickerInput
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate}
+                  maxDate={TODAY_STR}
+                  disabled={!startDate || filtersApplied}
+                  placeholder="End date"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={applyFilters}
+                disabled={filtersApplied}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          {conversionReport?.summary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MiniStatCard
+                value={conversionReport.summary.totalQuotations}
+                label="Total Quotations"
+              />
+              <MiniStatCard
+                value={conversionReport.summary.totalConverted}
+                label="Converted"
+                className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                valueClassName="text-green-700 dark:text-green-400"
+              />
+              <MiniStatCard
+                value={conversionReport.summary.totalPending}
+                label="Pending"
+                className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                valueClassName="text-amber-700 dark:text-amber-400"
+              />
+              <MiniStatCard
+                value={`${conversionReport.summary.conversionRate}%`}
+                label="Conversion Rate"
+                className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                valueClassName="text-blue-700 dark:text-blue-400"
+              />
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="enterprise-card p-5 md:p-6">
+            <div className="table-container max-h-96">
+              <table className="enterprise-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Quote No</th>
+                    <th>Customer</th>
+                    <th>Quote Amount</th>
+                    <th>Order No</th>
+                    <th className="hidden sm:table-cell">Order Amount</th>
+                    <th>Status</th>
+                    <th className="hidden md:table-cell">Salesperson</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!conversionReport?.data?.length ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading ? "Loading…" : "No data found"}
+                      </td>
+                    </tr>
+                  ) : (
+                    conversionReport.data.map((r) => (
+                      <tr key={r.id}>
+                        <td className="font-medium">{r.quoteNo}</td>
+                        <td>{r.customer}</td>
+                        <td>{formatCurrency(r.quoteAmount)}</td>
+                        <td className="font-mono text-xs">
+                          {r.orderNo || "—"}
+                        </td>
+                        <td className="hidden sm:table-cell">
+                          {r.orderAmount != null
+                            ? formatCurrency(r.orderAmount)
+                            : "—"}
+                        </td>
+                        <td>
+                          <span className={getStatusBadgeClass(r.status)}>
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="hidden md:table-cell text-muted-foreground">
+                          {r.salesPersonName}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─────── 4. PENDING QUOTATIONS ─────── */}
+        <TabsContent value="pending" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h2 className="text-lg font-semibold">
+              Pending Quotation Pipeline
+              {loading && (
+                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+              )}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportPending}
+              disabled={!pendingReport?.data?.length}
+              className="h-9 gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
+
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  From
+                </label>
+                <DatePickerInput
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  maxDate={endDate || TODAY_STR}
+                  placeholder="Start date"
+                  disabled={filtersApplied}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  To
+                </label>
+                <DatePickerInput
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate}
+                  maxDate={TODAY_STR}
+                  disabled={!startDate || filtersApplied}
+                  placeholder="End date"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={applyFilters}
+                disabled={filtersApplied}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {pendingReport?.summary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MiniStatCard
+                value={pendingReport.summary.totalPending}
+                label="Total Pending"
+                icon={Clock}
+              />
+              <MiniStatCard
+                value={formatCurrency(
+                  pendingReport.summary.totalPendingValue,
+                )}
+                label="Pending Value"
+              />
+              <MiniStatCard
+                value={pendingReport.summary.avgDaysPending}
+                label="Avg Days Pending"
+              />
+              <MiniStatCard
+                value={pendingReport.summary.overdueCount}
+                label="Overdue (>7d)"
+                className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                valueClassName="text-red-600 dark:text-red-400"
+              />
+            </div>
+          )}
+
+          <div className="enterprise-card p-5 md:p-6">
+            <div className="table-container max-h-96">
+              <table className="enterprise-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Quote No</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Days Pending</th>
+                    <th>Follow-up Date</th>
+                    <th className="hidden sm:table-cell">Salesperson</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!pendingReport?.data?.length ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading
+                          ? "Loading…"
+                          : "No pending quotations"}
+                      </td>
+                    </tr>
+                  ) : (
+                    pendingReport.data.map((r) => (
+                      <tr key={r.id}>
+                        <td className="font-medium">{r.quoteNo}</td>
+                        <td>{r.customer}</td>
+                        <td className="font-semibold">
+                          {formatCurrency(r.amount)}
+                        </td>
+                        <td>
+                          <span
+                            className={getDaysPendingClass(r.daysPending)}
+                          >
+                            {r.daysPending} days
+                          </span>
+                        </td>
+                        <td className="text-muted-foreground">
+                          {formatDate(r.followUpDate)}
+                        </td>
+                        <td className="hidden sm:table-cell text-muted-foreground">
+                          {r.salesPersonName}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─────── 5. SALES PERFORMANCE ─────── */}
+        <TabsContent value="sales-performance" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h2 className="text-lg font-semibold">
+              Salesman Performance Report
+              {loading && (
+                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+              )}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportSalesman}
+              disabled={!salesmanReport?.data?.length}
+              className="h-9 gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
+
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  From
+                </label>
+                <DatePickerInput
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  maxDate={endDate || TODAY_STR}
+                  placeholder="Start date"
+                  disabled={filtersApplied}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  To
+                </label>
+                <DatePickerInput
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate}
+                  maxDate={TODAY_STR}
+                  disabled={!startDate || filtersApplied}
+                  placeholder="End date"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={applyFilters}
+                disabled={filtersApplied}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Horizontal Bar Chart */}
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">
+                Salesperson vs Revenue
+              </h3>
+              {(salesmanReport?.data?.length || 0) > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={salesmanReport!.data}
+                    layout="vertical"
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                    />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) =>
+                        `₹${(v / 100000).toFixed(0)}L`
+                      }
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <YAxis
+                      dataKey="salesPersonName"
+                      type="category"
+                      width={100}
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                    />
+                    <Tooltip
+                      formatter={(v: number) => formatCurrency(v)}
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Bar
+                      dataKey="totalRevenue"
+                      fill="#A16207"
+                      radius={[0, 6, 6, 0]}
+                      name="Revenue"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-muted-foreground py-16">
+                  No data available
+                </div>
+              )}
+            </div>
+
+            {/* Summary */}
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">
+                Summary
+              </h3>
+              {salesmanReport?.summary && (
+                <div className="grid grid-cols-1 gap-4">
+                  <MiniStatCard
+                    value={salesmanReport.summary.totalSalespeople}
+                    label="Active Salespeople"
+                  />
+                  <MiniStatCard
+                    value={formatCurrency(
+                      salesmanReport.summary.totalRevenue,
+                    )}
+                    label="Total Revenue"
+                  />
+                  <MiniStatCard
+                    value={`${salesmanReport.summary.avgConversion}%`}
+                    label="Avg Conversion Rate"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Performance Table */}
+          <div className="enterprise-card p-5 md:p-6">
+            <h3 className="font-semibold text-foreground mb-4">
+              Sales Performance Table
+            </h3>
+            <div className="table-container max-h-72">
+              <table className="enterprise-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Salesperson</th>
+                    <th>Quotations</th>
+                    <th>Converted</th>
+                    <th>Conversion %</th>
+                    <th>Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!salesmanReport?.data?.length ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading ? "Loading…" : "No data available"}
+                      </td>
+                    </tr>
+                  ) : (
+                    salesmanReport.data.map((s) => (
+                      <tr key={s.salesPersonId}>
+                        <td className="font-medium">
+                          {s.salesPersonName}
+                        </td>
+                        <td>{s.totalQuotations}</td>
+                        <td>{s.converted}</td>
+                        <td>
+                          <span
+                            className={cn(
+                              "font-semibold",
+                              s.conversionPercent >= 40
+                                ? "text-green-600"
+                                : s.conversionPercent >= 20
+                                  ? "text-amber-600"
+                                  : "text-red-600",
+                            )}
+                          >
+                            {s.conversionPercent}%
+                          </span>
+                        </td>
+                        <td className="font-semibold text-accent">
+                          {formatCurrency(s.totalRevenue)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ─────── 6. CUSTOMER HISTORY ─────── */}
+        <TabsContent value="customer-history" className="space-y-6">
+          <h2 className="text-lg font-semibold">
+            Customer History Report
+            {loading && (
+              <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+            )}
+          </h2>
+
+          {/* Filter Panel */}
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Select Customer
+                </label>
+                <CustomerSearchSelect
+                  value={custHistoryCustomerId}
+                  onChange={setCustHistoryCustomerId}
+                  placeholder="Search customer…"
+                  apiFn={api.get}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Date From
+                </label>
+                <DatePickerInput
+                  value={custHistoryStart}
+                  onChange={handleCustHistoryStartChange}
+                  maxDate={custHistoryEnd || TODAY_STR}
+                  placeholder="Start date"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Date To
+                </label>
+                <DatePickerInput
+                  value={custHistoryEnd}
+                  onChange={setCustHistoryEnd}
+                  minDate={custHistoryStart}
+                  maxDate={TODAY_STR}
+                  disabled={!custHistoryStart}
+                  placeholder="End date"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={() =>
+                  fetchCustomerHistory({
+                    customerId:
+                      custHistoryCustomerId !== "all"
+                        ? custHistoryCustomerId
+                        : undefined,
+                    startDate: custHistoryStart || undefined,
+                    endDate: custHistoryEnd || undefined,
+                  })
+                }
+              >
+                <Search className="h-3.5 w-3.5" />
+                View Report
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportCustomerHistory}
+                disabled={!customerHistory?.quotations?.length}
+                className="ml-auto h-9 gap-1.5"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            </div>
+          </div>
+
+          {/* Customer Profile (when selected) */}
+          {customerHistory?.mode === "detail" &&
+            customerHistory.profile && (
+              <>
+                <div className="enterprise-card p-5 md:p-6">
+                  <h3 className="font-semibold text-foreground mb-4">
+                    Customer Profile
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Customer Name
+                      </p>
+                      <p className="font-semibold">
+                        {customerHistory.profile.name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Mobile
+                      </p>
+                      <p className="font-semibold">
+                        {customerHistory.profile.mobile}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">GST</p>
+                      <p className="font-semibold">
+                        {customerHistory.profile.gstin || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Address
+                      </p>
+                      <p className="font-semibold">
+                        {customerHistory.profile.address || "-"}
+                      </p>
+                    </div>
+                  </div>
+                  {customerHistory.summary && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <MiniStatCard
+                        value={
+                          customerHistory.summary.totalQuotations
+                        }
+                        label="Total Quotations"
+                      />
+                      <MiniStatCard
+                        value={customerHistory.summary.totalOrders}
+                        label="Total Orders"
+                        className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                        valueClassName="text-green-700 dark:text-green-400"
+                      />
+                      <MiniStatCard
+                        value={formatCurrency(
+                          customerHistory.summary.totalRevenue,
+                        )}
+                        label="Total Revenue"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Quotation Ledger with Drill-Down */}
+                <div className="enterprise-card p-5 md:p-6">
+                  <h3 className="font-semibold text-foreground mb-4">
+                    Quotation Ledger
+                  </h3>
+                  <div className="table-container max-h-[500px]">
+                    <table className="enterprise-table text-sm">
+                      <thead>
+                        <tr>
+                          <th className="w-8"></th>
+                          <th>Date</th>
+                          <th>Quote No</th>
+                          <th>Amount</th>
+                          <th className="hidden sm:table-cell">
+                            Discount
+                          </th>
+                          <th>Status</th>
+                          <th className="hidden md:table-cell">
+                            Salesperson
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {!customerHistory.quotations?.length ? (
+                          <tr>
+                            <td
+                              colSpan={7}
+                              className="text-center text-muted-foreground py-8"
+                            >
+                              No quotations found
+                            </td>
+                          </tr>
+                        ) : (
+                          customerHistory.quotations.map((q) => (
+                            <React.Fragment key={q.id}>
+                              <tr
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => toggleRow(q.id)}
+                              >
+                                <td>
+                                  {expandedRows.has(q.id) ? (
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </td>
+                                <td className="text-muted-foreground">
+                                  {formatDate(q.date)}
+                                </td>
+                                <td className="font-medium">
+                                  {q.quoteNo}
+                                </td>
+                                <td className="font-semibold">
+                                  {formatCurrency(q.amount)}
+                                </td>
+                                <td className="hidden sm:table-cell text-muted-foreground">
+                                  {q.discountPercent}%
+                                </td>
+                                <td>
+                                  <span
+                                    className={getStatusBadgeClass(
+                                      q.status,
+                                    )}
+                                  >
+                                    {q.status}
+                                  </span>
+                                </td>
+                                <td className="hidden md:table-cell text-muted-foreground">
+                                  {q.salesPersonName}
+                                </td>
+                              </tr>
+                              {expandedRows.has(q.id) &&
+                                q.items.length > 0 && (
+                                  <tr>
+                                    <td colSpan={7} className="p-0">
+                                      <div className="bg-muted/30 p-4 border-t border-b border-border">
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2">
+                                          Product Details
+                                        </p>
+                                        <table className="w-full text-xs">
+                                          <thead>
+                                            <tr className="border-b border-border">
+                                              <th className="text-left py-1 px-2 font-medium">
+                                                Product
+                                              </th>
+                                              <th className="text-left py-1 px-2 font-medium">
+                                                Qty
+                                              </th>
+                                              <th className="text-left py-1 px-2 font-medium">
+                                                Rate
+                                              </th>
+                                              <th className="text-left py-1 px-2 font-medium">
+                                                Amount
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {q.items.map((item) => (
+                                              <tr
+                                                key={item.id}
+                                                className="border-b border-border/50"
+                                              >
+                                                <td className="py-1 px-2">
+                                                  {item.product}
+                                                </td>
+                                                <td className="py-1 px-2">
+                                                  {item.quantity}
+                                                </td>
+                                                <td className="py-1 px-2">
+                                                  {formatCurrency(
+                                                    item.rate,
+                                                  )}
+                                                </td>
+                                                <td className="py-1 px-2 font-semibold">
+                                                  {formatCurrency(
+                                                    item.amount,
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                            </React.Fragment>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+          {/* Customer List (when no customer selected) */}
+          {customerHistory?.mode === "list" && (
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">
+                Select a customer to view history
+              </h3>
+              <div className="table-container max-h-96">
+                <table className="enterprise-table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Customer</th>
+                      <th className="hidden sm:table-cell">Mobile</th>
+                      <th className="hidden md:table-cell">City</th>
+                      <th className="hidden lg:table-cell">GST</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(customerHistory.customers || []).map((c: any) => (
+                      <tr key={c.id}>
+                        <td className="font-medium">{c.name}</td>
+                        <td className="hidden sm:table-cell text-muted-foreground">
+                          {c.mobile}
+                        </td>
+                        <td className="hidden md:table-cell text-muted-foreground">
+                          {c.city || "-"}
+                        </td>
+                        <td className="hidden lg:table-cell text-muted-foreground font-mono text-xs">
+                          {c.gstin || "-"}
+                        </td>
+                        <td>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => {
+                              setCustHistoryCustomerId(c.id);
+                              fetchCustomerHistory({
+                                customerId: c.id,
+                              });
+                            }}
+                          >
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {!customerHistory && !loading && (
+            <div className="enterprise-card p-5 md:p-6 text-center text-muted-foreground py-16">
+              Click "View Report" to load customer history
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ─────── 7. PRODUCT REPORT ─────── */}
+        <TabsContent value="product" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h2 className="text-lg font-semibold">
+              Product Report
+              {loading && (
+                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+              )}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportProduct}
+              disabled={!productReport?.details?.length}
+              className="h-9 gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
+
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  From
+                </label>
+                <DatePickerInput
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  maxDate={endDate || TODAY_STR}
+                  placeholder="Start date"
+                  disabled={filtersApplied}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  To
+                </label>
+                <DatePickerInput
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate}
+                  maxDate={TODAY_STR}
+                  disabled={!startDate || filtersApplied}
+                  placeholder="End date"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  Status
+                </label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                  disabled={filtersApplied}
+                >
+                  <SelectTrigger className="w-32 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={applyFilters}
+                disabled={filtersApplied}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Product Summary */}
+          <div className="enterprise-card p-5 md:p-6">
+            <h3 className="font-semibold text-foreground mb-4">
+              Product-wise Summary
+            </h3>
+            <div className="table-container max-h-72">
+              <table className="enterprise-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th className="hidden sm:table-cell">Code</th>
+                    <th>Used</th>
+                    <th>Total Qty</th>
+                    <th>Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!productReport?.summary?.length ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading ? "Loading…" : "No data available"}
+                      </td>
+                    </tr>
+                  ) : (
+                    productReport.summary.map((p: any, i: number) => (
+                      <tr key={i}>
+                        <td className="font-medium max-w-[150px] truncate">
+                          {p.quotationName}
+                        </td>
+                        <td className="hidden sm:table-cell font-mono text-xs text-muted-foreground">
+                          {p.quotationCode}
+                        </td>
+                        <td>
+                          <span className="bg-accent/10 text-accent px-2 py-0.5 rounded text-xs font-medium">
+                            {p.timesUsed}x
+                          </span>
+                        </td>
+                        <td>{p.totalQuantity}</td>
+                        <td className="font-semibold text-accent">
+                          {formatCurrency(Number(p.totalRevenue))}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Revenue Trend */}
+          {/* Product Details */}
           <div className="enterprise-card p-5 md:p-6">
             <h3 className="font-semibold text-foreground mb-4">
-              Revenue Trend
+              Product Detail Records (
+              {productReport?.details?.length || 0})
             </h3>
-            {monthlyChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyChartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="month"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <YAxis
-                    tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => formatCurrency(v)}
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#A16207"
-                    strokeWidth={3}
-                    dot={{ fill: "#A16207", r: 5 }}
-                    name="Revenue"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center text-muted-foreground py-16">
-                No revenue data available
-              </div>
-            )}
+            <div className="table-container max-h-96">
+              <table className="enterprise-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Quote No</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                    <th className="hidden sm:table-cell">Salesperson</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!productReport?.details?.length ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading ? "Loading…" : "No data available"}
+                      </td>
+                    </tr>
+                  ) : (
+                    productReport.details.map((d: any) => (
+                      <tr key={d.id}>
+                        <td className="text-muted-foreground">
+                          {formatDate(d.project?.date)}
+                        </td>
+                        <td className="font-medium">
+                          {d.project?.projectNo || "-"}
+                        </td>
+                        <td className="max-w-[120px] truncate">
+                          {d.quotationName}
+                        </td>
+                        <td>{d.quantity}</td>
+                        <td>
+                          {formatCurrency(Number(d.finalPrice) || 0)}
+                        </td>
+                        <td className="font-semibold">
+                          {formatCurrency(Number(d.totalWithGst) || 0)}
+                        </td>
+                        <td className="hidden sm:table-cell text-muted-foreground">
+                          {d.project?.salesPerson?.name || "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+        </TabsContent>
+
+        {/* ─────── 8. DISCOUNT APPROVAL ─────── */}
+        <TabsContent value="discounts" className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h2 className="text-lg font-semibold">
+              Discount Approval Report
+              {loading && (
+                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
+              )}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportDiscount}
+              disabled={!discountReport?.items?.length}
+              className="h-9 gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
+
+          <div className="enterprise-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex items-center h-9">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  From
+                </label>
+                <DatePickerInput
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  maxDate={endDate || TODAY_STR}
+                  placeholder="Start date"
+                  disabled={filtersApplied}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
+                  To
+                </label>
+                <DatePickerInput
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate}
+                  maxDate={TODAY_STR}
+                  disabled={!startDate || filtersApplied}
+                  placeholder="End date"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={applyFilters}
+                disabled={filtersApplied}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {discountReport?.summary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MiniStatCard
+                value={discountReport.summary.totalDiscountedItems}
+                label="Discounted Items"
+              />
+              <MiniStatCard
+                value={formatCurrency(
+                  discountReport.summary.totalDiscountValue,
+                )}
+                label="Total Discount Value"
+              />
+              <MiniStatCard
+                value={discountReport.summary.totalOTPRequests}
+                label="OTP Requests"
+              />
+              <MiniStatCard
+                value={discountReport.summary.approvedOTPs}
+                label="Approved OTPs"
+                className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                valueClassName="text-green-700 dark:text-green-400"
+              />
+            </div>
+          )}
+
+          {/* Discount Items Table */}
+          <div className="enterprise-card p-5 md:p-6">
+            <h3 className="font-semibold text-foreground mb-4">
+              Discounted Items
+            </h3>
+            <div className="table-container max-h-96">
+              <table className="enterprise-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Quote No</th>
+                    <th>Product</th>
+                    <th>Discount %</th>
+                    <th className="hidden sm:table-cell">Discount Amt</th>
+                    <th className="hidden md:table-cell">Customer</th>
+                    <th className="hidden lg:table-cell">Salesperson</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!discountReport?.items?.length ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        {loading
+                          ? "Loading…"
+                          : "No discounted items found"}
+                      </td>
+                    </tr>
+                  ) : (
+                    discountReport.items.map((item: any) => (
+                      <tr key={item.id}>
+                        <td className="font-medium">
+                          {item.project?.projectNo || "-"}
+                        </td>
+                        <td className="max-w-[120px] truncate">
+                          {item.quotationName}
+                        </td>
+                        <td className="text-destructive font-medium">
+                          {item.discountPercent}%
+                        </td>
+                        <td className="hidden sm:table-cell text-destructive">
+                          -
+                          {formatCurrency(
+                            Number(item.discountAmount) || 0,
+                          )}
+                        </td>
+                        <td className="hidden md:table-cell text-muted-foreground">
+                          {item.project?.customer?.name || "-"}
+                        </td>
+                        <td className="hidden lg:table-cell text-muted-foreground">
+                          {item.project?.salesPerson?.name || "-"}
+                        </td>
+                        <td className="text-muted-foreground">
+                          {formatDate(item.project?.date)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* OTP Approval Logs */}
+          {(discountReport?.otpLogs?.length || 0) > 0 && (
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">
+                OTP Approval Logs
+              </h3>
+              <div className="table-container max-h-72">
+                <table className="enterprise-table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th className="hidden sm:table-cell">
+                        Requested By
+                      </th>
+                      <th className="hidden md:table-cell">
+                        Approved By
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {discountReport!.otpLogs.map((log: any) => (
+                      <tr key={log.id}>
+                        <td className="text-muted-foreground">
+                          {formatDate(log.createdAt)}
+                        </td>
+                        <td>{log.email}</td>
+                        <td>
+                          <span
+                            className={getStatusBadgeClass(
+                              log.status === "approved"
+                                ? "approved"
+                                : log.status === "pending"
+                                  ? "pending"
+                                  : "expired",
+                            )}
+                          >
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="hidden sm:table-cell text-muted-foreground">
+                          {log.requestedByName || "-"}
+                        </td>
+                        <td className="hidden md:table-cell text-muted-foreground">
+                          {log.approvedByName || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
