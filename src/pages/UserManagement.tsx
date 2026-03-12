@@ -1,3 +1,4 @@
+// src/pages/UserManagement.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus,
@@ -8,7 +9,6 @@ import {
   ShieldAlert,
   ShieldOff,
   Search,
-  Filter,
   Users,
   KeyRound,
   Percent,
@@ -107,8 +107,10 @@ const UserManagement: React.FC = () => {
     permissions: [] as string[],
     discountMin: 0,
     discountMax: 100,
+    requireOtpForMaster: true,
     isActive: true,
   });
+
   // Confirm dialog
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -121,7 +123,7 @@ const UserManagement: React.FC = () => {
     open: false,
     title: "",
     description: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
     variant: "danger",
     loading: false,
   });
@@ -341,8 +343,9 @@ const UserManagement: React.FC = () => {
         displayName: r.displayName,
         description: r.description || "",
         permissions: [...r.permissions],
-        discountMin: (r as any).discountMin ?? 0,
-        discountMax: (r as any).discountMax ?? 100,
+        discountMin: r.discountMin ?? 0,
+        discountMax: r.discountMax ?? 100,
+        requireOtpForMaster: r.requireOtpForMaster ?? true,
         isActive: r.isActive,
       });
     } else {
@@ -354,6 +357,7 @@ const UserManagement: React.FC = () => {
         permissions: [],
         discountMin: 0,
         discountMax: 100,
+        requireOtpForMaster: true,
         isActive: true,
       });
     }
@@ -371,6 +375,7 @@ const UserManagement: React.FC = () => {
     setRoleFormLoading(true);
     try {
       if (editingRole) {
+        // Don't send 'name' for updates (slug is immutable)
         const { name, ...updateData } = roleForm;
         await updateRole(editingRole.id, updateData);
         toast.success("Role updated successfully");
@@ -446,7 +451,7 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  // ── Skeleton for role cards ──
+  // ── Skeletons ──
   const RoleCardSkeleton = () => (
     <div className="grid gap-4 md:grid-cols-2">
       {Array.from({ length: 4 }).map((_, i) => (
@@ -476,7 +481,6 @@ const UserManagement: React.FC = () => {
     </div>
   );
 
-  // ── Permission Matrix Skeleton ──
   const MatrixSkeleton = () => (
     <div className="enterprise-card overflow-hidden animate-pulse">
       <div className="p-4 border-b border-border">
@@ -520,7 +524,7 @@ const UserManagement: React.FC = () => {
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Users
-              {!usersLoading && usersMeta && `(${usersMeta.totalItems})`}
+              {!usersLoading && usersMeta && ` (${usersMeta.totalItems})`}
             </TabsTrigger>
           )}
           {hasPermission("role:view") && (
@@ -534,7 +538,7 @@ const UserManagement: React.FC = () => {
           )}
         </TabsList>
 
-        {/* ===== USERS TAB ===== */}
+        {/* ═════ USERS TAB ═════ */}
         <TabsContent value="users" className="space-y-4">
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -708,7 +712,7 @@ const UserManagement: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* ===== ROLES TAB ===== */}
+        {/* ═════ ROLES TAB ═════ */}
         <TabsContent value="roles" className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -772,14 +776,25 @@ const UserManagement: React.FC = () => {
                       {r.description}
                     </p>
                   )}
-                  {/* Discount range */}
-                  <div className="flex items-center gap-2 mb-2">
+
+                  {/* Badges: discount + OTP */}
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <div className="flex items-center gap-1.5 bg-orange-100/50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded text-xs font-medium">
                       <Percent className="h-3 w-3" />
-                      Discount: {(r as any).discountMin ?? 0}% –{" "}
-                      {(r as any).discountMax ?? 100}%
+                      Discount: {r.discountMin ?? 0}% – {r.discountMax ?? 100}%
+                    </div>
+                    <div
+                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${r.requireOtpForMaster
+                          ? "bg-blue-100/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                          : "bg-green-100/50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
+                        }`}
+                    >
+                      <KeyRound className="h-3 w-3" />
+                      Master OTP:{" "}
+                      {r.requireOtpForMaster ? "Required" : "Not Required"}
                     </div>
                   </div>
+
                   <p className="text-sm text-muted-foreground mb-3">
                     {r.permissions.length} permissions
                   </p>
@@ -798,6 +813,7 @@ const UserManagement: React.FC = () => {
                       </span>
                     )}
                   </div>
+
                   <div className="flex gap-2">
                     {hasPermission("role:edit") && (
                       <Button
@@ -837,7 +853,7 @@ const UserManagement: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* ===== PERMISSION MATRIX TAB ===== */}
+        {/* ═════ PERMISSION MATRIX TAB ═════ */}
         <TabsContent value="matrix" className="space-y-4">
           {permissionsLoading || rolesLoading ? (
             <MatrixSkeleton />
@@ -901,6 +917,46 @@ const UserManagement: React.FC = () => {
                           </React.Fragment>
                         ),
                       )}
+
+                    {/* Extra row: OTP requirement */}
+                    <tr>
+                      <td
+                        colSpan={roles.length + 1}
+                        className="bg-muted/50 font-semibold text-sm"
+                      >
+                        Role Settings
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="pl-6 text-sm sticky left-0 bg-background">
+                        Master OTP Required
+                      </td>
+                      {roles.map((r) => (
+                        <td key={r.id} className="text-center">
+                          {r.requireOtpForMaster ? (
+                            <span className="text-xs bg-blue-100/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-medium">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-green-100/50 dark:bg-green-950/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded font-medium">
+                              No
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="pl-6 text-sm sticky left-0 bg-background">
+                        Discount Range
+                      </td>
+                      {roles.map((r) => (
+                        <td key={r.id} className="text-center">
+                          <span className="text-xs bg-orange-100/50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded font-medium whitespace-nowrap">
+                            {r.discountMin ?? 0}% – {r.discountMax ?? 100}%
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -909,7 +965,7 @@ const UserManagement: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* ===== USER MODAL ===== */}
+      {/* ═════ USER MODAL ═════ */}
       <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
         <DialogContent>
           <DialogHeader>
@@ -1020,8 +1076,7 @@ const UserManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ===== ROLE MODAL ===== */}
-      {/* ===== ROLE MODAL ===== */}
+      {/* ═════ ROLE MODAL ═════ */}
       <Dialog open={showRoleModal} onOpenChange={setShowRoleModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1031,7 +1086,7 @@ const UserManagement: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Role Name (slug) */}
+            {/* Role Name (slug) — only on create */}
             {!editingRole && (
               <div className="space-y-2">
                 <Label>Role Name (slug) *</Label>
@@ -1044,7 +1099,6 @@ const UserManagement: React.FC = () => {
                     }))
                   }
                   placeholder="e.g. supervisor"
-                  disabled={!!editingRole}
                 />
                 <p className="text-xs text-muted-foreground">
                   Lowercase letters and underscores only
@@ -1076,7 +1130,7 @@ const UserManagement: React.FC = () => {
               />
             </div>
 
-            {/* ── Discount Range Section ── */}
+            {/* ── Discount Range ── */}
             <div className="border rounded-lg p-4 bg-orange-50/50 dark:bg-orange-950/10 border-orange-200/30 space-y-3">
               <div className="flex items-center gap-2">
                 <Percent className="h-4 w-4 text-orange-600" />
@@ -1084,7 +1138,7 @@ const UserManagement: React.FC = () => {
                   Discount Range
                 </Label>
               </div>
-             
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">
@@ -1166,7 +1220,44 @@ const UserManagement: React.FC = () => {
               )}
             </div>
 
-            {/* Permissions */}
+            {/* ── OTP for Master Data ── */}
+            <div className="border rounded-lg p-4 bg-blue-50/50 dark:bg-blue-950/10 border-blue-200/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-blue-600" />
+                  <Label className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+                    OTP for Master Data
+                  </Label>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={roleForm.requireOtpForMaster}
+                    onChange={(e) =>
+                      setRoleForm((p) => ({
+                        ...p,
+                        requireOtpForMaster: e.target.checked,
+                      }))
+                    }
+                    className="sr-only peer"
+                    disabled={editingRole?.name === "admin"}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-gray-600 peer-checked:bg-blue-600" />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {roleForm.requireOtpForMaster
+                  ? "Users with this role must verify OTP when creating or activating master data."
+                  : "Users with this role can create and activate master data without OTP verification."}
+              </p>
+              {editingRole?.name === "admin" && (
+                <p className="text-[10px] text-amber-600 font-medium">
+                  Admin role never requires OTP for master data operations.
+                </p>
+              )}
+            </div>
+
+            {/* ── Permissions ── */}
             <div className="space-y-2">
               <Label>
                 Permissions ({roleForm.permissions.length} selected)
@@ -1244,7 +1335,7 @@ const UserManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ===== CONFIRM DIALOG ===== */}
+      {/* ═════ CONFIRM DIALOG ═════ */}
       <ConfirmDialog
         open={confirmDialog.open}
         onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
@@ -1253,7 +1344,7 @@ const UserManagement: React.FC = () => {
         description={confirmDialog.description}
         variant={confirmDialog.variant}
         loading={confirmDialog.loading}
-        confirmText="Delete"
+        confirmText="Confirm"
         cancelText="Cancel"
       />
     </div>

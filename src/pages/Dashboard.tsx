@@ -85,7 +85,7 @@ const Dashboard: React.FC = () => {
 
         {/* ─── Right fill — orange background ─── */}
         <div
-          className="flex-1 min-w-0"
+          className="flex-1 min-w-0 mr-3"
           style={{ background: "#e06b0a" }}
         />
       </div>

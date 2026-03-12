@@ -52,7 +52,6 @@ const Login: React.FC = () => {
     }
 
     setIsLoading(true);
-
     const result = await login(selectedUser.email, password);
 
     if (result.success) navigate("/dashboard");
@@ -63,25 +62,41 @@ const Login: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-
-      {/* Logo */}
-      <div className="sticky top-0 z-50 flex justify-center py-5 bg-white">
-        <img src="/logo.png" alt="Ecstatics" className="h-24 object-contain" />
+      {/* ─── Logo ─── */}
+      <div className="sticky top-0 z-50 flex justify-center py-3 sm:py-4 lg:py-5 bg-white">
+        <img
+          src="/logo.png"
+          alt="Ecstatics"
+          className="h-14 sm:h-14 md:h-14 lg:h-14 object-contain"
+        />
       </div>
 
-      {/* Main Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0">
+      {/* ─── Main Layout ───
+           mx  = left & right outer spacing
+           gap = white space BETWEEN columns (form ↔ orange panel)
+      */}
+      <div
+        className={cn(
+          "flex-1 grid min-h-0",
+          "grid-cols-1 md:grid-cols-2 lg:grid-cols-12",
+          "gap-2",
+          "mx-4 sm:mx-5"
+        )}
+      >
+        {/* ─── Login Form Column ─── */}
+        <div className="flex flex-col col-span-1 md:col-span-1 lg:col-span-3 bg-white justify-center">
+          <form onSubmit={handleSubmit} className="flex flex-col h-full gap-2">
 
-        {/* Login Section */}
-        <div className="flex flex-col bg-white justify-center">
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
-
-            {/* Input Area */}
+            {/* ═══ TOP: Orange Input Area ═══ */}
             <div
-              className="flex-1 flex flex-col justify-center px-8 space-y-2 mx-4 mb-2"
+              className={cn(
+                "flex-1 flex flex-col justify-center",
+                "px-5 sm:px-6 md:px-7 lg:px-8",
+                "py-6 sm:py-8",
+                "space-y-2"
+              )}
               style={{ background: "#e06b0a" }}
             >
-
               {/* User Dropdown */}
               <div className="relative">
                 <button
@@ -106,7 +121,6 @@ const Login: React.FC = () => {
                   ) : (
                     <span className="text-sm text-gray-400">Select User</span>
                   )}
-
                   <ChevronDown
                     className={cn(
                       "h-4 w-4 text-gray-400 transition-transform duration-200",
@@ -121,7 +135,6 @@ const Login: React.FC = () => {
                       className="fixed inset-0 z-20"
                       onClick={() => setIsDropdownOpen(false)}
                     />
-
                     <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-white border border-gray-200 shadow-lg max-h-[200px] overflow-y-auto">
                       {users.length === 0 ? (
                         <div className="px-4 py-3 text-sm text-gray-400 text-center">
@@ -136,7 +149,7 @@ const Login: React.FC = () => {
                             className={cn(
                               "w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors",
                               selectedUserId === u.id &&
-                                "bg-gray-100 font-medium"
+                              "bg-gray-100 font-medium"
                             )}
                           >
                             {u.name}
@@ -161,35 +174,44 @@ const Login: React.FC = () => {
               />
 
               {error && (
-                <p className="text-red-500 text-sm bg-white p-1">{error}</p>
+                <p className="text-red-500 text-xs sm:text-sm bg-white p-1">
+                  {error}
+                </p>
               )}
             </div>
 
-            {/* Login Button */}
-            <div className="flex-1 px-4 pb-0 flex">
+            {/* ═══ gap-2 on form creates WHITE STRIPE here ═══ */}
+
+            {/* ═══ BOTTOM: Login Button ═══ */}
+            <div className="flex-1 flex">
               <button
                 type="submit"
                 disabled={isLoading || !selectedUser}
-                className="w-full h-full text-white text-2xl font-bold disabled:opacity-90 hover:opacity-90 transition-all cursor-pointer"
+                className={cn(
+                  "w-full h-full text-white font-bold",
+                  "text-lg sm:text-xl lg:text-2xl",
+                  "min-h-[60px] sm:min-h-[70px]",
+                  "disabled:opacity-90 hover:opacity-90 transition-all cursor-pointer"
+                )}
                 style={{ background: "#e06b0a" }}
               >
-                {isLoading ? "Login in..." : "Login"}
+                {isLoading ? "Logging in..." : "Login"}
               </button>
             </div>
           </form>
         </div>
 
-        {/* Right Panel */}
+        {/* ─── Right Orange Panel ─── */}
         <div
-          className="hidden lg:block"
+          className="hidden md:block md:col-span-1 lg:col-span-9"
           style={{ background: "#e06b0a" }}
         />
       </div>
 
-      {/* Footer */}
-      <div className="py-3 text-center bg-white text-xs text-gray-600">
-        © {new Date().getFullYear()} Ecstatics Spaces India Pvt. Ltd. | 
-        Design and Develop By{" "}
+      {/* ─── Footer ─── */}
+      <div className="py-2 sm:py-3 text-center bg-white text-[10px] sm:text-xs text-gray-600 px-4">
+        © {new Date().getFullYear()} Ecstatics Spaces India Pvt. Ltd. | Design
+        and Develop By{" "}
         <a
           href="https://sugamsofttech.com/"
           target="_blank"

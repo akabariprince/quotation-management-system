@@ -1,3 +1,4 @@
+// src/pages/Masters.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -12,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -54,7 +56,8 @@ const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
         {Array.from({ length: columns }).map((_, colIdx) => (
           <td key={colIdx}>
             <div
-              className={`h-4 bg-muted rounded ${colIdx === 0 ? "w-32" : "w-20"}`}
+              className={`h-4 bg-muted rounded ${colIdx === 0 ? "w-32" : "w-20"
+                }`}
             />
           </td>
         ))}
@@ -100,6 +103,18 @@ const Masters: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { hasPermission, user } = useAuth();
 
+  // ── Permission helpers ──
+  const canView = hasPermission("master:view");
+  const canCreate = hasPermission("master:create");
+  const canEdit = hasPermission("master:edit");
+  const canDelete = hasPermission("master:delete");
+  const canApprove = hasPermission("master:approve");
+
+  // ── Role-based OTP / approval logic ──
+  const isAdmin = (user as any)?.role?.name === "admin";
+  const roleRequiresOtp =
+    !isAdmin && (user as any)?.role?.requireOtpForMaster !== false;
+
   // Hooks
   const {
     categories,
@@ -110,7 +125,6 @@ const Masters: React.FC = () => {
     updateCategory,
     deleteCategory,
   } = useCategories();
-
   const {
     categoryNos,
     meta: categoryNosMeta,
@@ -120,7 +134,6 @@ const Masters: React.FC = () => {
     updateCategoryNo,
     deleteCategoryNo,
   } = useCategoryNos();
-
   const {
     quotationTypes,
     meta: quotationTypesMeta,
@@ -130,7 +143,6 @@ const Masters: React.FC = () => {
     updateQuotationType,
     deleteQuotationType,
   } = useQuotationTypes();
-
   const {
     quotationModels,
     meta: quotationModelsMeta,
@@ -140,7 +152,6 @@ const Masters: React.FC = () => {
     updateQuotationModel,
     deleteQuotationModel,
   } = useQuotationModels();
-
   const {
     variants,
     meta: variantsMeta,
@@ -150,7 +161,6 @@ const Masters: React.FC = () => {
     updateVariant,
     deleteVariant,
   } = useVariants();
-
   const {
     woods,
     meta: woodsMeta,
@@ -160,7 +170,6 @@ const Masters: React.FC = () => {
     updateWood,
     deleteWood,
   } = useWoods();
-
   const {
     polishes,
     meta: polishesMeta,
@@ -170,7 +179,6 @@ const Masters: React.FC = () => {
     updatePolish,
     deletePolish,
   } = usePolishes();
-
   const {
     fabrics,
     meta: fabricsMeta,
@@ -180,7 +188,6 @@ const Masters: React.FC = () => {
     updateFabric,
     deleteFabric,
   } = useFabrics();
-
   const {
     quotations,
     meta: quotationsMeta,
@@ -192,13 +199,13 @@ const Masters: React.FC = () => {
   } = useQuotations();
 
   const tabParam = searchParams.get("tab");
+  const tabParamfrom = searchParams.get("from");
   const validTabs = [
     "category",
     "categoryNo",
     "quotationType",
     "variant",
     "quotation",
-    // Hidden tabs kept for backend compatibility
     "quotationModel",
     "wood",
     "polish",
@@ -206,15 +213,14 @@ const Masters: React.FC = () => {
   ];
   const initialTab =
     tabParam && validTabs.includes(tabParam) ? tabParam : "category";
-  const [activeTab, setActiveTab] = useState(initialTab);
 
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [selectedParent, setSelectedParent] = useState("");
   const [pendingItem, setPendingItem] = useState<any>(null);
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editItemName, setEditItemName] = useState("");
@@ -255,7 +261,6 @@ const Masters: React.FC = () => {
   });
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
@@ -266,17 +271,34 @@ const Masters: React.FC = () => {
     description: string;
     onConfirm: () => void;
     loading: boolean;
+    confirmText?: string;
   }>({
     open: false,
     title: "",
     description: "",
     onConfirm: () => { },
     loading: false,
+    confirmText: "Delete",
   });
 
   useEffect(() => {
     if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
+
+  // Auto-open quotation form when tab=quotation & from=product
+  const quotationFormAutoOpened = useRef(false);
+  useEffect(() => {
+    if (
+      tabParam === "quotation" &&
+      tabParamfrom === "product" &&
+      !quotationFormAutoOpened.current
+    ) {
+      quotationFormAutoOpened.current = true;
+      setActiveTab("quotation");
+      resetQuotationForm();
+      setShowQuotationForm(true);
+    }
+  }, [tabParam, tabParamfrom]);
 
   // ── Fetch helper ──
   const fetchTabData = useCallback(
@@ -416,26 +438,23 @@ const Masters: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ── Filtered lists for quotation form ──
+  // Filtered lists
   const filteredCategoryNos = categoryNos.filter(
     (cn) =>
       cn.categoryId === quotationForm.categoryId && cn.status === "active",
   );
-
   const filteredQuotationTypes = quotationTypes.filter(
     (qt) =>
       qt.categoryId === quotationForm.categoryId && qt.status === "active",
   );
-
   const filteredQuotationModels = quotationModels.filter(
     (qm) =>
       qm.quotationTypeId === quotationForm.quotationTypeId &&
       qm.status === "active",
   );
-
   const activeVariants = variants.filter((v) => v.status === "active");
 
-  // ── Auto-generate part code ──
+  // Auto-generate part code
   useEffect(() => {
     const { categoryId, categoryNoId, quotationTypeId, variantId } =
       quotationForm;
@@ -446,10 +465,7 @@ const Masters: React.FC = () => {
       const vrnt = variants.find((v) => v.id === variantId);
       if (cat && catNo && qType && vrnt) {
         const generatedCode = `${cat.name}-${catNo.name}-${qType.name}-${vrnt.name}`;
-        setQuotationForm((prev) => ({
-          ...prev,
-          partCode: generatedCode,
-        }));
+        setQuotationForm((prev) => ({ ...prev, partCode: generatedCode }));
       }
     }
   }, [
@@ -463,6 +479,31 @@ const Masters: React.FC = () => {
     variants,
   ]);
 
+  // Update function map
+  const getUpdateFnMap = (): Record<string, Function> => ({
+    category: updateCategory,
+    categoryNo: updateCategoryNo,
+    quotationType: updateQuotationType,
+    quotationModel: updateQuotationModel,
+    variant: updateVariant,
+    wood: updateWood,
+    polish: updatePolish,
+    fabric: updateFabric,
+    quotation: updateQuotation,
+  });
+
+  // Direct approve (admin or roles without OTP)
+  const handleDirectApprove = async (item: any, type: string) => {
+    try {
+      const updateFn = getUpdateFnMap();
+      await updateFn[type]?.(item.id, { status: "active" });
+      toast.success(`"${item.name}" approved and activated successfully`);
+      await refreshCurrentTab();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to approve item");
+    }
+  };
+
   // ── Add simple master ──
   const handleAdd = async () => {
     if (!newItemName.trim()) {
@@ -471,12 +512,14 @@ const Masters: React.FC = () => {
     }
     setSubmitting(true);
     try {
+      const itemStatus = isAdmin ? "active" : "pending";
+
       let newItem: any;
       switch (activeTab) {
         case "category":
           newItem = await createCategory({
             name: newItemName,
-            status: "pending",
+            status: itemStatus,
           });
           break;
         case "categoryNo":
@@ -488,7 +531,7 @@ const Masters: React.FC = () => {
           newItem = await createCategoryNo({
             name: newItemName,
             categoryId: selectedParent,
-            status: "pending",
+            status: itemStatus,
           });
           break;
         case "quotationType":
@@ -500,7 +543,7 @@ const Masters: React.FC = () => {
           newItem = await createQuotationType({
             name: newItemName,
             categoryId: selectedParent,
-            status: "pending",
+            status: itemStatus,
           });
           break;
         case "quotationModel":
@@ -512,36 +555,52 @@ const Masters: React.FC = () => {
           newItem = await createQuotationModel({
             name: newItemName,
             quotationTypeId: selectedParent,
-            status: "pending",
+            status: itemStatus,
           });
           break;
         case "variant":
           newItem = await createVariant({
             name: newItemName,
-            status: "pending",
+            status: itemStatus,
           });
           break;
         case "wood":
-          newItem = await createWood({ name: newItemName, status: "pending" });
+          newItem = await createWood({
+            name: newItemName,
+            status: itemStatus,
+          });
           break;
         case "polish":
           newItem = await createPolish({
             name: newItemName,
-            status: "pending",
+            status: itemStatus,
           });
           break;
         case "fabric":
           newItem = await createFabric({
             name: newItemName,
-            status: "pending",
+            status: itemStatus,
           });
           break;
       }
-      setPendingItem({ ...newItem, type: activeTab });
+
       setShowAddModal(false);
       setNewItemName("");
       setSelectedParent("");
-      setShowOTPModal(true);
+
+      if (isAdmin) {
+        toast.success(
+          `${getTabLabel(activeTab)} created and activated successfully`,
+        );
+      } else if (!roleRequiresOtp) {
+        toast.success(
+          `${getTabLabel(activeTab)} created successfully. Awaiting admin approval.`,
+        );
+      } else {
+        setPendingItem({ ...newItem, type: activeTab });
+        setShowOTPModal(true);
+      }
+
       await refreshCurrentTab();
     } catch (error: any) {
       toast.error(error?.message || "Failed to create item");
@@ -582,17 +641,10 @@ const Masters: React.FC = () => {
       if (editingItem.type === "quotationModel" && editSelectedParent) {
         updateData.quotationTypeId = editSelectedParent;
       }
-      const updateFn: Record<string, Function> = {
-        category: updateCategory,
-        categoryNo: updateCategoryNo,
-        quotationType: updateQuotationType,
-        quotationModel: updateQuotationModel,
-        variant: updateVariant,
-        wood: updateWood,
-        polish: updatePolish,
-        fabric: updateFabric,
-      };
+
+      const updateFn = getUpdateFnMap();
       await updateFn[editingItem.type]?.(editingItem.id, updateData);
+
       toast.success(`${getTabLabel(editingItem.type)} updated successfully`);
       setShowEditModal(false);
       setEditingItem(null);
@@ -648,6 +700,7 @@ const Masters: React.FC = () => {
       toast.error("Please enter a valid base price");
       return;
     }
+
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -673,21 +726,33 @@ const Masters: React.FC = () => {
       formData.append("basePrice", String(quotationForm.basePrice));
       formData.append("defaultDiscount", String(quotationForm.defaultDiscount));
       formData.append("gstPercent", String(quotationForm.gstPercent));
-      formData.append("status", "pending");
+      formData.append("status", isAdmin ? "active" : "pending");
+
       selectedFiles.forEach((file) => {
         formData.append("images", file);
       });
       if (existingImages.length > 0) {
         formData.append("existingImages", JSON.stringify(existingImages));
       }
+
       if (editingQuotation) {
         await updateQuotation(editingQuotation.id, formData);
         toast.success("Quotation updated successfully");
       } else {
         const newQuotation = await createQuotation(formData);
-        setPendingItem({ ...newQuotation, type: "quotation" });
-        setShowOTPModal(true);
+
+        if (isAdmin) {
+          toast.success("Product created and activated successfully");
+        } else if (!roleRequiresOtp) {
+          toast.success(
+            "Product created successfully. Awaiting admin approval.",
+          );
+        } else {
+          setPendingItem({ ...newQuotation, type: "quotation" });
+          setShowOTPModal(true);
+        }
       }
+
       setShowQuotationForm(false);
       resetQuotationForm();
       await refreshCurrentTab();
@@ -730,21 +795,11 @@ const Masters: React.FC = () => {
     setShowQuotationForm(true);
   };
 
-  // ── OTP ──
+  // ── OTP verify ──
   const handleOTPVerify = async (otp: string, otpLogId: string) => {
     if (pendingItem) {
       try {
-        const updateFn: Record<string, Function> = {
-          category: updateCategory,
-          categoryNo: updateCategoryNo,
-          quotationType: updateQuotationType,
-          quotationModel: updateQuotationModel,
-          variant: updateVariant,
-          wood: updateWood,
-          polish: updatePolish,
-          fabric: updateFabric,
-          quotation: updateQuotation,
-        };
+        const updateFn = getUpdateFnMap();
         await updateFn[pendingItem.type]?.(pendingItem.id, {
           status: "active",
         });
@@ -766,6 +821,7 @@ const Masters: React.FC = () => {
       title: `Delete ${getTabLabel(type)}`,
       description: `Are you sure you want to delete "${label}"? This action cannot be undone.`,
       loading: false,
+      confirmText: "Delete",
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, loading: true }));
         try {
@@ -826,6 +882,7 @@ const Masters: React.FC = () => {
     return labels[tab] || tab;
   };
 
+  // ✅ CHANGED — check canCreate permission
   const handleAddClick = () => {
     if (activeTab === "quotation") {
       resetQuotationForm();
@@ -883,7 +940,7 @@ const Masters: React.FC = () => {
     }
   };
 
-  // ── Pagination Component ──
+  // ── Pagination ──
   const renderPagination = (tab: string, meta: any) => {
     if (!meta || meta.totalPages <= 1) return null;
     const page = currentPages[tab] || 1;
@@ -893,6 +950,7 @@ const Masters: React.FC = () => {
     const start = Math.max(1, page - 2);
     const end = Math.min(totalPages, page + 2);
     for (let i = start; i <= end; i++) pages.push(i);
+
     return (
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-border">
         <p className="text-sm text-muted-foreground">
@@ -990,11 +1048,49 @@ const Masters: React.FC = () => {
     </div>
   );
 
-  // ── Render simple master table ──
+  // ── Render Approve / Activate button ── ✅ USES canApprove
+  const renderActivateButton = (item: any, type: string) => {
+    if (item.status !== "pending") return null;
+    if (!canApprove) return null;
+
+    // Admin or role without OTP → direct approve
+    if (isAdmin || !roleRequiresOtp) {
+      return (
+        <button
+          onClick={() => handleDirectApprove(item, type)}
+          className="text-xs text-green-600 hover:underline font-medium flex items-center gap-1"
+          title="Approve directly"
+        >
+          <ShieldCheck className="h-3 w-3" />
+          Approve
+        </button>
+      );
+    }
+
+    // Non-admin with OTP required → OTP flow
+    return (
+      <button
+        onClick={() => {
+          setPendingItem({ ...item, type });
+          setShowOTPModal(true);
+        }}
+        className="text-xs text-accent hover:underline font-medium"
+      >
+        Activate
+      </button>
+    );
+  };
+
+  // ── Render simple master table ── ✅ USES canEdit, canDelete
   const renderTable = (items: any[], type: string, parentKey?: string) => {
     const isLoading = getLoadingForTab(type);
     const meta = getMetaForTab(type);
-    const colCount = parentKey ? 4 : 3;
+
+    // Calculate column count based on permissions
+    let colCount = 2; // Name + Status always shown
+    if (parentKey) colCount++;
+    if (canEdit || canDelete || canApprove) colCount++; // Actions column
+
     return (
       <div>
         {renderSearchBar(type)}
@@ -1008,7 +1104,7 @@ const Masters: React.FC = () => {
                     <th className="hidden sm:table-cell">Parent</th>
                   )}
                   <th>Status</th>
-                  <th>Actions</th>
+                  {(canEdit || canDelete || canApprove) && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1061,22 +1157,12 @@ const Masters: React.FC = () => {
                           )}
                         </span>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {item.status === "pending" &&
-                            hasPermission("master:manage") && (
-                              <button
-                                onClick={() => {
-                                  setPendingItem({ ...item, type });
-                                  setShowOTPModal(true);
-                                }}
-                                className="text-xs text-accent hover:underline font-medium"
-                              >
-                                Activate
-                              </button>
-                            )}
-                          {hasPermission("master:manage") && (
-                            <>
+                      {(canEdit || canDelete || canApprove) && (
+                        <td>
+                          <div className="flex items-center gap-2">
+                            {renderActivateButton(item, type)}
+
+                            {canEdit && (
                               <button
                                 onClick={() => handleEditClick(item, type)}
                                 className="action-btn"
@@ -1084,6 +1170,8 @@ const Masters: React.FC = () => {
                               >
                                 <Edit2 className="h-4 w-4 text-muted-foreground" />
                               </button>
+                            )}
+                            {canDelete && (
                               <button
                                 onClick={() =>
                                   handleDelete(item.id, type, item.name)
@@ -1093,10 +1181,10 @@ const Masters: React.FC = () => {
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -1109,9 +1197,11 @@ const Masters: React.FC = () => {
     );
   };
 
-  // ── Quotations table ──
+  // ── Quotations table ── ✅ USES canEdit, canDelete
   const renderQuotationsTable = () => {
     const meta = quotationsMeta;
+    const hasActions = canEdit || canDelete || canApprove;
+
     return (
       <div>
         {renderSearchBar("quotation")}
@@ -1126,7 +1216,7 @@ const Masters: React.FC = () => {
                   <th className="hidden md:table-cell">Category</th>
                   <th className="hidden lg:table-cell">Price</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  {hasActions && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1135,7 +1225,7 @@ const Masters: React.FC = () => {
                 ) : quotations.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={hasActions ? 7 : 6}
                       className="text-center text-muted-foreground py-12"
                     >
                       No products found.{" "}
@@ -1196,24 +1286,12 @@ const Masters: React.FC = () => {
                           )}
                         </span>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {quotation.status === "pending" && (
-                            <button
-                              onClick={() => {
-                                setPendingItem({
-                                  ...quotation,
-                                  type: "quotation",
-                                });
-                                setShowOTPModal(true);
-                              }}
-                              className="text-xs text-accent hover:underline font-medium"
-                            >
-                              Activate
-                            </button>
-                          )}
-                          {hasPermission("master:manage") && (
-                            <>
+                      {hasActions && (
+                        <td>
+                          <div className="flex items-center gap-2">
+                            {renderActivateButton(quotation, "quotation")}
+
+                            {canEdit && (
                               <button
                                 onClick={() => handleEditQuotation(quotation)}
                                 className="action-btn"
@@ -1221,6 +1299,8 @@ const Masters: React.FC = () => {
                               >
                                 <Edit2 className="h-4 w-4 text-muted-foreground" />
                               </button>
+                            )}
+                            {canDelete && (
                               <button
                                 onClick={() =>
                                   handleDelete(
@@ -1234,10 +1314,10 @@ const Masters: React.FC = () => {
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -1260,7 +1340,8 @@ const Masters: React.FC = () => {
             Manage categories, product types, variants, and products
           </p>
         </div>
-        {hasPermission("master:manage") && (
+        {/* ✅ CHANGED — uses canCreate */}
+        {canCreate && (
           <Button className="btn-accent gap-2" onClick={handleAddClick}>
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">
@@ -1283,11 +1364,6 @@ const Masters: React.FC = () => {
             <TabsTrigger value="quotationType">Type</TabsTrigger>
             <TabsTrigger value="variant">Variant</TabsTrigger>
             <TabsTrigger value="quotation">Products</TabsTrigger>
-            {/* Hidden tabs - kept for backend compatibility */}
-            {/* <TabsTrigger value="quotationModel">Model</TabsTrigger> */}
-            {/* <TabsTrigger value="wood">Wood</TabsTrigger> */}
-            {/* <TabsTrigger value="polish">Polish</TabsTrigger> */}
-            {/* <TabsTrigger value="fabric">Fabric</TabsTrigger> */}
           </TabsList>
         </div>
 
@@ -1304,14 +1380,9 @@ const Masters: React.FC = () => {
           {renderTable(variants, "variant")}
         </TabsContent>
         <TabsContent value="quotation">{renderQuotationsTable()}</TabsContent>
-        {/* Hidden tab content - kept for backend compatibility */}
-        {/* <TabsContent value="quotationModel">{renderTable(quotationModels, "quotationModel", "quotationTypeId")}</TabsContent> */}
-        {/* <TabsContent value="wood">{renderTable(woods, "wood")}</TabsContent> */}
-        {/* <TabsContent value="polish">{renderTable(polishes, "polish")}</TabsContent> */}
-        {/* <TabsContent value="fabric">{renderTable(fabrics, "fabric")}</TabsContent> */}
       </Tabs>
 
-      {/* Add Modal for simple masters */}
+      {/* Add Modal */}
       {showAddModal && (
         <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
           <div
@@ -1329,8 +1400,8 @@ const Masters: React.FC = () => {
                 <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
+
             <div className="space-y-4">
-              {/* Show category selector for quotationType and categoryNo */}
               {(activeTab === "quotationType" ||
                 activeTab === "categoryNo") && (
                   <div className="space-y-2">
@@ -1354,6 +1425,7 @@ const Masters: React.FC = () => {
                     </Select>
                   </div>
                 )}
+
               {activeTab === "quotationModel" && (
                 <div className="space-y-2">
                   <Label>Select Product Type</Label>
@@ -1376,6 +1448,7 @@ const Masters: React.FC = () => {
                   </Select>
                 </div>
               )}
+
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
@@ -1388,6 +1461,17 @@ const Masters: React.FC = () => {
                   }}
                 />
               </div>
+
+              {isAdmin && (
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200/50 rounded-lg p-3 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    As admin, this item will be created and activated
+                    immediately without OTP.
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
@@ -1407,6 +1491,8 @@ const Masters: React.FC = () => {
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                       Adding...
                     </div>
+                  ) : isAdmin ? (
+                    "Add & Activate"
                   ) : (
                     "Add"
                   )}
@@ -1417,7 +1503,7 @@ const Masters: React.FC = () => {
         </div>
       )}
 
-      {/* Edit Modal for simple masters */}
+      {/* Edit Modal */}
       {showEditModal && editingItem && (
         <div className="modal-backdrop" onClick={() => setShowEditModal(false)}>
           <div
@@ -1435,6 +1521,7 @@ const Masters: React.FC = () => {
                 <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
+
             <div className="space-y-4">
               {(editingItem.type === "quotationType" ||
                 editingItem.type === "categoryNo") && (
@@ -1459,6 +1546,7 @@ const Masters: React.FC = () => {
                     </Select>
                   </div>
                 )}
+
               {editingItem.type === "quotationModel" && (
                 <div className="space-y-2">
                   <Label>Select Product Type</Label>
@@ -1481,6 +1569,7 @@ const Masters: React.FC = () => {
                   </Select>
                 </div>
               )}
+
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
@@ -1493,6 +1582,7 @@ const Masters: React.FC = () => {
                   }}
                 />
               </div>
+
               <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
@@ -1548,6 +1638,16 @@ const Masters: React.FC = () => {
             </div>
 
             <div className="space-y-6">
+              {isAdmin && !editingQuotation && (
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200/50 rounded-lg p-3 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    As admin, this product will be created and activated
+                    immediately without OTP verification.
+                  </p>
+                </div>
+              )}
+
               {/* Basic Info */}
               <div className="space-y-4">
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
@@ -1569,13 +1669,12 @@ const Masters: React.FC = () => {
                 </div>
               </div>
 
-              {/* Classification — Category, CategoryNo, Type, Variant → auto partCode */}
+              {/* Classification */}
               <div className="space-y-4">
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
                   Classification & Part Code
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Category */}
                   <div className="space-y-2">
                     <Label>Category *</Label>
                     <Select
@@ -1605,7 +1704,6 @@ const Masters: React.FC = () => {
                     </Select>
                   </div>
 
-                  {/* Category No */}
                   <div className="space-y-2">
                     <Label>Category No *</Label>
                     <Select
@@ -1631,7 +1729,6 @@ const Masters: React.FC = () => {
                     </Select>
                   </div>
 
-                  {/* Type */}
                   <div className="space-y-2">
                     <Label>Type *</Label>
                     <Select
@@ -1658,13 +1755,15 @@ const Masters: React.FC = () => {
                     </Select>
                   </div>
 
-                  {/* Variant */}
                   <div className="space-y-2">
                     <Label>Variant *</Label>
                     <Select
                       value={quotationForm.variantId}
                       onValueChange={(v) =>
-                        setQuotationForm((prev) => ({ ...prev, variantId: v }))
+                        setQuotationForm((prev) => ({
+                          ...prev,
+                          variantId: v,
+                        }))
                       }
                     >
                       <SelectTrigger className="h-11">
@@ -1681,7 +1780,6 @@ const Masters: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Auto-generated Part Code */}
                 <div className="space-y-2">
                   <Label>Part Code (auto-generated)</Label>
                   <Input
@@ -1692,26 +1790,6 @@ const Masters: React.FC = () => {
                   />
                 </div>
               </div>
-
-              {/* Hidden: Model, Materials */}
-              {/* <div className="space-y-4">
-                <h3 className="font-medium text-foreground border-b border-border pb-2">Product Model</h3>
-                <Select value={quotationForm.quotationModelId}
-                  onValueChange={(v) => setQuotationForm((prev) => ({ ...prev, quotationModelId: v }))}
-                  disabled={!quotationForm.quotationTypeId}>
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Select model" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredQuotationModels.map((qm) => (
-                      <SelectItem key={qm.id} value={qm.id}>{qm.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div> */}
-
-              {/* <div className="space-y-4">
-                <h3 className="font-medium text-foreground border-b border-border pb-2">Materials (Optional)</h3>
-                ... wood, polish, fabric dropdowns ...
-              </div> */}
 
               {/* Dimensions */}
               <div className="space-y-4">
@@ -1811,11 +1889,12 @@ const Masters: React.FC = () => {
                 />
               </div>
 
-              {/* Images Section */}
+              {/* Images */}
               <div className="space-y-6">
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
                   Images
                 </h3>
+
                 {existingImages.length > 0 && (
                   <div className="space-y-4">
                     <Label className="text-sm text-muted-foreground">
@@ -1843,6 +1922,7 @@ const Masters: React.FC = () => {
                     </div>
                   </div>
                 )}
+
                 {selectedFiles.length > 0 && (
                   <div className="space-y-4">
                     <Label className="text-sm text-muted-foreground">
@@ -1873,6 +1953,7 @@ const Masters: React.FC = () => {
                     </div>
                   </div>
                 )}
+
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1920,6 +2001,8 @@ const Masters: React.FC = () => {
                     </div>
                   ) : editingQuotation ? (
                     "Update Product"
+                  ) : isAdmin ? (
+                    "Add & Activate Product"
                   ) : (
                     "Add Product"
                   )}
@@ -1955,7 +2038,7 @@ const Masters: React.FC = () => {
         description={confirmDialog.description}
         variant="danger"
         loading={confirmDialog.loading}
-        confirmText="Delete"
+        confirmText={confirmDialog.confirmText || "Delete"}
         cancelText="Cancel"
       />
     </div>

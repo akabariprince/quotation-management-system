@@ -162,8 +162,8 @@ const ImageCarousel: React.FC<{
                 key={idx}
                 onClick={() => setActiveIndex(idx)}
                 className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${activeIndex === idx
-                  ? "border-primary ring-2 ring-primary/20 scale-105"
-                  : "border-transparent hover:border-muted-foreground/30 opacity-70 hover:opacity-100"
+                    ? "border-primary ring-2 ring-primary/20 scale-105"
+                    : "border-transparent hover:border-muted-foreground/30 opacity-70 hover:opacity-100"
                   }`}
               >
                 <img
@@ -191,8 +191,8 @@ const ImageCarousel: React.FC<{
               key={idx}
               onClick={() => setActiveIndex(idx)}
               className={`rounded-full transition-all duration-200 ${activeIndex === idx
-                ? "w-6 h-2 bg-primary"
-                : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                  ? "w-6 h-2 bg-primary"
+                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
                 }`}
             />
           ))}
@@ -263,8 +263,8 @@ const ImageCarousel: React.FC<{
                     setActiveIndex(idx);
                   }}
                   className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${activeIndex === idx
-                    ? "border-white scale-110"
-                    : "border-transparent opacity-50 hover:opacity-80"
+                      ? "border-white scale-110"
+                      : "border-transparent opacity-50 hover:opacity-80"
                     }`}
                 >
                   <img
@@ -343,7 +343,7 @@ const Quotations: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(
-    null
+    null,
   );
 
   // Confirm dialog
@@ -380,7 +380,7 @@ const Quotations: React.FC = () => {
       if (st) params.status = st;
       fetchQuotations(params);
     },
-    [currentPage, searchTerm, statusFilter, fetchQuotations]
+    [currentPage, searchTerm, statusFilter, fetchQuotations],
   );
 
   // Initial load
@@ -513,7 +513,7 @@ const Quotations: React.FC = () => {
         {hasPermission("master:manage") && (
           <Button
             className="btn-accent gap-2"
-            onClick={() => navigate("/masters?tab=quotation")}
+            onClick={() => navigate("/masters?tab=quotation&from=product")}
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Add Product</span>
@@ -642,8 +642,8 @@ const Quotations: React.FC = () => {
 
                   <span
                     className={`capitalize absolute top-3 right-3 ${quotation.status === "active"
-                      ? "badge-success"
-                      : "badge-warning"
+                        ? "badge-success"
+                        : "badge-warning"
                       }`}
                   >
                     {quotation.status}
@@ -757,13 +757,13 @@ const Quotations: React.FC = () => {
                       key={page}
                       onClick={() => setCurrentPage(page as number)}
                       className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${currentPage === page
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "hover:bg-muted text-muted-foreground"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "hover:bg-muted text-muted-foreground"
                         }`}
                     >
                       {page}
                     </button>
-                  )
+                  ),
                 )}
               </div>
               <button
@@ -812,8 +812,8 @@ const Quotations: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span
                   className={`capitalize text-xs ${selectedQuotation.status === "active"
-                    ? "badge-success"
-                    : "badge-warning"
+                      ? "badge-success"
+                      : "badge-warning"
                     }`}
                 >
                   {selectedQuotation.status}
@@ -840,7 +840,6 @@ const Quotations: React.FC = () => {
 
                 {/* Right: Product Details */}
                 <div className="lg:w-1/2 p-6 space-y-6">
-
                   {/* Pricing Section */}
                   <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                     <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -866,7 +865,7 @@ const Quotations: React.FC = () => {
                       <DetailRow
                         label="After Discount"
                         value={formatCurrency(
-                          getDiscountedPrice(selectedQuotation)
+                          getDiscountedPrice(selectedQuotation),
                         )}
                       />
                     </div>
@@ -892,8 +891,6 @@ const Quotations: React.FC = () => {
                       </p>
                     </div>
                   )}
-
-
 
                   {/* Dimensions */}
                   {(Number(selectedQuotation.length) > 0 ||
@@ -1015,7 +1012,7 @@ const Quotations: React.FC = () => {
                       <DetailRow
                         label="Created"
                         value={new Date(
-                          selectedQuotation.createdAt
+                          selectedQuotation.createdAt,
                         ).toLocaleDateString("en-IN", {
                           day: "2-digit",
                           month: "short",
@@ -1025,7 +1022,7 @@ const Quotations: React.FC = () => {
                       <DetailRow
                         label="Last Updated"
                         value={new Date(
-                          selectedQuotation.updatedAt
+                          selectedQuotation.updatedAt,
                         ).toLocaleDateString("en-IN", {
                           day: "2-digit",
                           month: "short",

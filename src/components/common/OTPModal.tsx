@@ -95,18 +95,17 @@ const OTPModal: React.FC<OTPModalProps> = ({
   };
 
   // ─── Send OTP (calls /auth/otp/request) ───────────────────────────────
-
   const handleSendOTP = async () => {
     setSending(true);
     setError("");
-
     try {
-      // Use the auth endpoint which handles all OTP types
       const res = await api.post("/auth/otp/request", {
         email: user?.email || "",
         type,
         entityId: entityId || undefined,
         entityType: entityType || undefined,
+        entityName: entityName || undefined,
+        requestedBy: user?.id || undefined,
       });
 
       if (res.success) {
@@ -114,8 +113,8 @@ const OTPModal: React.FC<OTPModalProps> = ({
         setOtpLogId(res.data?.otpLogId || null);
         setSentToEmail(
           res.data?.email ||
-            user?.email?.replace(/(.{2})(.*)(@.*)/, "$1***$3") ||
-            "admin",
+          user?.email?.replace(/(.{2})(.*)(@.*)/, "$1***$3") ||
+          "admin",
         );
         startCooldown();
       } else {
@@ -298,9 +297,8 @@ const OTPModal: React.FC<OTPModalProps> = ({
         {/* Header */}
         <div className="text-center mb-6">
           <div
-            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${
-              success ? "bg-success/10" : "bg-accent/10"
-            }`}
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${success ? "bg-success/10" : "bg-accent/10"
+              }`}
           >
             {success ? (
               <CheckCircle className="h-8 w-8 text-success" />
@@ -387,13 +385,12 @@ const OTPModal: React.FC<OTPModalProps> = ({
                   value={digit}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`otp-input transition-all ${
-                    error
+                  className={`otp-input transition-all ${error
                       ? "border-destructive ring-destructive/20"
                       : digit
                         ? "border-accent ring-accent/20"
                         : ""
-                  }`}
+                    }`}
                   disabled={verifying}
                   autoComplete="one-time-code"
                 />

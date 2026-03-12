@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
-import { useApi } from '@/hooks/useApi';
+// src/hooks/useRoles.ts
+import { useState, useCallback } from "react";
+import { useApi } from "@/hooks/useApi";
 
 export interface Role {
   id: string;
@@ -9,6 +10,7 @@ export interface Role {
   permissions: string[];
   discountMin: number;
   discountMax: number;
+  requireOtpForMaster: boolean;
   isActive: boolean;
   isSystem: boolean;
   createdAt: string;
@@ -33,7 +35,8 @@ export const useRoles = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(false);
-  const [permissionsMeta, setPermissionsMeta] = useState<PermissionsMeta | null>(null);
+  const [permissionsMeta, setPermissionsMeta] =
+    useState<PermissionsMeta | null>(null);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
 
   const fetchRoles = useCallback(
@@ -48,14 +51,16 @@ export const useRoles = () => {
       setLoading(true);
       try {
         const queryParts: string[] = [];
-        if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+        if (params?.search)
+          queryParts.push(`search=${encodeURIComponent(params.search)}`);
         if (params?.page) queryParts.push(`page=${params.page}`);
         if (params?.limit) queryParts.push(`limit=${params.limit}`);
         if (params?.sortBy) queryParts.push(`sortBy=${params.sortBy}`);
         if (params?.sortOrder) queryParts.push(`sortOrder=${params.sortOrder}`);
-        if (params?.isActive !== undefined) queryParts.push(`isActive=${params.isActive}`);
-
-        const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '?limit=100';
+        if (params?.isActive !== undefined)
+          queryParts.push(`isActive=${params.isActive}`);
+        const queryString =
+          queryParts.length > 0 ? `?${queryParts.join("&")}` : "?limit=100";
         const res = await get(`/roles${queryString}`);
         setRoles(res.data || []);
         if (res.meta) setMeta(res.meta);
@@ -67,12 +72,12 @@ export const useRoles = () => {
         setLoading(false);
       }
     },
-    [get]
+    [get],
   );
 
   const fetchActiveRoles = useCallback(async () => {
     try {
-      const res = await get('/roles/active');
+      const res = await get("/roles/active");
       return res.data || [];
     } catch {
       return [];
@@ -82,7 +87,7 @@ export const useRoles = () => {
   const fetchPermissionsMeta = useCallback(async () => {
     setPermissionsLoading(true);
     try {
-      const res = await get('/roles/permissions');
+      const res = await get("/roles/permissions");
       setPermissionsMeta(res.data || null);
       return res.data;
     } catch {
@@ -102,7 +107,7 @@ export const useRoles = () => {
         return null;
       }
     },
-    [get]
+    [get],
   );
 
   const createRole = useCallback(
@@ -111,12 +116,15 @@ export const useRoles = () => {
       displayName: string;
       description?: string;
       permissions: string[];
+      discountMin?: number;
+      discountMax?: number;
+      requireOtpForMaster?: boolean;
       isActive?: boolean;
     }) => {
-      const res = await post('/roles', data);
+      const res = await post("/roles", data);
       return res.data;
     },
-    [post]
+    [post],
   );
 
   const updateRole = useCallback(
@@ -126,20 +134,23 @@ export const useRoles = () => {
         displayName?: string;
         description?: string;
         permissions?: string[];
+        discountMin?: number;
+        discountMax?: number;
+        requireOtpForMaster?: boolean;
         isActive?: boolean;
-      }
+      },
     ) => {
       const res = await put(`/roles/${id}`, data);
       return res.data;
     },
-    [put]
+    [put],
   );
 
   const deleteRole = useCallback(
     async (id: string) => {
       await del(`/roles/${id}`);
     },
-    [del]
+    [del],
   );
 
   return {

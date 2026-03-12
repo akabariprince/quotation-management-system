@@ -5,6 +5,7 @@ import {
   X,
   Clock,
   Shield,
+  ShieldCheck,
   Search,
   RefreshCw,
   AlertCircle,
@@ -13,9 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Send,
-  User,
-  Mail,
-  Calendar,
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +39,7 @@ interface OTPLog {
   type: "login" | "discount" | "master_activation";
   entityId: string | null;
   entityType: string | null;
+  entityName: string | null;
   email: string;
   status: "pending" | "approved" | "expired";
   attempts: number;
@@ -47,8 +47,10 @@ interface OTPLog {
   expiresAt: string;
   approvedAt: string | null;
   createdAt: string;
-  requester?: { id: string; name: string; email: string };
-  approver?: { id: string; name: string; email: string };
+  requestedBy: string | null;
+  approvedBy: string | null;
+  requester?: { id: string; name: string; email: string } | null;
+  approver?: { id: string; name: string; email: string } | null;
 }
 
 interface PaginationMeta {
@@ -57,6 +59,13 @@ interface PaginationMeta {
   totalCount: number;
   totalItems?: number;
   limit: number;
+}
+
+interface Stats {
+  pending: number;
+  approvedToday: number;
+  expiredToday: number;
+  total: number;
 }
 
 // ─── Skeletons ──────────────────────────────────────────────────────────────
@@ -79,7 +88,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
       <table className="enterprise-table">
         <thead>
           <tr>
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 7 }).map((_, i) => (
               <th key={i}>
                 <Skeleton className="h-4 w-20" />
               </th>
@@ -89,7 +98,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
         <tbody>
           {Array.from({ length: rows }).map((_, i) => (
             <tr key={i}>
-              {Array.from({ length: 6 }).map((_, j) => (
+              {Array.from({ length: 7 }).map((_, j) => (
                 <td key={j}>
                   <Skeleton className="h-4 w-full" />
                 </td>
@@ -102,7 +111,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
   </div>
 );
 
-// ─── OTP Verify Modal ───────────────────────────────────────────────────────
+// ─── OTP Verify Modal (for non-admin) ───────────────────────────────────────
 
 const OTPVerifyModal: React.FC<{
   isOpen: boolean;
@@ -138,6 +147,9 @@ const OTPVerifyModal: React.FC<{
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === "Enter" && otp.length === 6) {
+      onVerify(otp);
     }
   };
 
@@ -296,10 +308,14 @@ const ApprovalManagement: React.FC = () => {
   const { user, hasPermission } = useAuth();
   const api = useApi();
 
+  // Admin detection
+  const isAdmin = (user as any)?.role?.name === "admin";
+
   const [pendingLogs, setPendingLogs] = useState<OTPLog[]>([]);
   const [allLogs, setAllLogs] = useState<OTPLog[]>([]);
   const [pendingMeta, setPendingMeta] = useState<PaginationMeta | null>(null);
   const [allMeta, setAllMeta] = useState<PaginationMeta | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -310,23 +326,51 @@ const ApprovalManagement: React.FC = () => {
   const [pendingPage, setPendingPage] = useState(1);
   const [allPage, setAllPage] = useState(1);
 
+  // Search debounce
+  const searchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
   // Modals
   const [otpModal, setOtpModal] = useState<{
     open: boolean;
     item: OTPLog | null;
-  }>({
-    open: false,
-    item: null,
-  });
+  }>({ open: false, item: null });
+
   const [rejectModal, setRejectModal] = useState<{
     open: boolean;
     item: OTPLog | null;
+  }>({ open: false, item: null });
+
+  // Confirm dialog for admin direct approval
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant: "danger" | "warning" | "info";
+    loading: boolean;
+    confirmText: string;
   }>({
     open: false,
-    item: null,
+    title: "",
+    description: "",
+    onConfirm: () => { },
+    variant: "info",
+    loading: false,
+    confirmText: "Approve",
   });
 
   // ─── Fetch Data ─────────────────────────────────────────────────────
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await api.get("/otp-logs/stats");
+      if (res.success) {
+        setStats(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  }, []);
 
   const fetchPending = useCallback(async () => {
     try {
@@ -363,25 +407,137 @@ const ApprovalManagement: React.FC = () => {
     }
   }, [allPage, searchTerm, filterType, filterStatus]);
 
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchPending(), fetchAll(), fetchStats()]);
+  }, [fetchPending, fetchAll, fetchStats]);
+
+  // Initial load
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([fetchPending(), fetchAll()]);
+      await refreshAll();
       setLoading(false);
     };
     loadAll();
   }, []);
 
+  // Refetch on page changes
   useEffect(() => {
     if (!loading) fetchPending();
   }, [pendingPage]);
 
   useEffect(() => {
     if (!loading) fetchAll();
-  }, [allPage, searchTerm, filterType, filterStatus]);
+  }, [allPage, filterType, filterStatus]);
+
+  // Debounced search
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setAllPage(1);
+      fetchAll();
+    }, 400);
+  };
 
   // ─── Actions ────────────────────────────────────────────────────────
 
+  // Admin direct approve (no OTP)
+  const handleDirectApprove = (log: OTPLog) => {
+    const entityLabel = getEntityDisplayName(log);
+
+    setConfirmDialog({
+      open: true,
+      title: "Direct Approval",
+      description: `As admin, you can directly approve "${entityLabel}" without OTP verification. This will immediately activate the item. Do you want to proceed?`,
+      variant: "info",
+      loading: false,
+      confirmText: "Approve Now",
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, loading: true }));
+        try {
+          const res = await api.post(`/otp-logs/${log.id}/direct-approve`, {});
+          if (res.success) {
+            toast.success(
+              `"${entityLabel}" approved and activated successfully`,
+            );
+            await refreshAll();
+          } else {
+            toast.error(res.message || "Failed to approve");
+          }
+        } catch (err: any) {
+          toast.error(err?.message || "Failed to approve directly");
+        } finally {
+          setConfirmDialog((prev) => ({
+            ...prev,
+            open: false,
+            loading: false,
+          }));
+        }
+      },
+    });
+  };
+
+  // Batch direct approve all pending (admin only)
+  const handleBatchDirectApprove = () => {
+    const nonExpiredLogs = pendingLogs.filter(
+      (log) => !isExpired(log.expiresAt),
+    );
+
+    if (nonExpiredLogs.length === 0) {
+      toast.info("No active pending items to approve");
+      return;
+    }
+
+    setConfirmDialog({
+      open: true,
+      title: "Approve All Pending",
+      description: `As admin, you are about to directly approve ${nonExpiredLogs.length} pending item(s) without OTP. All items will be activated immediately. Continue?`,
+      variant: "warning",
+      loading: false,
+      confirmText: `Approve All (${nonExpiredLogs.length})`,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, loading: true }));
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const log of nonExpiredLogs) {
+          try {
+            const res = await api.post(
+              `/otp-logs/${log.id}/direct-approve`,
+              {},
+            );
+            if (res.success) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch {
+            failCount++;
+          }
+        }
+
+        if (successCount > 0) {
+          toast.success(
+            `${successCount} item(s) approved successfully${failCount > 0 ? `, ${failCount} failed` : ""
+            }`,
+          );
+        }
+        if (failCount > 0 && successCount === 0) {
+          toast.error("Failed to approve items");
+        }
+
+        await refreshAll();
+        setConfirmDialog((prev) => ({
+          ...prev,
+          open: false,
+          loading: false,
+        }));
+      },
+    });
+  };
+
+  // OTP-based approve (for non-admin)
   const handleApprove = async (otp: string) => {
     if (!otpModal.item) return;
     setActionLoading(true);
@@ -392,7 +548,7 @@ const ApprovalManagement: React.FC = () => {
       if (res.success) {
         toast.success("Approved successfully");
         setOtpModal({ open: false, item: null });
-        await Promise.all([fetchPending(), fetchAll()]);
+        await refreshAll();
       } else {
         toast.error(res.message || "Invalid OTP");
       }
@@ -412,7 +568,7 @@ const ApprovalManagement: React.FC = () => {
       if (res.success) {
         toast.success("Rejected successfully");
         setRejectModal({ open: false, item: null });
-        await Promise.all([fetchPending(), fetchAll()]);
+        await refreshAll();
       } else {
         toast.error(res.message || "Failed to reject");
       }
@@ -437,7 +593,7 @@ const ApprovalManagement: React.FC = () => {
 
   const handleRefresh = async () => {
     setLoading(true);
-    await Promise.all([fetchPending(), fetchAll()]);
+    await refreshAll();
     setLoading(false);
     toast.success("Data refreshed");
   };
@@ -494,8 +650,39 @@ const ApprovalManagement: React.FC = () => {
 
   const isExpired = (expiresAt: string) => new Date(expiresAt) < new Date();
 
-  const pendingCount = pendingMeta?.totalCount || pendingMeta?.totalItems || 0;
-  const totalCount = allMeta?.totalCount || allMeta?.totalItems || 0;
+  // Get display name for entity
+  const getEntityDisplayName = (log: OTPLog): string => {
+    if (log?.entityName) return log?.entityName;
+    if (log?.entityType) return log?.entityType;
+    return getTypeLabel(log?.type);
+  };
+
+  // Get requester display
+  const getRequesterName = (log: OTPLog): string => {
+    if (log.requester?.name) return log.requester?.name;
+    if (log.requester?.email) return log.requester.email;
+    if (log.email) return log.email;
+    return "—";
+  };
+
+  // Get approver display
+  const getApproverName = (log: OTPLog): string => {
+    if (log.approver?.name) return log.approver?.name;
+    if (log.approver?.email) return log.approver.email;
+    return "—";
+  };
+
+  const pendingCount =
+    stats?.pending ?? pendingMeta?.totalCount ?? pendingMeta?.totalItems ?? 0;
+  const totalCount =
+    stats?.total ?? allMeta?.totalCount ?? allMeta?.totalItems ?? 0;
+  const approvedToday = stats?.approvedToday ?? 0;
+  const expiredToday = stats?.expiredToday ?? 0;
+
+  // Count non-expired pending for batch approve
+  const nonExpiredPendingCount = pendingLogs.filter(
+    (log) => !isExpired(log.expiresAt),
+  ).length;
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -509,7 +696,9 @@ const ApprovalManagement: React.FC = () => {
           </div>
         </div>
         <StatsSkeleton />
-        <TableSkeleton rows={5} />
+        <div className="mt-6">
+          <TableSkeleton rows={5} />
+        </div>
       </div>
     );
   }
@@ -522,17 +711,41 @@ const ApprovalManagement: React.FC = () => {
           <h1 className="page-title">Approval Management</h1>
           <p className="text-muted-foreground mt-1">
             Review and approve pending OTP requests
+            {isAdmin && (
+              <span className="ml-2 inline-flex items-center gap-1 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-xs font-medium">
+                <ShieldCheck className="h-3 w-3" />
+                Admin — Direct Approval
+              </span>
+            )}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={handleRefresh}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Batch approve button for admin */}
+          {isAdmin &&
+            hasPermission("approval:manage") &&
+            nonExpiredPendingCount > 0 && (
+              <Button
+                size="sm"
+                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleBatchDirectApprove}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">Approve All</span>
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">
+                  {nonExpiredPendingCount}
+                </span>
+              </Button>
+            )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -544,16 +757,12 @@ const ApprovalManagement: React.FC = () => {
         </div>
         <div className="stat-card">
           <Check className="h-5 w-5 text-success" />
-          <p className="stat-value">
-            {allLogs.filter((l) => l.status === "approved").length}
-          </p>
+          <p className="stat-value">{approvedToday}</p>
           <p className="stat-label">Approved Today</p>
         </div>
         <div className="stat-card">
           <AlertCircle className="h-5 w-5 text-destructive" />
-          <p className="stat-value">
-            {allLogs.filter((l) => l.status === "expired").length}
-          </p>
+          <p className="stat-value">{expiredToday}</p>
           <p className="stat-label">Expired / Rejected</p>
         </div>
         <div className="stat-card">
@@ -579,17 +788,17 @@ const ApprovalManagement: React.FC = () => {
           </TabsList>
         </div>
 
-        {/* ─── Pending Tab ─────────────────────────────────────────────── */}
+        {/* ─── Pending Tab ─────────────────────────────────────────── */}
         <TabsContent value="pending" className="space-y-4">
-          <div className="enterprise-card overflow-hidden mt-4">
+          <div className="enterprise-card overflow-hidden">
             <div className="table-container">
               <table className="enterprise-table">
                 <thead>
                   <tr>
                     <th>Type</th>
-                    <th>Email</th>
+                    <th>Entity</th>
                     <th className="hidden sm:table-cell">Requested By</th>
-                    <th className="hidden md:table-cell">Entity</th>
+                    <th className="hidden md:table-cell">Email</th>
                     <th className="hidden lg:table-cell">Expires</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -615,22 +824,44 @@ const ApprovalManagement: React.FC = () => {
                           className={expired ? "opacity-60" : ""}
                         >
                           <td>
-                            <span className={getTypeBadge(log.type)}>
-                              {getTypeLabel(log.type)}
+                            <span className={getTypeBadge(log?.type)}>
+                              {getTypeLabel(log?.type)}
                             </span>
                           </td>
-                          <td className="font-medium text-sm">{log.email}</td>
-                          <td className="hidden sm:table-cell text-muted-foreground text-sm">
-                            {log.requester?.name || "—"}
-                          </td>
-                          <td className="hidden md:table-cell text-sm">
-                            {log.entityType ? (
-                              <span className="bg-muted px-2 py-1 rounded text-xs">
-                                {log.entityType}
-                              </span>
+                          <td className="text-sm">
+                            {log?.entityType ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="bg-muted px-2 py-0.5 rounded text-xs w-fit capitalize">
+                                  {log?.entityType}
+                                </span>
+                                {log?.entityName && (
+                                  <span
+                                    className="text-xs font-medium text-foreground truncate max-w-[140px]"
+                                    title={log?.entityName}
+                                  >
+                                    {log?.entityName}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
-                              "—"
+                              <span className="text-muted-foreground">—</span>
                             )}
+                          </td>
+                          <td className="hidden sm:table-cell text-sm">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground">
+                                {getRequesterName(log)}
+                              </span>
+                              {log.requester?.email &&
+                                log.requester.email !== log.requester?.name && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                    {log.requester.email}
+                                  </span>
+                                )}
+                            </div>
+                          </td>
+                          <td className="hidden md:table-cell text-muted-foreground text-sm">
+                            {log.email}
                           </td>
                           <td className="hidden lg:table-cell text-sm">
                             {expired ? (
@@ -654,25 +885,46 @@ const ApprovalManagement: React.FC = () => {
                           </td>
                           <td>
                             {!expired ? (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 {hasPermission("approval:manage") && (
-                                  <Button
-                                    size="sm"
-                                    className="h-8 bg-success hover:bg-success/90 text-success-foreground"
-                                    onClick={() =>
-                                      setOtpModal({ open: true, item: log })
-                                    }
-                                  >
-                                    <Check className="h-3.5 w-3.5 mr-1" />
-                                    Approve
-                                  </Button>
+                                  <>
+                                    {/* Admin gets direct approve */}
+                                    {isAdmin ? (
+                                      <Button
+                                        size="sm"
+                                        className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
+                                        onClick={() => handleDirectApprove(log)}
+                                      >
+                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                        <span className="hidden xl:inline">
+                                          Direct
+                                        </span>{" "}
+                                        Approve
+                                      </Button>
+                                    ) : (
+                                      /* Non-admin gets OTP-based approve */
+                                      <Button
+                                        size="sm"
+                                        className="h-8 bg-success hover:bg-success/90 text-success-foreground"
+                                        onClick={() =>
+                                          setOtpModal({
+                                            open: true,
+                                            item: log,
+                                          })
+                                        }
+                                      >
+                                        <Check className="h-3.5 w-3.5 mr-1" />
+                                        Approve
+                                      </Button>
+                                    )}
+                                  </>
                                 )}
 
                                 {hasPermission("approval:manage") && (
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 text-destructive border-destructive hover:bg-destructive/10"
+                                    className="h-8 text-destructive border-destructive/50 hover:bg-destructive/10"
                                     onClick={() =>
                                       setRejectModal({ open: true, item: log })
                                     }
@@ -681,17 +933,20 @@ const ApprovalManagement: React.FC = () => {
                                     Reject
                                   </Button>
                                 )}
-                                {hasPermission("approval:manage") && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8"
-                                    onClick={() => handleResend(log)}
-                                    title="Resend OTP"
-                                  >
-                                    <Send className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
+
+                                {/* Only show resend for non-admin */}
+                                {hasPermission("approval:manage") &&
+                                  !isAdmin && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8"
+                                      onClick={() => handleResend(log)}
+                                      title="Resend OTP"
+                                    >
+                                      <Send className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
                               </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">
@@ -736,7 +991,7 @@ const ApprovalManagement: React.FC = () => {
           </div>
         </TabsContent>
 
-        {/* ─── All Logs Tab ────────────────────────────────────────────── */}
+        {/* ─── All Logs Tab ────────────────────────────────────────── */}
         <TabsContent value="all" className="space-y-4">
           {/* Filters */}
           <div className="enterprise-card p-4">
@@ -744,12 +999,9 @@ const ApprovalManagement: React.FC = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by email..."
+                  placeholder="Search by email, entity name..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setAllPage(1);
-                  }}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 h-11"
                 />
               </div>
@@ -798,17 +1050,18 @@ const ApprovalManagement: React.FC = () => {
                   <tr>
                     <th>Date</th>
                     <th>Type</th>
-                    <th className="hidden sm:table-cell">Email</th>
+                    <th className="hidden sm:table-cell">Entity</th>
                     <th className="hidden md:table-cell">Requested By</th>
                     <th className="hidden lg:table-cell">Approved By</th>
                     <th>Status</th>
+                    {isAdmin && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {allLogs.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={isAdmin ? 7 : 6}
                         className="text-center text-muted-foreground py-12"
                       >
                         <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -822,18 +1075,67 @@ const ApprovalManagement: React.FC = () => {
                           {formatDate(log.createdAt)}
                         </td>
                         <td>
-                          <span className={getTypeBadge(log.type)}>
-                            {getTypeLabel(log.type)}
+                          <span className={getTypeBadge(log?.type)}>
+                            {getTypeLabel(log?.type)}
                           </span>
                         </td>
                         <td className="hidden sm:table-cell text-sm">
-                          {log.email}
+                          {log?.entityType ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="bg-muted px-2 py-0.5 rounded text-xs w-fit capitalize">
+                                {log?.entityType}
+                              </span>
+                              {log?.entityName && (
+                                <span
+                                  className="text-xs text-foreground font-medium truncate max-w-[120px]"
+                                  title={log?.entityName}
+                                >
+                                  {log?.entityName}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {log.email}
+                            </span>
+                          )}
                         </td>
-                        <td className="hidden md:table-cell text-sm text-muted-foreground">
-                          {log.requester?.name || "—"}
+                        <td className="hidden md:table-cell text-sm">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground">
+                              {getRequesterName(log)}
+                            </span>
+                            {log.requester?.email &&
+                              log.requester?.name &&
+                              log.requester.email !== log.requester?.name && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                  {log.requester.email}
+                                </span>
+                              )}
+                          </div>
                         </td>
-                        <td className="hidden lg:table-cell text-sm text-muted-foreground">
-                          {log.approver?.name || "—"}
+                        <td className="hidden lg:table-cell text-sm">
+                          {log.status === "approved" ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground">
+                                {getApproverName(log)}
+                              </span>
+                              {log.approver?.email &&
+                                log.approver?.name &&
+                                log.approver.email !== log.approver?.name && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                    {log.approver.email}
+                                  </span>
+                                )}
+                              {log.approvedAt && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {formatDate(log.approvedAt)}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td>
                           <span className={getStatusBadge(log.status)}>
@@ -841,6 +1143,45 @@ const ApprovalManagement: React.FC = () => {
                               log.status.slice(1)}
                           </span>
                         </td>
+                        {/* Admin can approve/reject from all logs */}
+                        {isAdmin && (
+                          <td>
+                            {log.status === "pending" &&
+                              !isExpired(log.expiresAt) ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1 text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-950/30"
+                                  onClick={() => handleDirectApprove(log)}
+                                >
+                                  <ShieldCheck className="h-3 w-3" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/5"
+                                  onClick={() =>
+                                    setRejectModal({ open: true, item: log })
+                                  }
+                                >
+                                  <X className="h-3 w-3" />
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : log.status === "pending" &&
+                              isExpired(log.expiresAt) ? (
+                              <span className="text-xs text-muted-foreground">
+                                Expired
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
@@ -880,24 +1221,36 @@ const ApprovalManagement: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modals */}
+      {/* OTP Verify Modal — Only for non-admin */}
       <OTPVerifyModal
         isOpen={otpModal.open}
         onClose={() => setOtpModal({ open: false, item: null })}
         onVerify={handleApprove}
         loading={actionLoading}
-        title={`Approve ${otpModal.item?.entityType || otpModal.item?.type || "Request"}`}
+        title={`Approve ${getEntityDisplayName(otpModal.item!)}`}
         description="Enter the OTP to verify and approve this request"
       />
 
+      {/* Reject Modal */}
       <RejectModal
         isOpen={rejectModal.open}
         onClose={() => setRejectModal({ open: false, item: null })}
         onReject={handleReject}
         loading={actionLoading}
-        itemName={
-          rejectModal.item?.entityType || rejectModal.item?.type || "Request"
-        }
+        itemName={getEntityDisplayName(rejectModal.item!)}
+      />
+
+      {/* Confirm Dialog for admin direct approval */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        variant={confirmDialog.variant}
+        loading={confirmDialog.loading}
+        confirmText={confirmDialog.confirmText}
+        cancelText="Cancel"
       />
     </div>
   );
