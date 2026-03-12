@@ -712,7 +712,6 @@ const PDFPreview: React.FC = () => {
                     style={{
                       flex: 1,
                       padding: "13px 20px",
-                      borderRight: border,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "flex-end",
@@ -731,48 +730,7 @@ const PDFPreview: React.FC = () => {
                       {salesPersonName}
                     </div>
                   </div>
-                  <div style={{ width: "270px" }}>
-                    <table
-                      style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        fontSize: "13px",
-                      }}
-                    >
-                      <tbody>
-                        <tr style={{ backgroundColor: "#f3f4f6" }}>
-                          <td
-                            style={{
-                              padding: "13px 12px",
-                              fontWeight: 800,
-                              fontSize: "14px",
-                            }}
-                          >
-                            Grand Total{" "}
-                            <span
-                              style={{
-                                fontWeight: 500,
-                                fontSize: "11.5px",
-                                color: "#555",
-                              }}
-                            >
-                              (incl. of gst)
-                            </span>
-                          </td>
-                          <td
-                            style={{
-                              padding: "13px 12px",
-                              textAlign: "right",
-                              fontWeight: 800,
-                              fontSize: "16px",
-                            }}
-                          >
-                            ₹{formatCurrency(project.grandTotalWithGst)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+
                 </div>
 
                 <PageFooter />

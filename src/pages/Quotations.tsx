@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ZoomIn,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -31,6 +32,269 @@ import { toast } from "sonner";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const PAGE_SIZE = 12;
+
+// ── Image Carousel Component ──
+const ImageCarousel: React.FC<{
+  images: string[];
+  name: string;
+}> = ({ images, name }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const thumbnailRef = useRef<HTMLDivElement>(null);
+
+  const hasImages = images && images.length > 0;
+  const totalImages = hasImages ? images.length : 0;
+
+  const goToPrev = useCallback(() => {
+    setActiveIndex((prev) => (prev === 0 ? totalImages - 1 : prev - 1));
+  }, [totalImages]);
+
+  const goToNext = useCallback(() => {
+    setActiveIndex((prev) => (prev === totalImages - 1 ? 0 : prev + 1));
+  }, [totalImages]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") goToPrev();
+      if (e.key === "ArrowRight") goToNext();
+      if (e.key === "Escape") setIsZoomed(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goToPrev, goToNext]);
+
+  // Scroll active thumbnail into view
+  useEffect(() => {
+    if (thumbnailRef.current) {
+      const activeThumb = thumbnailRef.current.children[
+        activeIndex
+      ] as HTMLElement;
+      if (activeThumb) {
+        activeThumb.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }
+  }, [activeIndex]);
+
+  if (!hasImages) {
+    return (
+      <div className="w-full aspect-[4/3] bg-muted rounded-xl flex items-center justify-center">
+        <div className="text-center">
+          <ImageIcon className="h-16 w-16 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No images available</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Main Image Container */}
+      <div className="relative w-full aspect-[4/3] bg-muted rounded-xl overflow-hidden group">
+        {/* Main Image */}
+        <img
+          src={getQuotationImageUrl(images[activeIndex])}
+          alt={`${name} - Image ${activeIndex + 1}`}
+          className="w-full h-full object-contain cursor-pointer transition-transform duration-300"
+          onClick={() => setIsZoomed(true)}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+
+        {/* Zoom hint */}
+        <button
+          onClick={() => setIsZoomed(true)}
+          className="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          title="Zoom image"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </button>
+
+        {/* Navigation Arrows */}
+        {totalImages > 1 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrev();
+              }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-sm"
+              title="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNext();
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-sm"
+              title="Next image"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+
+        {/* Image Counter */}
+        {totalImages > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+            {activeIndex + 1} / {totalImages}
+          </div>
+        )}
+      </div>
+
+      {/* Thumbnail Strip */}
+      {totalImages > 1 && (
+        <div className="relative">
+          <div
+            ref={thumbnailRef}
+            className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent"
+            style={{ scrollbarWidth: "thin" }}
+          >
+            {images.map((img, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveIndex(idx)}
+                className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${activeIndex === idx
+                  ? "border-primary ring-2 ring-primary/20 scale-105"
+                  : "border-transparent hover:border-muted-foreground/30 opacity-70 hover:opacity-100"
+                  }`}
+              >
+                <img
+                  src={getQuotationImageUrl(img)}
+                  alt={`${name} thumbnail ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "";
+                  }}
+                />
+                {activeIndex === idx && (
+                  <div className="absolute inset-0 bg-primary/10" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dot Indicators for mobile */}
+      {totalImages > 1 && totalImages <= 10 && (
+        <div className="flex items-center justify-center gap-1.5 sm:hidden">
+          {images.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveIndex(idx)}
+              className={`rounded-full transition-all duration-200 ${activeIndex === idx
+                ? "w-6 h-2 bg-primary"
+                : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Fullscreen Zoom Modal */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
+          onClick={() => setIsZoomed(false)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setIsZoomed(false)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Counter */}
+          {totalImages > 1 && (
+            <div className="absolute top-4 left-4 text-white/80 text-sm z-10">
+              {activeIndex + 1} / {totalImages}
+            </div>
+          )}
+
+          {/* Navigation in zoom */}
+          {totalImages > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPrev();
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNext();
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+
+          {/* Zoomed Image */}
+          <img
+            src={getQuotationImageUrl(images[activeIndex])}
+            alt={`${name} - Full size ${activeIndex + 1}`}
+            className="max-w-[90vw] max-h-[85vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Thumbnail strip in zoom */}
+          {totalImages > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 max-w-[90vw] overflow-x-auto pb-1">
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveIndex(idx);
+                  }}
+                  className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${activeIndex === idx
+                    ? "border-white scale-110"
+                    : "border-transparent opacity-50 hover:opacity-80"
+                    }`}
+                >
+                  <img
+                    src={getQuotationImageUrl(img)}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Detail Row Component ──
+const DetailRow: React.FC<{
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}> = ({ label, value, className = "" }) => (
+  <div className={`space-y-1 ${className}`}>
+    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      {label}
+    </p>
+    <div className="text-sm font-semibold text-foreground">{value}</div>
+  </div>
+);
 
 // ── Quotation Card Skeleton ──
 const QuotationCardSkeleton: React.FC = () => (
@@ -79,7 +343,7 @@ const Quotations: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(
-    null,
+    null
   );
 
   // Confirm dialog
@@ -93,7 +357,7 @@ const Quotations: React.FC = () => {
     open: false,
     title: "",
     description: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
     loading: false,
   });
 
@@ -116,7 +380,7 @@ const Quotations: React.FC = () => {
       if (st) params.status = st;
       fetchQuotations(params);
     },
-    [currentPage, searchTerm, statusFilter, fetchQuotations],
+    [currentPage, searchTerm, statusFilter, fetchQuotations]
   );
 
   // Initial load
@@ -165,7 +429,6 @@ const Quotations: React.FC = () => {
         try {
           await deleteQuotation(id);
           toast.success("Quotation deleted successfully");
-          // Close modal if the deleted quotation was being viewed
           if (selectedQuotation?.id === id) {
             setSelectedQuotation(null);
           }
@@ -181,14 +444,6 @@ const Quotations: React.FC = () => {
         }
       },
     });
-  };
-
-  const getCategoryName = (quotation: Quotation) => {
-    return quotation.category?.name || "—";
-  };
-
-  const getQuotationTypeName = (quotation: Quotation) => {
-    return quotation.quotationType?.name || "—";
   };
 
   const totalPages = meta?.totalPages || 1;
@@ -216,6 +471,34 @@ const Quotations: React.FC = () => {
     }
     return pages;
   };
+
+  // Calculate discounted price
+  const getDiscountedPrice = (quotation: Quotation) => {
+    const base = Number(quotation.basePrice);
+    const discount = Number(quotation.defaultDiscount);
+    return base - (base * discount) / 100;
+  };
+
+  const getGstAmount = (quotation: Quotation) => {
+    const discounted = getDiscountedPrice(quotation);
+    return (discounted * Number(quotation.gstPercent)) / 100;
+  };
+
+  const getFinalPrice = (quotation: Quotation) => {
+    return getDiscountedPrice(quotation) + getGstAmount(quotation);
+  };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (selectedQuotation) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedQuotation]);
 
   return (
     <div className="animate-fade-in">
@@ -308,7 +591,7 @@ const Quotations: React.FC = () => {
             </div>
             {!loading && totalCount > 0 && (
               <div className="text-sm text-muted-foreground whitespace-nowrap">
-                {totalCount} Products{totalCount !== 1 ? "s" : ""}
+                {totalCount} Product{totalCount !== 1 ? "s" : ""}
               </div>
             )}
           </div>
@@ -331,7 +614,8 @@ const Quotations: React.FC = () => {
             quotations.map((quotation) => (
               <div
                 key={quotation.id}
-                className="enterprise-card overflow-hidden group"
+                className="enterprise-card overflow-hidden group cursor-pointer"
+                onClick={() => setSelectedQuotation(quotation)}
               >
                 <div className="aspect-[16/9] bg-muted relative overflow-hidden">
                   {quotation.images?.[0] ? (
@@ -350,26 +634,25 @@ const Quotations: React.FC = () => {
 
                   {/* Fallback icon */}
                   <div
-                    className={`w-full h-full flex items-center justify-center absolute inset-0 ${
-                      quotation.images?.[0] ? "hidden" : ""
-                    }`}
+                    className={`w-full h-full flex items-center justify-center absolute inset-0 ${quotation.images?.[0] ? "hidden" : ""
+                      }`}
                   >
                     <ImageIcon className="h-12 w-12 text-muted-foreground" />
                   </div>
 
                   <span
-                    className={`capitalize absolute top-3 right-3 ${
-                      quotation.status === "active"
-                        ? "badge-success"
-                        : "badge-warning"
-                    }`}
+                    className={`capitalize absolute top-3 right-3 ${quotation.status === "active"
+                      ? "badge-success"
+                      : "badge-warning"
+                      }`}
                   >
                     {quotation.status}
                   </span>
 
                   {quotation.images && quotation.images.length > 1 && (
-                    <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                      +{quotation.images.length - 1}
+                    <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3" />
+                      {quotation.images.length}
                     </span>
                   )}
                 </div>
@@ -385,14 +668,6 @@ const Quotations: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  {/* <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 flex-wrap">
-                    <span className="bg-muted px-2 py-0.5 rounded">
-                      {getCategoryName(quotation)}
-                    </span>
-                    <span className="bg-muted px-2 py-0.5 rounded">
-                      {getQuotationTypeName(quotation)}
-                    </span>
-                  </div> */}
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-lg font-bold text-foreground">
@@ -404,7 +679,10 @@ const Quotations: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setSelectedQuotation(quotation)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedQuotation(quotation);
+                        }}
                         className="action-btn"
                         title="View Details"
                       >
@@ -412,9 +690,10 @@ const Quotations: React.FC = () => {
                       </button>
                       {hasPermission("quotation:delete") && (
                         <button
-                          onClick={() =>
-                            handleDelete(quotation.id, quotation.name)
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(quotation.id, quotation.name);
+                          }}
                           className="action-btn action-btn-danger"
                           title="Delete"
                         >
@@ -445,7 +724,7 @@ const Quotations: React.FC = () => {
               </span>{" "}
               of{" "}
               <span className="font-medium text-foreground">{totalCount}</span>{" "}
-              quotations
+              products
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -477,15 +756,14 @@ const Quotations: React.FC = () => {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page as number)}
-                      className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
-                        currentPage === page
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "hover:bg-muted text-muted-foreground"
-                      }`}
+                      className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${currentPage === page
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "hover:bg-muted text-muted-foreground"
+                        }`}
                     >
                       {page}
                     </button>
-                  ),
+                  )
                 )}
               </div>
               <button
@@ -511,187 +789,252 @@ const Quotations: React.FC = () => {
         </div>
       )}
 
-      {/* Quotation Detail Modal */}
+      {/* ── Product Detail Modal ── */}
       {selectedQuotation && (
         <div
-          className="modal-backdrop"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setSelectedQuotation(null)}
         >
           <div
-            className="modal-content max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">
-                {selectedQuotation.name}
-              </h2>
-              <button
-                onClick={() => setSelectedQuotation(null)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <div className="min-w-0 flex-1 pr-4">
+                <h2 className="text-xl font-bold text-foreground truncate">
+                  {selectedQuotation.name}
+                </h2>
+                <p className="text-sm text-muted-foreground font-mono mt-0.5">
+                  {selectedQuotation.partCode}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`capitalize text-xs ${selectedQuotation.status === "active"
+                    ? "badge-success"
+                    : "badge-warning"
+                    }`}
+                >
+                  {selectedQuotation.status}
+                </span>
+                <button
+                  onClick={() => setSelectedQuotation(null)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-6">
-              {/* Image gallery */}
-              {/* Image gallery */}
-              <div className="sm:w-1/3 space-y-2">
-                {selectedQuotation.images?.[0] ? (
-                  <div className="w-full aspect-[16/9] rounded-xl overflow-hidden">
-                    <img
-                      src={getQuotationImageUrl(selectedQuotation.images[0])}
-                      alt={selectedQuotation.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full aspect-[16/9] bg-muted rounded-xl flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                )}
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-col lg:flex-row">
+                {/* Left: Image Carousel */}
+                <div className="lg:w-1/2 p-6 lg:border-r border-border">
+                  <ImageCarousel
+                    images={selectedQuotation.images || []}
+                    name={selectedQuotation.name}
+                  />
+                </div>
 
-                {/* Additional images (keep square for thumbnails) */}
-                {selectedQuotation.images &&
-                  selectedQuotation.images.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {selectedQuotation.images.slice(1).map((img, idx) => (
-                        <img
-                          key={idx}
-                          src={getQuotationImageUrl(img)}
-                          alt={`${selectedQuotation.name} ${idx + 2}`}
-                          className="w-16 h-16 object-cover rounded-lg border border-border flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                        />
-                      ))}
+                {/* Right: Product Details */}
+                <div className="lg:w-1/2 p-6 space-y-6">
+
+                  {/* Pricing Section */}
+                  <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Pricing
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailRow
+                        label="Base Price"
+                        value={
+                          <span className="text-lg">
+                            {formatCurrency(selectedQuotation.basePrice)}
+                          </span>
+                        }
+                      />
+                      <DetailRow
+                        label="Discount"
+                        value={`${selectedQuotation.defaultDiscount}%`}
+                      />
+                      <DetailRow
+                        label="GST"
+                        value={`${selectedQuotation.gstPercent}%`}
+                      />
+                      <DetailRow
+                        label="After Discount"
+                        value={formatCurrency(
+                          getDiscountedPrice(selectedQuotation)
+                        )}
+                      />
+                    </div>
+                    <div className="pt-3 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Final Price (incl. GST)
+                        </span>
+                        <span className="text-xl font-bold text-primary">
+                          {formatCurrency(getFinalPrice(selectedQuotation))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Description */}
+                  {selectedQuotation.description && (
+                    <div>
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                        Description
+                      </h3>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {selectedQuotation.description}
+                      </p>
                     </div>
                   )}
-              </div>
 
-              <div className="flex-1 space-y-4">
-                <div>
-                  <p className="text-muted-foreground font-mono text-sm mb-2">
-                    {selectedQuotation.partCode}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedQuotation.description ||
-                      "No description available"}
-                  </p>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Base Price</p>
-                    <p className="font-semibold text-lg">
-                      {formatCurrency(selectedQuotation.basePrice)}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      Default Discount
-                    </p>
-                    <p className="font-semibold text-lg">
-                      {selectedQuotation.defaultDiscount}%
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">GST</p>
-                    <p className="font-semibold">
-                      {selectedQuotation.gstPercent}%
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <span
-                      className={
-                        selectedQuotation.status === "active"
-                          ? "badge-success"
-                          : "badge-warning"
-                      }
-                    >
-                      {selectedQuotation.status}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Category & Type */}
-                {/* <div className="pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Classification
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedQuotation.category?.name && (
-                      <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded">
-                        {selectedQuotation.category.name}
-                      </span>
+                  {/* Dimensions */}
+                  {(Number(selectedQuotation.length) > 0 ||
+                    Number(selectedQuotation.width) > 0 ||
+                    Number(selectedQuotation.height) > 0) && (
+                      <div>
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                          Dimensions
+                        </h3>
+                        <div className="grid grid-cols-3 gap-3">
+                          {Number(selectedQuotation.length) > 0 && (
+                            <div className="bg-muted/50 rounded-lg p-3 text-center">
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Length
+                              </p>
+                              <p className="text-sm font-bold text-foreground">
+                                {selectedQuotation.length}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                inches
+                              </p>
+                            </div>
+                          )}
+                          {Number(selectedQuotation.width) > 0 && (
+                            <div className="bg-muted/50 rounded-lg p-3 text-center">
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Width
+                              </p>
+                              <p className="text-sm font-bold text-foreground">
+                                {selectedQuotation.width}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                inches
+                              </p>
+                            </div>
+                          )}
+                          {Number(selectedQuotation.height) > 0 && (
+                            <div className="bg-muted/50 rounded-lg p-3 text-center">
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Height
+                              </p>
+                              <p className="text-sm font-bold text-foreground">
+                                {selectedQuotation.height}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                inches
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
-                    {selectedQuotation.quotationType?.name && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">
-                        {selectedQuotation.quotationType.name}
-                      </span>
-                    )}
-                    {selectedQuotation.quotationModel?.name && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded">
-                        {selectedQuotation.quotationModel.name}
-                      </span>
-                    )}
-                  </div>
-                </div> */}
 
-                {/* Materials */}
-                {(selectedQuotation.wood?.name ||
-                  selectedQuotation.polish?.name ||
-                  selectedQuotation.fabric?.name) && (
+                  {/* Materials */}
+                  {(selectedQuotation.wood?.name ||
+                    selectedQuotation.polish?.name ||
+                    selectedQuotation.fabric?.name) && (
+                      <div>
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                          Materials
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedQuotation.wood?.name && (
+                            <span className="inline-flex items-center gap-1.5 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full font-medium">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              Wood: {selectedQuotation.wood.name}
+                            </span>
+                          )}
+                          {selectedQuotation.polish?.name && (
+                            <span className="inline-flex items-center gap-1.5 text-xs bg-blue-500/10 text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-full font-medium">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              Polish: {selectedQuotation.polish.name}
+                            </span>
+                          )}
+                          {selectedQuotation.fabric?.name && (
+                            <span className="inline-flex items-center gap-1.5 text-xs bg-purple-500/10 text-purple-700 dark:text-purple-400 px-3 py-1.5 rounded-full font-medium">
+                              <span className="w-2 h-2 rounded-full bg-purple-500" />
+                              Fabric: {selectedQuotation.fabric.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Classification */}
+                  {(selectedQuotation.category?.name ||
+                    selectedQuotation.quotationType?.name ||
+                    selectedQuotation.quotationModel?.name) && (
+                      <div>
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                          Classification
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedQuotation.category?.name && (
+                            <DetailRow
+                              label="Category"
+                              value={selectedQuotation.category.name}
+                            />
+                          )}
+                          {selectedQuotation.quotationType?.name && (
+                            <DetailRow
+                              label="Type"
+                              value={selectedQuotation.quotationType.name}
+                            />
+                          )}
+                          {selectedQuotation.quotationModel?.name && (
+                            <DetailRow
+                              label="Model"
+                              value={selectedQuotation.quotationModel.name}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Meta info */}
                   <div className="pt-4 border-t border-border">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Materials
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedQuotation.wood?.name && (
-                        <span className="text-xs bg-amber-500/10 text-amber-700 px-2 py-1 rounded">
-                          Wood: {selectedQuotation.wood.name}
-                        </span>
-                      )}
-                      {selectedQuotation.polish?.name && (
-                        <span className="text-xs bg-blue-500/10 text-blue-700 px-2 py-1 rounded">
-                          Polish: {selectedQuotation.polish.name}
-                        </span>
-                      )}
-                      {selectedQuotation.fabric?.name && (
-                        <span className="text-xs bg-purple-500/10 text-purple-700 px-2 py-1 rounded">
-                          Fabric: {selectedQuotation.fabric.name}
-                        </span>
-                      )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailRow
+                        label="Created"
+                        value={new Date(
+                          selectedQuotation.createdAt
+                        ).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      />
+                      <DetailRow
+                        label="Last Updated"
+                        value={new Date(
+                          selectedQuotation.updatedAt
+                        ).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      />
                     </div>
                   </div>
-                )}
-
-                {/* Dimensions */}
-                {(selectedQuotation.length > 0 ||
-                  selectedQuotation.width > 0 ||
-                  selectedQuotation.height > 0) && (
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Dimensions
-                    </p>
-                    <div className="flex gap-4 text-sm">
-                      {selectedQuotation.length > 0 && (
-                        <span className="bg-muted px-2 py-1 rounded">
-                          L: {selectedQuotation.length}mm
-                        </span>
-                      )}
-                      {selectedQuotation.width > 0 && (
-                        <span className="bg-muted px-2 py-1 rounded">
-                          W: {selectedQuotation.width}mm
-                        </span>
-                      )}
-                      {selectedQuotation.height > 0 && (
-                        <span className="bg-muted px-2 py-1 rounded">
-                          H: {selectedQuotation.height}mm
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           </div>

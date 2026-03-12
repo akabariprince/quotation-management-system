@@ -98,6 +98,43 @@ const MONTH_NAMES = [
 ];
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+/* ─── Format a date string for badge display ─── */
+const formatDateDisplay = (v: string) => {
+  if (!v) return "";
+  const d = new Date(v + "T00:00:00");
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+/* ═══════════════════════════════════════════════════════════
+   FilterBadge — Removable pill for an active filter
+   ═══════════════════════════════════════════════════════════ */
+
+interface FilterBadgeProps {
+  label: string;
+  onRemove: () => void;
+}
+
+const FilterBadge: React.FC<FilterBadgeProps> = ({ label, onRemove }) => (
+  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium border border-accent/20 animate-in fade-in-0 zoom-in-95 duration-150">
+    {label}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onRemove();
+      }}
+      className="ml-0.5 hover:bg-accent/20 rounded-full p-0.5 transition-colors"
+      aria-label={`Remove ${label} filter`}
+    >
+      <X className="h-3 w-3" />
+    </button>
+  </span>
+);
+
 /* ═══════════════════════════════════════════════════════════
    DatePickerInput — Custom Calendar Popover
    ═══════════════════════════════════════════════════════════ */
@@ -207,7 +244,6 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
         <div className="p-3 w-[280px]">
-          {/* Month / Year navigation */}
           <div className="flex items-center justify-between mb-3">
             <button
               type="button"
@@ -227,8 +263,6 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-
-          {/* Day-of-week headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAY_LABELS.map((d) => (
               <div
@@ -239,8 +273,6 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
               </div>
             ))}
           </div>
-
-          {/* Calendar grid */}
           <div className="grid grid-cols-7">
             {cells.map((cell, i) => {
               const selected = value === cell.dateStr;
@@ -256,17 +288,17 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
                       "h-8 w-8 rounded-md text-sm flex items-center justify-center transition-colors",
                       !cell.current && "text-muted-foreground/20",
                       cell.current &&
-                      !selected &&
-                      !dis &&
-                      "hover:bg-muted text-foreground",
+                        !selected &&
+                        !dis &&
+                        "hover:bg-muted text-foreground",
                       selected && "bg-foreground text-background font-semibold",
                       today &&
-                      !selected &&
-                      cell.current &&
-                      "ring-1 ring-foreground/20 font-medium",
+                        !selected &&
+                        cell.current &&
+                        "ring-1 ring-foreground/20 font-medium",
                       dis &&
-                      cell.current &&
-                      "text-muted-foreground/25 cursor-not-allowed",
+                        cell.current &&
+                        "text-muted-foreground/25 cursor-not-allowed",
                     )}
                   >
                     {cell.day}
@@ -275,8 +307,6 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
               );
             })}
           </div>
-
-          {/* Footer */}
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
             <button
               type="button"
@@ -312,7 +342,7 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
 };
 
 /* ═══════════════════════════════════════════════════════════
-   StatCard — Icon Right, Value + Label Left
+   StatCard
    ═══════════════════════════════════════════════════════════ */
 
 interface StatCardProps {
@@ -330,7 +360,7 @@ const StatCard: React.FC<StatCardProps> = ({
   iconColor = "text-accent",
   iconBg = "bg-accent/10",
 }) => (
-  <div className="flex items-center justify-between p-4 md:p-5 bg-card border border-border  shadow-sm hover:shadow-md transition-shadow">
+  <div className="flex items-center justify-between p-4 md:p-5 bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
     <div className="space-y-1 min-w-0 flex-1">
       <p className="text-xl md:text-2xl font-bold text-foreground tracking-tight truncate">
         {value}
@@ -341,7 +371,7 @@ const StatCard: React.FC<StatCardProps> = ({
     </div>
     <div
       className={cn(
-        "h-10 w-10 md:h-12 md:w-12  flex items-center justify-center flex-shrink-0 ml-3",
+        "h-10 w-10 md:h-12 md:w-12 flex items-center justify-center flex-shrink-0 ml-3",
         iconBg,
       )}
     >
@@ -351,7 +381,7 @@ const StatCard: React.FC<StatCardProps> = ({
 );
 
 /* ═══════════════════════════════════════════════════════════
-   MiniStatCard — For tab-level summary cards
+   MiniStatCard
    ═══════════════════════════════════════════════════════════ */
 
 interface MiniStatCardProps {
@@ -370,10 +400,7 @@ const MiniStatCard: React.FC<MiniStatCardProps> = ({
   valueClassName = "",
 }) => (
   <div
-    className={cn(
-      "p-4  text-center border border-border bg-card",
-      className,
-    )}
+    className={cn("p-4 text-center border border-border bg-card", className)}
   >
     {Icon && (
       <Icon className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground" />
@@ -386,7 +413,7 @@ const MiniStatCard: React.FC<MiniStatCardProps> = ({
 );
 
 /* ═══════════════════════════════════════════════════════════
-   CustomerSearchSelect — Portal + Live API Search
+   CustomerSearchSelect
    ═══════════════════════════════════════════════════════════ */
 
 interface CustomerSearchSelectProps {
@@ -537,73 +564,73 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
 
   const dropdown = isOpen
     ? createPortal(
-      <div
-        id="cust-search-portal"
-        style={{
-          position: "absolute",
-          top: dropdownPos.top,
-          left: dropdownPos.left,
-          width: dropdownPos.width,
-          zIndex: 9999,
-        }}
-        className="bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-auto animate-in fade-in-0 zoom-in-95 duration-100"
-      >
-        <button
-          type="button"
-          onClick={() => handleSelect("all")}
-          className={cn(
-            "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/50",
-            value === "all"
-              ? "bg-accent/5 text-accent font-medium"
-              : "text-muted-foreground",
-          )}
+        <div
+          id="cust-search-portal"
+          style={{
+            position: "absolute",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 9999,
+          }}
+          className="bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-auto animate-in fade-in-0 zoom-in-95 duration-100"
         >
-          All Customers
-        </button>
-        <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30 font-medium flex items-center justify-between sticky top-0">
-          <span>
-            {search.trim()
-              ? `${results.length} result${results.length !== 1 ? "s" : ""}`
-              : "Recent Customers"}
-          </span>
-          {searching && (
-            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <button
+            type="button"
+            onClick={() => handleSelect("all")}
+            className={cn(
+              "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/50",
+              value === "all"
+                ? "bg-accent/5 text-accent font-medium"
+                : "text-muted-foreground",
+            )}
+          >
+            All Customers
+          </button>
+          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30 font-medium flex items-center justify-between sticky top-0">
+            <span>
+              {search.trim()
+                ? `${results.length} result${results.length !== 1 ? "s" : ""}`
+                : "Recent Customers"}
+            </span>
+            {searching && (
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {!searching && results.length === 0 ? (
+            <div className="px-3 py-8 text-sm text-muted-foreground text-center">
+              {search.trim()
+                ? "No customers found"
+                : "No customers available"}
+            </div>
+          ) : (
+            results.map((c: any) => (
+              <button
+                type="button"
+                key={c.id}
+                onClick={() => handleSelect(c.id, c.name)}
+                className={cn(
+                  "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/10 last:border-0",
+                  value === c.id ? "bg-accent/10 text-accent" : "",
+                )}
+              >
+                <div className="font-medium truncate">{c.name}</div>
+                {(c.mobile || c.city || c.email) && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                    {[c.mobile, c.city, c.email].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+              </button>
+            ))
           )}
-        </div>
-        {!searching && results.length === 0 ? (
-          <div className="px-3 py-8 text-sm text-muted-foreground text-center">
-            {search.trim()
-              ? "No customers found"
-              : "No customers available"}
-          </div>
-        ) : (
-          results.map((c: any) => (
-            <button
-              type="button"
-              key={c.id}
-              onClick={() => handleSelect(c.id, c.name)}
-              className={cn(
-                "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/10 last:border-0",
-                value === c.id ? "bg-accent/10 text-accent" : "",
-              )}
-            >
-              <div className="font-medium truncate">{c.name}</div>
-              {(c.mobile || c.city || c.email) && (
-                <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                  {[c.mobile, c.city, c.email].filter(Boolean).join(" · ")}
-                </div>
-              )}
-            </button>
-          ))
-        )}
-        {searching && results.length > 0 && (
-          <div className="px-3 py-2 text-center">
-            <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-          </div>
-        )}
-      </div>,
-      document.body,
-    )
+          {searching && results.length > 0 && (
+            <div className="px-3 py-2 text-center">
+              <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+            </div>
+          )}
+        </div>,
+        document.body,
+      )
     : null;
 
   return (
@@ -734,6 +761,43 @@ const Reports: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, initialLoaded]);
 
+  /* ═══════════════════════════════════════════════════════
+     RE-FETCH helper — calls the right API for current tab
+     ═══════════════════════════════════════════════════════ */
+  const refetchTabWithFilters = useCallback(
+    (filters?: any) => {
+      switch (activeTab) {
+        case "quotation-summary":
+          fetchQuotationSummary(filters);
+          break;
+        case "conversion":
+          fetchConversionReport(filters);
+          break;
+        case "pending":
+          fetchPendingReport(filters);
+          break;
+        case "sales-performance":
+          fetchSalesmanReport(filters);
+          break;
+        case "product":
+          fetchProductReport(filters);
+          break;
+        case "discounts":
+          fetchDiscountReport(filters);
+          break;
+      }
+    },
+    [
+      activeTab,
+      fetchQuotationSummary,
+      fetchConversionReport,
+      fetchPendingReport,
+      fetchSalesmanReport,
+      fetchProductReport,
+      fetchDiscountReport,
+    ],
+  );
+
   /* ─── Helpers ─── */
   const buildCurrentFilters = useCallback(() => {
     const filters: any = {};
@@ -749,60 +813,210 @@ const Reports: React.FC = () => {
   const applyFilters = useCallback(() => {
     const filters = buildCurrentFilters();
     setFiltersApplied(true);
-    switch (activeTab) {
-      case "quotation-summary":
-        fetchQuotationSummary(filters);
-        break;
-      case "conversion":
-        fetchConversionReport(filters);
-        break;
-      case "pending":
-        fetchPendingReport(filters);
-        break;
-      case "sales-performance":
-        fetchSalesmanReport(filters);
-        break;
-      case "product":
-        fetchProductReport(filters);
-        break;
-      case "discounts":
-        fetchDiscountReport(filters);
-        break;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, buildCurrentFilters]);
+    refetchTabWithFilters(filters);
+  }, [buildCurrentFilters, refetchTabWithFilters]);
 
-  const clearFilters = useCallback(() => {
-    setStartDate("");
-    setEndDate("");
-    setStatusFilter("all");
-    setSearchText("");
-    setSelectedCustomerId("all");
-    setFiltersApplied(false);
-  }, []);
+  /* ═══════════════════════════════════════════════════════
+     CLEAR ALL — reset state + re-fetch without filters
+     skipRefetch = true when called from tab-switch
+     (the tab useEffect will handle the fetch for the new tab)
+     ═══════════════════════════════════════════════════════ */
+  const clearFilters = useCallback(
+    (skipRefetch = false) => {
+      setStartDate("");
+      setEndDate("");
+      setStatusFilter("all");
+      setSearchText("");
+      setSelectedCustomerId("all");
+      setFiltersApplied(false);
+
+      if (!skipRefetch) {
+        // Re-fetch current tab with NO filters
+        refetchTabWithFilters(undefined);
+      }
+    },
+    [refetchTabWithFilters],
+  );
+
+  /* ═══════════════════════════════════════════════════════
+     REMOVE single filter badge → re-fetch with remaining
+     ═══════════════════════════════════════════════════════ */
+  const removeFilter = useCallback(
+    (filterKey: string) => {
+      // Build "remaining" filters from current state minus the removed key
+      let newStart = startDate;
+      let newEnd = endDate;
+      let newStatus = statusFilter;
+      let newSearch = searchText;
+      let newCustomer = selectedCustomerId;
+
+      switch (filterKey) {
+        case "startDate":
+          newStart = "";
+          newEnd = ""; // end depends on start
+          setStartDate("");
+          setEndDate("");
+          break;
+        case "endDate":
+          newEnd = "";
+          setEndDate("");
+          break;
+        case "status":
+          newStatus = "all";
+          setStatusFilter("all");
+          break;
+        case "search":
+          newSearch = "";
+          setSearchText("");
+          break;
+        case "customer":
+          newCustomer = "all";
+          setSelectedCustomerId("all");
+          break;
+      }
+
+      const remaining: any = {};
+      if (newStart) remaining.startDate = newStart;
+      if (newEnd) remaining.endDate = newEnd;
+      if (newStatus !== "all") remaining.status = newStatus;
+      if (newSearch) remaining.search = newSearch;
+      if (newCustomer && newCustomer !== "all")
+        remaining.customerId = newCustomer;
+
+      const hasRemaining = Object.keys(remaining).length > 0;
+      if (!hasRemaining) setFiltersApplied(false);
+
+      // Always re-fetch: either with remaining filters or unfiltered
+      refetchTabWithFilters(hasRemaining ? remaining : undefined);
+    },
+    [
+      startDate,
+      endDate,
+      statusFilter,
+      searchText,
+      selectedCustomerId,
+      refetchTabWithFilters,
+    ],
+  );
+
+  /* ═══════════════════════════════════════════════════════
+     Active-filter badges (memoised list for the shared bar)
+     ═══════════════════════════════════════════════════════ */
+  const activeFilterBadges = useMemo(() => {
+    if (!filtersApplied) return [];
+    const badges: { key: string; label: string }[] = [];
+    if (startDate)
+      badges.push({
+        key: "startDate",
+        label: `From: ${formatDateDisplay(startDate)}`,
+      });
+    if (endDate)
+      badges.push({
+        key: "endDate",
+        label: `To: ${formatDateDisplay(endDate)}`,
+      });
+    if (statusFilter !== "all")
+      badges.push({
+        key: "status",
+        label: `Status: ${statusFilter}`,
+      });
+    if (searchText)
+      badges.push({ key: "search", label: `Search: ${searchText}` });
+    if (selectedCustomerId !== "all")
+      badges.push({ key: "customer", label: "Customer filter" });
+    return badges;
+  }, [
+    filtersApplied,
+    startDate,
+    endDate,
+    statusFilter,
+    searchText,
+    selectedCustomerId,
+  ]);
+
+  /* ═══════════════════════════════════════════════════════
+     Customer-history — separate filter state & helpers
+     ═══════════════════════════════════════════════════════ */
+  const custHistoryFilterBadges = useMemo(() => {
+    const badges: { key: string; label: string }[] = [];
+    if (custHistoryCustomerId !== "all")
+      badges.push({ key: "customer", label: "Customer selected" });
+    if (custHistoryStart)
+      badges.push({
+        key: "startDate",
+        label: `From: ${formatDateDisplay(custHistoryStart)}`,
+      });
+    if (custHistoryEnd)
+      badges.push({
+        key: "endDate",
+        label: `To: ${formatDateDisplay(custHistoryEnd)}`,
+      });
+    return badges;
+  }, [custHistoryCustomerId, custHistoryStart, custHistoryEnd]);
+
+  const hasCustHistoryFilters =
+    custHistoryCustomerId !== "all" || custHistoryStart || custHistoryEnd;
+
+  const removeCustHistoryFilter = useCallback(
+    (filterKey: string) => {
+      let newCust = custHistoryCustomerId;
+      let newStart = custHistoryStart;
+      let newEnd = custHistoryEnd;
+
+      switch (filterKey) {
+        case "customer":
+          newCust = "all";
+          setCustHistoryCustomerId("all");
+          break;
+        case "startDate":
+          newStart = "";
+          newEnd = "";
+          setCustHistoryStart("");
+          setCustHistoryEnd("");
+          break;
+        case "endDate":
+          newEnd = "";
+          setCustHistoryEnd("");
+          break;
+      }
+
+      fetchCustomerHistory({
+        customerId: newCust !== "all" ? newCust : undefined,
+        startDate: newStart || undefined,
+        endDate: newEnd || undefined,
+      });
+    },
+    [
+      custHistoryCustomerId,
+      custHistoryStart,
+      custHistoryEnd,
+      fetchCustomerHistory,
+    ],
+  );
+
+  const clearCustHistoryFilters = useCallback(() => {
+    setCustHistoryCustomerId("all");
+    setCustHistoryStart("");
+    setCustHistoryEnd("");
+    fetchCustomerHistory(); // no filters → full list
+  }, [fetchCustomerHistory]);
 
   // When start date clears, clear end date too
-  const handleStartDateChange = useCallback(
-    (val: string) => {
-      setStartDate(val);
-      if (!val) setEndDate("");
-      setFiltersApplied(false);
-    },
-    [],
-  );
+  const handleStartDateChange = useCallback((val: string) => {
+    setStartDate(val);
+    if (!val) setEndDate("");
+    setFiltersApplied(false);
+  }, []);
 
   const handleEndDateChange = useCallback((val: string) => {
     setEndDate(val);
     setFiltersApplied(false);
   }, []);
 
-  const handleCustHistoryStartChange = useCallback(
-    (val: string) => {
-      setCustHistoryStart(val);
-      if (!val) setCustHistoryEnd("");
-    },
-    [],
-  );
+  const handleCustHistoryStartChange = useCallback((val: string) => {
+    setCustHistoryStart(val);
+    if (!val) setCustHistoryEnd("");
+  }, []);
 
   const toggleRow = (id: string) => {
     setExpandedRows((prev) => {
@@ -956,6 +1170,34 @@ const Reports: React.FC = () => {
     );
   }
 
+  /* ═══════════════════════════════════════════════════════
+     Shared "Active Filters" badge row — reused in each tab
+     ═══════════════════════════════════════════════════════ */
+  const renderActiveFilterBadges = () => {
+    if (activeFilterBadges.length === 0) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border w-full">
+        <span className="text-xs text-muted-foreground font-medium">
+          Active Filters:
+        </span>
+        {activeFilterBadges.map((badge) => (
+          <FilterBadge
+            key={badge.key}
+            label={badge.label}
+            onRemove={() => removeFilter(badge.key)}
+          />
+        ))}
+        <button
+          type="button"
+          onClick={() => clearFilters()}
+          className="text-xs text-destructive hover:text-destructive/80 hover:underline font-medium ml-1 transition-colors"
+        >
+          Clear All
+        </button>
+      </div>
+    );
+  };
+
   /* ════════════════════════ RENDER ════════════════════════ */
   return (
     <div className="space-y-6 animate-fade-in">
@@ -979,16 +1221,14 @@ const Reports: React.FC = () => {
           disabled={loading}
           className="gap-2 h-9"
         >
-          <RefreshCw
-            className={cn("h-4 w-4", loading && "animate-spin")}
-          />
+          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           Refresh
         </Button>
       </div>
 
       {/* ── Error Banner ── */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20  p-4 flex items-center gap-3">
+        <div className="bg-destructive/10 border border-destructive/20 p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
           <p className="text-sm text-destructive">{error}</p>
         </div>
@@ -1032,7 +1272,7 @@ const Reports: React.FC = () => {
         className="space-y-6"
         onValueChange={(v) => {
           setActiveTab(v);
-          clearFilters();
+          clearFilters(true); // ← skip refetch; the tab useEffect handles it
         }}
       >
         <div className="overflow-x-auto -mx-1 px-1">
@@ -1079,7 +1319,6 @@ const Reports: React.FC = () => {
             Master Report – Hierarchy
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Status Breakdown */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Status Breakdown
@@ -1088,7 +1327,7 @@ const Reports: React.FC = () => {
                 {(masterReport?.statusCounts || []).map((sc: any) => (
                   <div
                     key={sc.status}
-                    className="p-4 bg-muted/40  text-center border border-border"
+                    className="p-4 bg-muted/40 text-center border border-border"
                   >
                     <p className="text-2xl font-bold">{sc.count}</p>
                     <p className="text-sm text-muted-foreground capitalize">
@@ -1101,8 +1340,6 @@ const Reports: React.FC = () => {
                 ))}
               </div>
             </div>
-
-            {/* Report Hierarchy */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Report Hierarchy
@@ -1148,7 +1385,6 @@ const Reports: React.FC = () => {
               <div className="flex items-center h-9">
                 <Filter className="h-4 w-4 text-muted-foreground" />
               </div>
-
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
                   Date From
@@ -1174,7 +1410,6 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
                   Customer
@@ -1186,7 +1421,6 @@ const Reports: React.FC = () => {
                   apiFn={api.get}
                 />
               </div>
-
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
                   Status
@@ -1208,7 +1442,6 @@ const Reports: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
                   Search
@@ -1224,7 +1457,6 @@ const Reports: React.FC = () => {
                   />
                 </div>
               </div>
-
               <Button
                 size="sm"
                 className="h-9 gap-1.5"
@@ -1239,7 +1471,7 @@ const Reports: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5"
-                  onClick={clearFilters}
+                  onClick={() => clearFilters()}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
@@ -1255,6 +1487,9 @@ const Reports: React.FC = () => {
                 Export
               </Button>
             </div>
+
+            {/* ★ Active filter badges */}
+            {renderActiveFilterBadges()}
           </div>
 
           {/* Summary Cards */}
@@ -1285,7 +1520,6 @@ const Reports: React.FC = () => {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Bar – Monthly Value */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Monthly Quotation Value
@@ -1333,8 +1567,6 @@ const Reports: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* Pie – Status Distribution */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Status Distribution
@@ -1506,13 +1738,16 @@ const Reports: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5"
-                  onClick={clearFilters}
+                  onClick={() => clearFilters()}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </Button>
               )}
             </div>
+
+            {/* ★ Active filter badges */}
+            {renderActiveFilterBadges()}
           </div>
 
           {/* Summary Cards */}
@@ -1664,13 +1899,16 @@ const Reports: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5"
-                  onClick={clearFilters}
+                  onClick={() => clearFilters()}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </Button>
               )}
             </div>
+
+            {/* ★ Active filter badges */}
+            {renderActiveFilterBadges()}
           </div>
 
           {pendingReport?.summary && (
@@ -1719,9 +1957,7 @@ const Reports: React.FC = () => {
                         colSpan={6}
                         className="text-center text-muted-foreground py-8"
                       >
-                        {loading
-                          ? "Loading…"
-                          : "No pending quotations"}
+                        {loading ? "Loading…" : "No pending quotations"}
                       </td>
                     </tr>
                   ) : (
@@ -1819,36 +2055,33 @@ const Reports: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5"
-                  onClick={clearFilters}
+                  onClick={() => clearFilters()}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </Button>
               )}
             </div>
+
+            {/* ★ Active filter badges */}
+            {renderActiveFilterBadges()}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Horizontal Bar Chart */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Salesperson vs Revenue
               </h3>
               {(salesmanReport?.data?.length || 0) > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={salesmanReport!.data}
-                    layout="vertical"
-                  >
+                  <BarChart data={salesmanReport!.data} layout="vertical">
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="hsl(var(--border))"
                     />
                     <XAxis
                       type="number"
-                      tickFormatter={(v) =>
-                        `₹${(v / 100000).toFixed(0)}L`
-                      }
+                      tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`}
                       stroke="hsl(var(--muted-foreground))"
                       fontSize={12}
                     />
@@ -1881,12 +2114,8 @@ const Reports: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* Summary */}
             <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Summary
-              </h3>
+              <h3 className="font-semibold text-foreground mb-4">Summary</h3>
               {salesmanReport?.summary && (
                 <div className="grid grid-cols-1 gap-4">
                   <MiniStatCard
@@ -1908,7 +2137,6 @@ const Reports: React.FC = () => {
             </div>
           </div>
 
-          {/* Performance Table */}
           <div className="enterprise-card p-5 md:p-6">
             <h3 className="font-semibold text-foreground mb-4">
               Sales Performance Table
@@ -1937,9 +2165,7 @@ const Reports: React.FC = () => {
                   ) : (
                     salesmanReport.data.map((s) => (
                       <tr key={s.salesPersonId}>
-                        <td className="font-medium">
-                          {s.salesPersonName}
-                        </td>
+                        <td className="font-medium">{s.salesPersonName}</td>
                         <td>{s.totalQuotations}</td>
                         <td>{s.converted}</td>
                         <td>
@@ -2035,6 +2261,17 @@ const Reports: React.FC = () => {
                 <Search className="h-3.5 w-3.5" />
                 View Report
               </Button>
+              {hasCustHistoryFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={clearCustHistoryFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -2046,6 +2283,29 @@ const Reports: React.FC = () => {
                 Export
               </Button>
             </div>
+
+            {/* ★ Customer-history active filter badges */}
+            {custHistoryFilterBadges.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border w-full">
+                <span className="text-xs text-muted-foreground font-medium">
+                  Active Filters:
+                </span>
+                {custHistoryFilterBadges.map((badge) => (
+                  <FilterBadge
+                    key={badge.key}
+                    label={badge.label}
+                    onRemove={() => removeCustHistoryFilter(badge.key)}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={clearCustHistoryFilters}
+                  className="text-xs text-destructive hover:text-destructive/80 hover:underline font-medium ml-1 transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Customer Profile (when selected) */}
@@ -2066,9 +2326,7 @@ const Reports: React.FC = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">
-                        Mobile
-                      </p>
+                      <p className="text-xs text-muted-foreground">Mobile</p>
                       <p className="font-semibold">
                         {customerHistory.profile.mobile}
                       </p>
@@ -2091,9 +2349,7 @@ const Reports: React.FC = () => {
                   {customerHistory.summary && (
                     <div className="grid grid-cols-3 gap-4">
                       <MiniStatCard
-                        value={
-                          customerHistory.summary.totalQuotations
-                        }
+                        value={customerHistory.summary.totalQuotations}
                         label="Total Quotations"
                       />
                       <MiniStatCard
@@ -2125,9 +2381,7 @@ const Reports: React.FC = () => {
                           <th>Date</th>
                           <th>Quote No</th>
                           <th>Amount</th>
-                          <th className="hidden sm:table-cell">
-                            Discount
-                          </th>
+                          <th className="hidden sm:table-cell">Discount</th>
                           <th>Status</th>
                           <th className="hidden md:table-cell">
                             Salesperson
@@ -2161,9 +2415,7 @@ const Reports: React.FC = () => {
                                 <td className="text-muted-foreground">
                                   {formatDate(q.date)}
                                 </td>
-                                <td className="font-medium">
-                                  {q.quoteNo}
-                                </td>
+                                <td className="font-medium">{q.quoteNo}</td>
                                 <td className="font-semibold">
                                   {formatCurrency(q.amount)}
                                 </td>
@@ -2172,9 +2424,7 @@ const Reports: React.FC = () => {
                                 </td>
                                 <td>
                                   <span
-                                    className={getStatusBadgeClass(
-                                      q.status,
-                                    )}
+                                    className={getStatusBadgeClass(q.status)}
                                   >
                                     {q.status}
                                   </span>
@@ -2221,9 +2471,7 @@ const Reports: React.FC = () => {
                                                   {item.quantity}
                                                 </td>
                                                 <td className="py-1 px-2">
-                                                  {formatCurrency(
-                                                    item.rate,
-                                                  )}
+                                                  {formatCurrency(item.rate)}
                                                 </td>
                                                 <td className="py-1 px-2 font-semibold">
                                                   {formatCurrency(
@@ -2394,13 +2642,16 @@ const Reports: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5"
-                  onClick={clearFilters}
+                  onClick={() => clearFilters()}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </Button>
               )}
             </div>
+
+            {/* ★ Active filter badges */}
+            {renderActiveFilterBadges()}
           </div>
 
           {/* Product Summary */}
@@ -2580,13 +2831,16 @@ const Reports: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="h-9 gap-1.5"
-                  onClick={clearFilters}
+                  onClick={() => clearFilters()}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </Button>
               )}
             </div>
+
+            {/* ★ Active filter badges */}
+            {renderActiveFilterBadges()}
           </div>
 
           {discountReport?.summary && (
@@ -2692,12 +2946,8 @@ const Reports: React.FC = () => {
                       <th>Date</th>
                       <th>Email</th>
                       <th>Status</th>
-                      <th className="hidden sm:table-cell">
-                        Requested By
-                      </th>
-                      <th className="hidden md:table-cell">
-                        Approved By
-                      </th>
+                      <th className="hidden sm:table-cell">Requested By</th>
+                      <th className="hidden md:table-cell">Approved By</th>
                     </tr>
                   </thead>
                   <tbody>
