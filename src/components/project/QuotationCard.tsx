@@ -150,8 +150,10 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
     // const fabricObj = item.fabricId ? fabrics.find((f) => f.id === item.fabricId) : null;
 
     const uniqueNumber =
+      (item as any).uniqueNumber ||
       (item as any).projectQuotationNo ||
-      `ITM-${String(index + 1).padStart(4, "0")}`;
+      (item as any).quotationCode ||
+      "ITEM-0000";
 
     return (
       <div

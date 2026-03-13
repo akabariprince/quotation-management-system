@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import { useReports } from "@/hooks/useReports";
 import { useApi } from "@/hooks/useApi";
+import { useSalesPersons } from "@/hooks/useSalesPersons";
 import {
   FileText,
   Users,
@@ -34,7 +35,6 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
-  Clock,
   Search,
   X,
   Calendar as CalendarIcon,
@@ -63,6 +63,7 @@ import {
   getDaysPendingClass,
   generateCSV,
 } from "@/utils/reportHelpers";
+import { downloadA4PDF } from "@/utils/pdfExport";
 
 /* ─── Utility ─── */
 const cn = (...classes: (string | boolean | undefined | null)[]) =>
@@ -83,22 +84,11 @@ const TODAY_STR = (() => {
 })();
 
 const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-/* ─── Format a date string for badge display ─── */
 const formatDateDisplay = (v: string) => {
   if (!v) return "";
   const d = new Date(v + "T00:00:00");
@@ -110,7 +100,7 @@ const formatDateDisplay = (v: string) => {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   FilterBadge — Removable pill for an active filter
+   FilterBadge
    ═══════════════════════════════════════════════════════════ */
 
 interface FilterBadgeProps {
@@ -136,7 +126,7 @@ const FilterBadge: React.FC<FilterBadgeProps> = ({ label, onRemove }) => (
 );
 
 /* ═══════════════════════════════════════════════════════════
-   DatePickerInput — Custom Calendar Popover
+   DatePickerInput
    ═══════════════════════════════════════════════════════════ */
 
 interface DatePickerInputProps {
@@ -158,7 +148,7 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState<Date>(
-    () => new Date(value ? value + "T00:00:00" : Date.now()),
+    () => new Date(value ? value + "T00:00:00" : Date.now())
   );
 
   useEffect(() => {
@@ -213,16 +203,6 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
     setOpen(false);
   };
 
-  const formatDisplay = (v: string) => {
-    if (!v) return "";
-    const d = new Date(v + "T00:00:00");
-    return d.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -230,15 +210,15 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
           type="button"
           disabled={disabled}
           className={cn(
-            "flex h-9 w-[160px] items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm transition-colors",
+            "flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm transition-colors",
             "hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             disabled && "opacity-50 cursor-not-allowed",
-            !value ? "text-muted-foreground" : "text-foreground",
+            !value ? "text-muted-foreground" : "text-foreground"
           )}
         >
           <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="truncate text-left flex-1">
-            {value ? formatDisplay(value) : placeholder}
+            {value ? formatDateDisplay(value) : placeholder}
           </span>
         </button>
       </PopoverTrigger>
@@ -287,18 +267,10 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
                     className={cn(
                       "h-8 w-8 rounded-md text-sm flex items-center justify-center transition-colors",
                       !cell.current && "text-muted-foreground/20",
-                      cell.current &&
-                        !selected &&
-                        !dis &&
-                        "hover:bg-muted text-foreground",
+                      cell.current && !selected && !dis && "hover:bg-muted text-foreground",
                       selected && "bg-foreground text-background font-semibold",
-                      today &&
-                        !selected &&
-                        cell.current &&
-                        "ring-1 ring-foreground/20 font-medium",
-                      dis &&
-                        cell.current &&
-                        "text-muted-foreground/25 cursor-not-allowed",
+                      today && !selected && cell.current && "ring-1 ring-foreground/20 font-medium",
+                      dis && cell.current && "text-muted-foreground/25 cursor-not-allowed"
                     )}
                   >
                     {cell.day}
@@ -317,7 +289,7 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
                 "text-xs font-medium hover:underline",
                 isDateDisabled(TODAY_STR)
                   ? "text-muted-foreground/40 cursor-not-allowed"
-                  : "text-foreground",
+                  : "text-foreground"
               )}
             >
               Today
@@ -346,37 +318,19 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
    ═══════════════════════════════════════════════════════════ */
 
 interface StatCardProps {
-  icon: React.ElementType;
+  icon?: React.ElementType;
   value: string | number;
   label: string;
   iconColor?: string;
   iconBg?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({
-  icon: Icon,
-  value,
-  label,
-  iconColor = "text-accent",
-  iconBg = "bg-accent/10",
-}) => (
-  <div className="flex items-center justify-between p-4 md:p-5 bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-    <div className="space-y-1 min-w-0 flex-1">
-      <p className="text-xl md:text-2xl font-bold text-foreground tracking-tight truncate">
-        {value}
-      </p>
-      <p className="text-xs md:text-sm text-muted-foreground font-medium">
-        {label}
-      </p>
-    </div>
-    <div
-      className={cn(
-        "h-10 w-10 md:h-12 md:w-12 flex items-center justify-center flex-shrink-0 ml-3",
-        iconBg,
-      )}
-    >
-      <Icon className={cn("h-5 w-5 md:h-6 md:w-6", iconColor)} />
-    </div>
+const StatCard: React.FC<StatCardProps> = ({ value, label }) => (
+  <div className="flex items-center gap-2 p-3 md:p-4 bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+    <p className="text-sm text-muted-foreground font-medium">{label}:</p>
+    <p className="text-base md:text-lg font-bold text-foreground tracking-tight">
+      {value}
+    </p>
   </div>
 );
 
@@ -395,20 +349,19 @@ interface MiniStatCardProps {
 const MiniStatCard: React.FC<MiniStatCardProps> = ({
   value,
   label,
-  icon: Icon,
   className = "",
   valueClassName = "",
 }) => (
   <div
-    className={cn("p-4 text-center border border-border bg-card", className)}
-  >
-    {Icon && (
-      <Icon className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground" />
+    className={cn(
+      "p-2 md:p-3 flex items-center justify-center gap-2 border border-border bg-card",
+      className
     )}
-    <p className={cn("text-xl md:text-2xl font-bold", valueClassName)}>
+  >
+    <p className="text-xs text-muted-foreground font-medium">{label}:</p>
+    <p className={cn("text-sm md:text-base font-bold", valueClassName)}>
       {value}
     </p>
-    <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
   </div>
 );
 
@@ -421,6 +374,7 @@ interface CustomerSearchSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   apiFn: (url: string) => Promise<any>;
+  disabled?: boolean;
 }
 
 const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
@@ -428,17 +382,14 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
   onChange,
   placeholder = "Search customer…",
   apiFn,
+  disabled = false,
 }) => {
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [selectedName, setSelectedName] = useState("");
   const [searching, setSearching] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-  });
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -527,7 +478,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
         setSearching(false);
       }
     },
-    [apiFn],
+    [apiFn]
   );
 
   useEffect(() => {
@@ -564,73 +515,71 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
 
   const dropdown = isOpen
     ? createPortal(
-        <div
-          id="cust-search-portal"
-          style={{
-            position: "absolute",
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            width: dropdownPos.width,
-            zIndex: 9999,
-          }}
-          className="bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-auto animate-in fade-in-0 zoom-in-95 duration-100"
+      <div
+        id="cust-search-portal"
+        style={{
+          position: "absolute",
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          width: dropdownPos.width,
+          zIndex: 9999,
+        }}
+        className="bg-popover border border-border rounded-lg shadow-xl max-h-72 overflow-auto animate-in fade-in-0 zoom-in-95 duration-100"
+      >
+        <button
+          type="button"
+          onClick={() => handleSelect("all")}
+          className={cn(
+            "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/50",
+            value === "all"
+              ? "bg-accent/5 text-accent font-medium"
+              : "text-muted-foreground"
+          )}
         >
-          <button
-            type="button"
-            onClick={() => handleSelect("all")}
-            className={cn(
-              "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/50",
-              value === "all"
-                ? "bg-accent/5 text-accent font-medium"
-                : "text-muted-foreground",
-            )}
-          >
-            All Customers
-          </button>
-          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30 font-medium flex items-center justify-between sticky top-0">
-            <span>
-              {search.trim()
-                ? `${results.length} result${results.length !== 1 ? "s" : ""}`
-                : "Recent Customers"}
-            </span>
-            {searching && (
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-            )}
+          All Customers
+        </button>
+        <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30 font-medium flex items-center justify-between sticky top-0">
+          <span>
+            {search.trim()
+              ? `${results.length} result${results.length !== 1 ? "s" : ""}`
+              : "Recent Customers"}
+          </span>
+          {searching && (
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {!searching && results.length === 0 ? (
+          <div className="px-3 py-8 text-sm text-muted-foreground text-center">
+            {search.trim() ? "No customers found" : "No customers available"}
           </div>
-          {!searching && results.length === 0 ? (
-            <div className="px-3 py-8 text-sm text-muted-foreground text-center">
-              {search.trim()
-                ? "No customers found"
-                : "No customers available"}
-            </div>
-          ) : (
-            results.map((c: any) => (
-              <button
-                type="button"
-                key={c.id}
-                onClick={() => handleSelect(c.id, c.name)}
-                className={cn(
-                  "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/10 last:border-0",
-                  value === c.id ? "bg-accent/10 text-accent" : "",
-                )}
-              >
-                <div className="font-medium truncate">{c.name}</div>
-                {(c.mobile || c.city || c.email) && (
-                  <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                    {[c.mobile, c.city, c.email].filter(Boolean).join(" · ")}
-                  </div>
-                )}
-              </button>
-            ))
-          )}
-          {searching && results.length > 0 && (
-            <div className="px-3 py-2 text-center">
-              <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-            </div>
-          )}
-        </div>,
-        document.body,
-      )
+        ) : (
+          results.map((c: any) => (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => handleSelect(c.id, c.name)}
+              className={cn(
+                "w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 transition-colors border-b border-border/10 last:border-0",
+                value === c.id ? "bg-accent/10 text-accent" : ""
+              )}
+            >
+              <div className="font-medium truncate">{c.name}</div>
+              {(c.mobile || c.city || c.email) && (
+                <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {[c.mobile, c.city, c.email].filter(Boolean).join(" · ")}
+                </div>
+              )}
+            </button>
+          ))
+        )}
+        {searching && results.length > 0 && (
+          <div className="px-3 py-2 text-center">
+            <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+          </div>
+        )}
+      </div>,
+      document.body
+    )
     : null;
 
   return (
@@ -652,9 +601,10 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
               inputRef.current?.blur();
             }
           }}
+          disabled={disabled}
           placeholder={placeholder}
           autoComplete="off"
-          className="flex h-9 w-56 rounded-md border border-input bg-transparent pl-8 pr-8 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-8 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         {selectedName && !isOpen && (
           <button
@@ -677,6 +627,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
 
 const Reports: React.FC = () => {
   const api = useApi();
+  const { salesPersons, fetchSalesPersons } = useSalesPersons();
   const {
     masterReport,
     quotationSummary,
@@ -705,6 +656,7 @@ const Reports: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchText, setSearchText] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("all");
+  const [selectedSalesmanId, setSelectedSalesmanId] = useState("all");
   const [custHistoryCustomerId, setCustHistoryCustomerId] = useState("all");
   const [custHistoryStart, setCustHistoryStart] = useState("");
   const [custHistoryEnd, setCustHistoryEnd] = useState("");
@@ -712,10 +664,20 @@ const Reports: React.FC = () => {
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [filtersApplied, setFiltersApplied] = useState(false);
 
+  /* ─── Derived: date validation ─── */
+  const dateIncomplete = (startDate && !endDate) || (!startDate && endDate);
+  const custDateIncomplete =
+    (custHistoryStart && !custHistoryEnd) ||
+    (!custHistoryStart && custHistoryEnd);
+
   /* ─── Initial Load ─── */
   useEffect(() => {
     const load = async () => {
-      await Promise.allSettled([fetchMasterReport(), fetchQuotationSummary()]);
+      await Promise.allSettled([
+        fetchMasterReport(),
+        fetchQuotationSummary(),
+        fetchSalesPersons(),
+      ]);
       setInitialLoaded(true);
     };
     load();
@@ -744,9 +706,7 @@ const Reports: React.FC = () => {
       case "customer-history":
         fetchCustomerHistory({
           customerId:
-            custHistoryCustomerId !== "all"
-              ? custHistoryCustomerId
-              : undefined,
+            custHistoryCustomerId !== "all" ? custHistoryCustomerId : undefined,
           startDate: custHistoryStart || undefined,
           endDate: custHistoryEnd || undefined,
         });
@@ -761,9 +721,7 @@ const Reports: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, initialLoaded]);
 
-  /* ═══════════════════════════════════════════════════════
-     RE-FETCH helper — calls the right API for current tab
-     ═══════════════════════════════════════════════════════ */
+  /* ─── Re-fetch helper ─── */
   const refetchTabWithFilters = useCallback(
     (filters?: any) => {
       switch (activeTab) {
@@ -795,32 +753,45 @@ const Reports: React.FC = () => {
       fetchSalesmanReport,
       fetchProductReport,
       fetchDiscountReport,
-    ],
+    ]
   );
 
-  /* ─── Helpers ─── */
+  /* ─── Build filters ─── */
   const buildCurrentFilters = useCallback(() => {
     const filters: any = {};
-    if (startDate) filters.startDate = startDate;
-    if (endDate) filters.endDate = endDate;
+    if (startDate && endDate) {
+      filters.startDate = startDate;
+      filters.endDate = endDate;
+    }
     if (statusFilter !== "all") filters.status = statusFilter;
     if (searchText) filters.search = searchText;
     if (selectedCustomerId && selectedCustomerId !== "all")
       filters.customerId = selectedCustomerId;
+    if (selectedSalesmanId && selectedSalesmanId !== "all")
+      filters.salesPersonId = selectedSalesmanId;
     return filters;
-  }, [startDate, endDate, statusFilter, searchText, selectedCustomerId]);
+  }, [startDate, endDate, statusFilter, searchText, selectedCustomerId, selectedSalesmanId]);
+
+  const hasActiveFilters =
+    (startDate && endDate) ||
+    statusFilter !== "all" ||
+    searchText ||
+    selectedCustomerId !== "all" ||
+    selectedSalesmanId !== "all";
+
+  const canApplyFilters = hasActiveFilters && !dateIncomplete && !filtersApplied;
 
   const applyFilters = useCallback(() => {
+    if (dateIncomplete) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
     const filters = buildCurrentFilters();
     setFiltersApplied(true);
     refetchTabWithFilters(filters);
-  }, [buildCurrentFilters, refetchTabWithFilters]);
+  }, [buildCurrentFilters, refetchTabWithFilters, dateIncomplete]);
 
-  /* ═══════════════════════════════════════════════════════
-     CLEAR ALL — reset state + re-fetch without filters
-     skipRefetch = true when called from tab-switch
-     (the tab useEffect will handle the fetch for the new tab)
-     ═══════════════════════════════════════════════════════ */
+  /* ─── Clear filters ─── */
   const clearFilters = useCallback(
     (skipRefetch = false) => {
       setStartDate("");
@@ -828,37 +799,30 @@ const Reports: React.FC = () => {
       setStatusFilter("all");
       setSearchText("");
       setSelectedCustomerId("all");
+      setSelectedSalesmanId("all");
       setFiltersApplied(false);
-
       if (!skipRefetch) {
-        // Re-fetch current tab with NO filters
         refetchTabWithFilters(undefined);
       }
     },
-    [refetchTabWithFilters],
+    [refetchTabWithFilters]
   );
 
-  /* ═══════════════════════════════════════════════════════
-     REMOVE single filter badge → re-fetch with remaining
-     ═══════════════════════════════════════════════════════ */
+  /* ─── Remove single filter ─── */
   const removeFilter = useCallback(
     (filterKey: string) => {
-      // Build "remaining" filters from current state minus the removed key
       let newStart = startDate;
       let newEnd = endDate;
       let newStatus = statusFilter;
       let newSearch = searchText;
       let newCustomer = selectedCustomerId;
+      let newSalesman = selectedSalesmanId;
 
       switch (filterKey) {
-        case "startDate":
+        case "dateRange":
           newStart = "";
-          newEnd = ""; // end depends on start
-          setStartDate("");
-          setEndDate("");
-          break;
-        case "endDate":
           newEnd = "";
+          setStartDate("");
           setEndDate("");
           break;
         case "status":
@@ -873,89 +837,77 @@ const Reports: React.FC = () => {
           newCustomer = "all";
           setSelectedCustomerId("all");
           break;
+        case "salesman":
+          newSalesman = "all";
+          setSelectedSalesmanId("all");
+          break;
       }
 
       const remaining: any = {};
-      if (newStart) remaining.startDate = newStart;
-      if (newEnd) remaining.endDate = newEnd;
+      if (newStart && newEnd) {
+        remaining.startDate = newStart;
+        remaining.endDate = newEnd;
+      }
       if (newStatus !== "all") remaining.status = newStatus;
       if (newSearch) remaining.search = newSearch;
-      if (newCustomer && newCustomer !== "all")
-        remaining.customerId = newCustomer;
+      if (newCustomer && newCustomer !== "all") remaining.customerId = newCustomer;
+      if (newSalesman && newSalesman !== "all") remaining.salesPersonId = newSalesman;
 
       const hasRemaining = Object.keys(remaining).length > 0;
       if (!hasRemaining) setFiltersApplied(false);
 
-      // Always re-fetch: either with remaining filters or unfiltered
       refetchTabWithFilters(hasRemaining ? remaining : undefined);
     },
-    [
-      startDate,
-      endDate,
-      statusFilter,
-      searchText,
-      selectedCustomerId,
-      refetchTabWithFilters,
-    ],
+    [startDate, endDate, statusFilter, searchText, selectedCustomerId, selectedSalesmanId, refetchTabWithFilters]
   );
 
-  /* ═══════════════════════════════════════════════════════
-     Active-filter badges (memoised list for the shared bar)
-     ═══════════════════════════════════════════════════════ */
+  /* ─── Active filter badges ─── */
   const activeFilterBadges = useMemo(() => {
     if (!filtersApplied) return [];
     const badges: { key: string; label: string }[] = [];
-    if (startDate)
+    if (startDate && endDate)
       badges.push({
-        key: "startDate",
-        label: `From: ${formatDateDisplay(startDate)}`,
-      });
-    if (endDate)
-      badges.push({
-        key: "endDate",
-        label: `To: ${formatDateDisplay(endDate)}`,
+        key: "dateRange",
+        label: `${formatDateDisplay(startDate)} – ${formatDateDisplay(endDate)}`,
       });
     if (statusFilter !== "all")
-      badges.push({
-        key: "status",
-        label: `Status: ${statusFilter}`,
-      });
+      badges.push({ key: "status", label: `Status: ${statusFilter}` });
     if (searchText)
       badges.push({ key: "search", label: `Search: ${searchText}` });
     if (selectedCustomerId !== "all")
       badges.push({ key: "customer", label: "Customer filter" });
+    if (selectedSalesmanId !== "all") {
+      const salesman = salesPersons.find((s) => s.id === selectedSalesmanId);
+      badges.push({
+        key: "salesman",
+        label: `Salesman: ${salesman?.name || "Unknown"}`,
+      });
+    }
     return badges;
-  }, [
-    filtersApplied,
-    startDate,
-    endDate,
-    statusFilter,
-    searchText,
-    selectedCustomerId,
-  ]);
+  }, [filtersApplied, startDate, endDate, statusFilter, searchText, selectedCustomerId, selectedSalesmanId, salesPersons]);
 
-  /* ═══════════════════════════════════════════════════════
-     Customer-history — separate filter state & helpers
-     ═══════════════════════════════════════════════════════ */
+  /* ─── PDF filter labels for export ─── */
+  const pdfFilterLabels = useMemo(() => {
+    if (!filtersApplied || activeFilterBadges.length === 0) return undefined;
+    return activeFilterBadges.map((b) => b.label);
+  }, [filtersApplied, activeFilterBadges]);
+
+  /* ─── Customer history filter state ─── */
   const custHistoryFilterBadges = useMemo(() => {
     const badges: { key: string; label: string }[] = [];
     if (custHistoryCustomerId !== "all")
       badges.push({ key: "customer", label: "Customer selected" });
-    if (custHistoryStart)
+    if (custHistoryStart && custHistoryEnd)
       badges.push({
-        key: "startDate",
-        label: `From: ${formatDateDisplay(custHistoryStart)}`,
-      });
-    if (custHistoryEnd)
-      badges.push({
-        key: "endDate",
-        label: `To: ${formatDateDisplay(custHistoryEnd)}`,
+        key: "dateRange",
+        label: `${formatDateDisplay(custHistoryStart)} – ${formatDateDisplay(custHistoryEnd)}`,
       });
     return badges;
   }, [custHistoryCustomerId, custHistoryStart, custHistoryEnd]);
 
   const hasCustHistoryFilters =
-    custHistoryCustomerId !== "all" || custHistoryStart || custHistoryEnd;
+    custHistoryCustomerId !== "all" ||
+    (custHistoryStart && custHistoryEnd);
 
   const removeCustHistoryFilter = useCallback(
     (filterKey: string) => {
@@ -968,14 +920,10 @@ const Reports: React.FC = () => {
           newCust = "all";
           setCustHistoryCustomerId("all");
           break;
-        case "startDate":
+        case "dateRange":
           newStart = "";
           newEnd = "";
           setCustHistoryStart("");
-          setCustHistoryEnd("");
-          break;
-        case "endDate":
-          newEnd = "";
           setCustHistoryEnd("");
           break;
       }
@@ -986,22 +934,16 @@ const Reports: React.FC = () => {
         endDate: newEnd || undefined,
       });
     },
-    [
-      custHistoryCustomerId,
-      custHistoryStart,
-      custHistoryEnd,
-      fetchCustomerHistory,
-    ],
+    [custHistoryCustomerId, custHistoryStart, custHistoryEnd, fetchCustomerHistory]
   );
 
   const clearCustHistoryFilters = useCallback(() => {
     setCustHistoryCustomerId("all");
     setCustHistoryStart("");
     setCustHistoryEnd("");
-    fetchCustomerHistory(); // no filters → full list
+    fetchCustomerHistory();
   }, [fetchCustomerHistory]);
 
-  // When start date clears, clear end date too
   const handleStartDateChange = useCallback((val: string) => {
     setStartDate(val);
     if (!val) setEndDate("");
@@ -1026,17 +968,24 @@ const Reports: React.FC = () => {
     });
   };
 
-  const hasActiveFilters =
-    startDate ||
-    endDate ||
-    statusFilter !== "all" ||
-    searchText ||
-    selectedCustomerId !== "all";
+  /* ─── PDF export handler ─── */
+  const handleExportPDF = useCallback(
+    async (elementId: string, title: string, filterLabels?: string[]) => {
+      try {
+        toast.loading("Generating PDF…", { id: "pdf-gen" });
+        await downloadA4PDF(elementId, title, filterLabels);
+        toast.success("PDF downloaded successfully", { id: "pdf-gen" });
+      } catch (err) {
+        toast.error("Failed to generate PDF", { id: "pdf-gen" });
+        console.error(err);
+      }
+    },
+    []
+  );
 
   /* ─── Exports ─── */
   const exportQuotationSummary = useCallback(() => {
-    if (!quotationSummary?.projects?.length)
-      return toast.error("No data to export");
+    if (!quotationSummary?.projects?.length) return toast.error("No data to export");
     generateCSV(
       quotationSummary.projects.map((p) => ({
         "Quote No": p.projectNo,
@@ -1047,14 +996,13 @@ const Reports: React.FC = () => {
         Salesperson: p.salesPerson?.name || "-",
         "Project Name": p.projectName || "-",
       })),
-      "quotation_summary",
+      "quotation_summary"
     );
     toast.success("Exported successfully");
   }, [quotationSummary]);
 
   const exportConversion = useCallback(() => {
-    if (!conversionReport?.data?.length)
-      return toast.error("No data to export");
+    if (!conversionReport?.data?.length) return toast.error("No data to export");
     generateCSV(
       conversionReport.data.map((r) => ({
         "Quote No": r.quoteNo,
@@ -1066,14 +1014,13 @@ const Reports: React.FC = () => {
         Salesperson: r.salesPersonName,
         "Project Name": r.projectName,
       })),
-      "conversion_report",
+      "conversion_report"
     );
     toast.success("Exported successfully");
   }, [conversionReport]);
 
   const exportPending = useCallback(() => {
-    if (!pendingReport?.data?.length)
-      return toast.error("No data to export");
+    if (!pendingReport?.data?.length) return toast.error("No data to export");
     generateCSV(
       pendingReport.data.map((r) => ({
         "Quote No": r.quoteNo,
@@ -1083,14 +1030,13 @@ const Reports: React.FC = () => {
         "Follow-up Date": formatDate(r.followUpDate),
         Salesperson: r.salesPersonName,
       })),
-      "pending_quotations",
+      "pending_quotations"
     );
     toast.success("Exported successfully");
   }, [pendingReport]);
 
   const exportSalesman = useCallback(() => {
-    if (!salesmanReport?.data?.length)
-      return toast.error("No data to export");
+    if (!salesmanReport?.data?.length) return toast.error("No data to export");
     generateCSV(
       salesmanReport.data.map((r) => ({
         Salesperson: r.salesPersonName,
@@ -1100,14 +1046,13 @@ const Reports: React.FC = () => {
         "Conversion %": r.conversionPercent + "%",
         Revenue: r.totalRevenue,
       })),
-      "salesman_performance",
+      "salesman_performance"
     );
     toast.success("Exported successfully");
   }, [salesmanReport]);
 
   const exportCustomerHistory = useCallback(() => {
-    if (!customerHistory?.quotations?.length)
-      return toast.error("No data to export");
+    if (!customerHistory?.quotations?.length) return toast.error("No data to export");
     generateCSV(
       customerHistory.quotations.map((q) => ({
         Date: formatDate(q.date),
@@ -1117,14 +1062,13 @@ const Reports: React.FC = () => {
         Status: q.status,
         Salesperson: q.salesPersonName,
       })),
-      "customer_history",
+      "customer_history"
     );
     toast.success("Exported successfully");
   }, [customerHistory]);
 
   const exportProduct = useCallback(() => {
-    if (!productReport?.details?.length)
-      return toast.error("No data to export");
+    if (!productReport?.details?.length) return toast.error("No data to export");
     generateCSV(
       productReport.details.map((d: any) => ({
         Date: formatDate(d.project?.date),
@@ -1135,14 +1079,13 @@ const Reports: React.FC = () => {
         Amount: d.totalWithGst,
         Salesperson: d.project?.salesPerson?.name || "-",
       })),
-      "product_report",
+      "product_report"
     );
     toast.success("Exported successfully");
   }, [productReport]);
 
   const exportDiscount = useCallback(() => {
-    if (!discountReport?.items?.length)
-      return toast.error("No data to export");
+    if (!discountReport?.items?.length) return toast.error("No data to export");
     generateCSV(
       discountReport.items.map((i: any) => ({
         "Quote No": i.project?.projectNo || "-",
@@ -1153,7 +1096,7 @@ const Reports: React.FC = () => {
         Salesperson: i.project?.salesPerson?.name || "-",
         Date: formatDate(i.project?.date),
       })),
-      "discount_report",
+      "discount_report"
     );
     toast.success("Exported successfully");
   }, [discountReport]);
@@ -1171,14 +1114,14 @@ const Reports: React.FC = () => {
   }
 
   /* ═══════════════════════════════════════════════════════
-     Shared "Active Filters" badge row — reused in each tab
+     Shared filter badge row
      ═══════════════════════════════════════════════════════ */
   const renderActiveFilterBadges = () => {
-    if (activeFilterBadges.length === 0) return null;
+    if (!filtersApplied || activeFilterBadges.length === 0) return null;
     return (
-      <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border w-full">
-        <span className="text-xs text-muted-foreground font-medium">
-          Active Filters:
+      <div className="no-pdf flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-border">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Filters:
         </span>
         {activeFilterBadges.map((badge) => (
           <FilterBadge
@@ -1190,13 +1133,76 @@ const Reports: React.FC = () => {
         <button
           type="button"
           onClick={() => clearFilters()}
-          className="text-xs text-destructive hover:text-destructive/80 hover:underline font-medium ml-1 transition-colors"
+          className="ml-auto text-xs font-semibold text-destructive hover:opacity-75 transition-opacity"
         >
           Clear All
         </button>
       </div>
     );
   };
+
+  /* ═══════════════════════════════════════════════════════
+     Shared action row — Apply / Clear / Export buttons
+     ═══════════════════════════════════════════════════════ */
+  const renderActionRow = (
+    exportExcel: () => void,
+    exportPDFId: string,
+    exportPDFTitle: string,
+    hasData: boolean
+  ) => (
+    <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-border">
+      {/* Left: Apply + Clear */}
+      <Button
+        size="sm"
+        className="h-9 gap-1.5"
+        onClick={applyFilters}
+        disabled={!canApplyFilters}
+      >
+        <Filter className="h-3.5 w-3.5" />
+        Apply Filters
+      </Button>
+      {filtersApplied && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 gap-1.5 text-destructive hover:text-destructive"
+          onClick={() => clearFilters()}
+        >
+          <X className="h-3.5 w-3.5" />
+          Clear
+        </Button>
+      )}
+      {dateIncomplete && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+          Both start & end dates are required
+        </p>
+      )}
+
+      {/* Right: Export buttons */}
+      <div className="flex gap-2 ml-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exportExcel}
+          disabled={!hasData}
+          className="h-9 gap-1.5"
+        >
+          <Download className="h-4 w-4" />
+          Excel
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleExportPDF(exportPDFId, exportPDFTitle, pdfFilterLabels)}
+          disabled={!hasData}
+          className="h-9 gap-1.5"
+        >
+          <FileText className="h-4 w-4" />
+          PDF
+        </Button>
+      </div>
+    </div>
+  );
 
   /* ════════════════════════ RENDER ════════════════════════ */
   return (
@@ -1272,106 +1278,64 @@ const Reports: React.FC = () => {
         className="space-y-6"
         onValueChange={(v) => {
           setActiveTab(v);
-          clearFilters(true); // ← skip refetch; the tab useEffect handles it
+          clearFilters(true);
         }}
       >
         <div className="overflow-x-auto -mx-1 px-1">
           <TabsList className="inline-flex h-10">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="quotation-summary"
-              className="text-xs sm:text-sm"
-            >
-              Quotation Summary
-            </TabsTrigger>
-            <TabsTrigger value="conversion" className="text-xs sm:text-sm">
-              Conversion
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="text-xs sm:text-sm">
-              Pending
-            </TabsTrigger>
-            <TabsTrigger
-              value="sales-performance"
-              className="text-xs sm:text-sm"
-            >
-              Sales Performance
-            </TabsTrigger>
-            <TabsTrigger
-              value="customer-history"
-              className="text-xs sm:text-sm"
-            >
-              Customer History
-            </TabsTrigger>
-            <TabsTrigger value="product" className="text-xs sm:text-sm">
-              Product
-            </TabsTrigger>
-            <TabsTrigger value="discounts" className="text-xs sm:text-sm">
-              Discounts
-            </TabsTrigger>
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="quotation-summary" className="text-xs sm:text-sm">Quotation Summary</TabsTrigger>
+            <TabsTrigger value="conversion" className="text-xs sm:text-sm">Conversion</TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">Pending</TabsTrigger>
+            <TabsTrigger value="sales-performance" className="text-xs sm:text-sm">Sales Performance</TabsTrigger>
+            <TabsTrigger value="customer-history" className="text-xs sm:text-sm">Customer History</TabsTrigger>
+            <TabsTrigger value="product" className="text-xs sm:text-sm">Product</TabsTrigger>
+            <TabsTrigger value="discounts" className="text-xs sm:text-sm">Discounts</TabsTrigger>
           </TabsList>
         </div>
 
         {/* ─────── 1. OVERVIEW ─────── */}
         <TabsContent value="overview" className="space-y-6">
-          <h2 className="text-lg font-semibold">
-            Master Report – Hierarchy
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Status Breakdown
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {(masterReport?.statusCounts || []).map((sc: any) => (
-                  <div
-                    key={sc.status}
-                    className="p-4 bg-muted/40 text-center border border-border"
-                  >
-                    <p className="text-2xl font-bold">{sc.count}</p>
-                    <p className="text-sm text-muted-foreground capitalize">
-                      {sc.status}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatCurrency(Number(sc.value) || 0)}
-                    </p>
-                  </div>
-                ))}
+          <div id="report-overview">
+            <h2 className="text-lg font-semibold mb-6">Master Report – Hierarchy</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="enterprise-card p-5 md:p-6">
+                <h3 className="font-semibold text-foreground mb-4">Status Breakdown</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {(masterReport?.statusCounts || []).map((sc: any) => (
+                    <div key={sc.status} className="p-4 bg-muted/40 text-center border border-border">
+                      <p className="text-2xl font-bold">{sc.count}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{sc.status}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{formatCurrency(Number(sc.value) || 0)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Report Hierarchy
-              </h3>
-              <div className="space-y-2">
-                {[
-                  {
-                    name: "Quotation Summary Report",
-                    tab: "quotation-summary",
-                  },
-                  { name: "Conversion Report", tab: "conversion" },
-                  { name: "Pending Quotation Report", tab: "pending" },
-                  {
-                    name: "Salesman Performance Report",
-                    tab: "sales-performance",
-                  },
-                  {
-                    name: "Customer History Report",
-                    tab: "customer-history",
-                  },
-                  { name: "Product Report", tab: "product" },
-                  { name: "Discount Approval Report", tab: "discounts" },
-                ].map((r) => (
-                  <button
-                    key={r.tab}
-                    onClick={() => setActiveTab(r.tab)}
-                    className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition flex items-center justify-between group"
-                  >
-                    <span className="font-medium text-sm">{r.name}</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                ))}
+              <div className="enterprise-card p-5 md:p-6">
+                <h3 className="font-semibold text-foreground mb-4">Report Hierarchy</h3>
+                <div className="space-y-2">
+                  {[
+                    { name: "Quotation Summary Report", tab: "quotation-summary" },
+                    { name: "Conversion Report", tab: "conversion" },
+                    { name: "Pending Quotation Report", tab: "pending" },
+                    { name: "Salesman Performance Report", tab: "sales-performance" },
+                    { name: "Customer History Report", tab: "customer-history" },
+                    { name: "Product Report", tab: "product" },
+                    { name: "Discount Approval Report", tab: "discounts" },
+                  ].map((r) => (
+                    <button
+                      key={r.tab}
+                      onClick={() => {
+                        clearFilters(true);
+                        setActiveTab(r.tab);
+                      }}
+                      className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition flex items-center justify-between group"
+                    >
+                      <span className="font-medium text-sm">{r.name}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1379,16 +1343,11 @@ const Reports: React.FC = () => {
 
         {/* ─────── 2. QUOTATION SUMMARY ─────── */}
         <TabsContent value="quotation-summary" className="space-y-6">
-          {/* Filters */}
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Date From
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={startDate}
                   onChange={handleStartDateChange}
@@ -1397,10 +1356,8 @@ const Reports: React.FC = () => {
                   disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Date To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={endDate}
                   onChange={handleEndDateChange}
@@ -1410,27 +1367,20 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Customer
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Customer</label>
                 <CustomerSearchSelect
                   value={selectedCustomerId}
                   onChange={setSelectedCustomerId}
                   placeholder="Search customer…"
                   apiFn={api.get}
+                  disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Status
-                </label>
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                  disabled={filtersApplied}
-                >
-                  <SelectTrigger className="w-32 h-9">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter} disabled={filtersApplied}>
+                  <SelectTrigger className="w-full h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1442,267 +1392,168 @@ const Reports: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Search
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Salesman</label>
+                <Select value={selectedSalesmanId} onValueChange={setSelectedSalesmanId} disabled={filtersApplied}>
+                  <SelectTrigger className="w-full h-9">
+                    <SelectValue placeholder="All Salesmen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {salesPersons.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Search</label>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
+                    onChange={(e) => { setSearchText(e.target.value); setFiltersApplied(false); }}
                     placeholder="Quote no / project…"
-                    className="pl-8 w-44 h-9 text-sm"
+                    className="pl-8 w-full h-9 text-sm"
                     disabled={filtersApplied}
                   />
                 </div>
               </div>
-              <Button
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={applyFilters}
-                disabled={filtersApplied}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => clearFilters()}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportQuotationSummary}
-                className="ml-auto h-9 gap-1.5"
-              >
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
             </div>
 
-            {/* ★ Active filter badges */}
+            {/* Action Row */}
+            {renderActionRow(
+              exportQuotationSummary,
+              "report-quotation-summary",
+              "Quotation_Summary",
+              !!quotationSummary?.projects?.length
+            )}
+
+            {/* Active filter badges */}
             {renderActiveFilterBadges()}
           </div>
 
-          {/* Summary Cards */}
-          {quotationSummary?.summary && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <MiniStatCard
-                value={formatNumber(
-                  quotationSummary.summary.totalQuotations,
-                )}
-                label="Total Quotations"
-              />
-              <MiniStatCard
-                value={formatCurrency(quotationSummary.summary.totalValue)}
-                label="Total Value"
-              />
-              <MiniStatCard
-                value={formatCurrency(
-                  quotationSummary.summary.totalDiscount,
-                )}
-                label="Total Discount"
-              />
-              <MiniStatCard
-                value={formatCurrency(quotationSummary.summary.avgValue)}
-                label="Avg Value"
-              />
-            </div>
-          )}
+          {/* Report Content */}
+          <div id="report-quotation-summary" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Quotation Summary
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Summary Cards */}
+            {quotationSummary?.summary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <MiniStatCard value={formatNumber(quotationSummary.summary.totalQuotations)} label="Total Quotations" />
+                <MiniStatCard value={formatCurrency(quotationSummary.summary.totalValue)} label="Total Value" />
+                <MiniStatCard value={formatCurrency(quotationSummary.summary.totalDiscount)} label="Total Discount" />
+                <MiniStatCard value={formatCurrency(quotationSummary.summary.avgValue)} label="Avg Value" />
+              </div>
+            )}
+
+            {/* Table */}
             <div className="enterprise-card p-5 md:p-6">
               <h3 className="font-semibold text-foreground mb-4">
-                Monthly Quotation Value
+                Quotation Details ({quotationSummary?.projects?.length || 0} records)
               </h3>
-              {(quotationSummary?.monthlyChartData?.length || 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={quotationSummary!.monthlyChartData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      dataKey="month"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`}
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <Tooltip
-                      formatter={(v: number) => formatCurrency(v)}
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      fill="#A16207"
-                      radius={[6, 6, 0, 0]}
-                      name="Value"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-muted-foreground py-16">
-                  {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                  ) : (
-                    "No data available"
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Status Distribution
-              </h3>
-              {(quotationSummary?.statusDistribution?.length || 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={quotationSummary!.statusDistribution}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
-                      labelLine={false}
-                    >
-                      {quotationSummary!.statusDistribution.map(
-                        (entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ),
-                      )}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-center text-muted-foreground py-16">
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Quotation Details (
-              {quotationSummary?.projects?.length || 0} records)
-            </h3>
-            <div className="table-container max-h-96">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Quote No</th>
-                    <th>Date</th>
-                    <th className="hidden sm:table-cell">Customer</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th className="hidden md:table-cell">Salesperson</th>
-                    <th className="hidden lg:table-cell">Project Name</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!quotationSummary?.projects?.length ? (
+              <div className="table-container max-h-96">
+                <table className="enterprise-table text-sm">
+                  <thead>
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading ? "Loading…" : "No quotations found"}
-                      </td>
+                      <th>Quote No</th>
+                      <th>Date</th>
+                      <th className="hidden sm:table-cell">Customer</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th className="hidden md:table-cell">Salesperson</th>
+                      <th className="hidden lg:table-cell">Project Name</th>
                     </tr>
-                  ) : (
-                    quotationSummary.projects.map((p) => (
-                      <tr key={p.id}>
-                        <td className="font-medium">{p.projectNo}</td>
-                        <td className="text-muted-foreground">
-                          {formatDate(p.date)}
-                        </td>
-                        <td className="hidden sm:table-cell">
-                          {p.customer?.name || "-"}
-                        </td>
-                        <td className="font-semibold">
-                          {formatCurrency(Number(p.grandTotalWithGst))}
-                        </td>
-                        <td>
-                          <span className={getStatusBadgeClass(p.status)}>
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {p.salesPerson?.name || "-"}
-                        </td>
-                        <td className="hidden lg:table-cell text-muted-foreground">
-                          {p.projectName || "-"}
+                  </thead>
+                  <tbody>
+                    {!quotationSummary?.projects?.length ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No quotations found"}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      quotationSummary.projects.map((p) => (
+                        <tr key={p.id}>
+                          <td className="font-medium">{p.projectNo}</td>
+                          <td className="text-muted-foreground">{formatDate(p.date)}</td>
+                          <td className="hidden sm:table-cell">{p.customer?.name || "-"}</td>
+                          <td className="font-semibold">{formatCurrency(Number(p.grandTotalWithGst))}</td>
+                          <td><span className={getStatusBadgeClass(p.status)}>{p.status}</span></td>
+                          <td className="hidden md:table-cell text-muted-foreground">{p.salesPerson?.name || "-"}</td>
+                          <td className="hidden lg:table-cell text-muted-foreground">{p.projectName || "-"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="enterprise-card p-5 md:p-6">
+                <h3 className="font-semibold text-foreground mb-4">Monthly Quotation Value</h3>
+                {(quotationSummary?.monthlyChartData?.length || 0) > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={quotationSummary!.monthlyChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip
+                        formatter={(v: number) => formatCurrency(v)}
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                      />
+                      <Bar dataKey="value" fill="#A16207" radius={[6, 6, 0, 0]} name="Value" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-muted-foreground py-16">
+                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : "No data available"}
+                  </div>
+                )}
+              </div>
+              <div className="enterprise-card p-5 md:p-6">
+                <h3 className="font-semibold text-foreground mb-4">Status Distribution</h3>
+                {(quotationSummary?.statusDistribution?.length || 0) > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie
+                        data={quotationSummary!.statusDistribution}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {quotationSummary!.statusDistribution.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-muted-foreground py-16">No data available</div>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>
 
         {/* ─────── 3. CONVERSION REPORT ─────── */}
         <TabsContent value="conversion" className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-lg font-semibold">
-              Quotation vs Order Conversion
-              {loading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportConversion}
-              disabled={!conversionReport?.data?.length}
-              className="h-9 gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
-
-          {/* Filters */}
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  From
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={startDate}
                   onChange={handleStartDateChange}
@@ -1711,10 +1562,8 @@ const Reports: React.FC = () => {
                   disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={endDate}
                   onChange={handleEndDateChange}
@@ -1724,146 +1573,98 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-              <Button
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={applyFilters}
-                disabled={filtersApplied}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => clearFilters()}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
             </div>
 
-            {/* ★ Active filter badges */}
+            {renderActionRow(
+              exportConversion,
+              "report-conversion",
+              "Conversion_Report",
+              !!conversionReport?.data?.length
+            )}
             {renderActiveFilterBadges()}
           </div>
 
-          {/* Summary Cards */}
-          {conversionReport?.summary && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <MiniStatCard
-                value={conversionReport.summary.totalQuotations}
-                label="Total Quotations"
-              />
-              <MiniStatCard
-                value={conversionReport.summary.totalConverted}
-                label="Converted"
-                className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                valueClassName="text-green-700 dark:text-green-400"
-              />
-              <MiniStatCard
-                value={conversionReport.summary.totalPending}
-                label="Pending"
-                className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-                valueClassName="text-amber-700 dark:text-amber-400"
-              />
-              <MiniStatCard
-                value={`${conversionReport.summary.conversionRate}%`}
-                label="Conversion Rate"
-                className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
-                valueClassName="text-blue-700 dark:text-blue-400"
-              />
-            </div>
-          )}
+          {/* Report Content */}
+          <div id="report-conversion" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Quotation vs Order Conversion
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
 
-          {/* Table */}
-          <div className="enterprise-card p-5 md:p-6">
-            <div className="table-container max-h-96">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Quote No</th>
-                    <th>Customer</th>
-                    <th>Quote Amount</th>
-                    <th>Order No</th>
-                    <th className="hidden sm:table-cell">Order Amount</th>
-                    <th>Status</th>
-                    <th className="hidden md:table-cell">Salesperson</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!conversionReport?.data?.length ? (
+            {conversionReport?.summary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <MiniStatCard value={conversionReport.summary.totalQuotations} label="Total Quotations" />
+                <MiniStatCard
+                  value={conversionReport.summary.totalConverted}
+                  label="Converted"
+                  className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  valueClassName="text-green-700 dark:text-green-400"
+                />
+                <MiniStatCard
+                  value={conversionReport.summary.totalPending}
+                  label="Pending"
+                  className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                  valueClassName="text-amber-700 dark:text-amber-400"
+                />
+                <MiniStatCard
+                  value={`${conversionReport.summary.conversionRate}%`}
+                  label="Conversion Rate"
+                  className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                  valueClassName="text-blue-700 dark:text-blue-400"
+                />
+              </div>
+            )}
+
+            <div className="enterprise-card p-5 md:p-6">
+              <div className="table-container max-h-96">
+                <table className="enterprise-table text-sm">
+                  <thead>
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading ? "Loading…" : "No data found"}
-                      </td>
+                      <th>Quote No</th>
+                      <th>Customer</th>
+                      <th>Quote Amount</th>
+                      <th>Order No</th>
+                      <th className="hidden sm:table-cell">Order Amount</th>
+                      <th>Status</th>
+                      <th className="hidden md:table-cell">Salesperson</th>
                     </tr>
-                  ) : (
-                    conversionReport.data.map((r) => (
-                      <tr key={r.id}>
-                        <td className="font-medium">{r.quoteNo}</td>
-                        <td>{r.customer}</td>
-                        <td>{formatCurrency(r.quoteAmount)}</td>
-                        <td className="font-mono text-xs">
-                          {r.orderNo || "—"}
-                        </td>
-                        <td className="hidden sm:table-cell">
-                          {r.orderAmount != null
-                            ? formatCurrency(r.orderAmount)
-                            : "—"}
-                        </td>
-                        <td>
-                          <span className={getStatusBadgeClass(r.status)}>
-                            {r.status}
-                          </span>
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {r.salesPersonName}
+                  </thead>
+                  <tbody>
+                    {!conversionReport?.data?.length ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No data found"}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      conversionReport.data.map((r) => (
+                        <tr key={r.id}>
+                          <td className="font-medium">{r.quoteNo}</td>
+                          <td>{r.customer}</td>
+                          <td>{formatCurrency(r.quoteAmount)}</td>
+                          <td className="font-mono text-xs">{r.orderNo || "—"}</td>
+                          <td className="hidden sm:table-cell">
+                            {r.orderAmount != null ? formatCurrency(r.orderAmount) : "—"}
+                          </td>
+                          <td><span className={getStatusBadgeClass(r.status)}>{r.status}</span></td>
+                          <td className="hidden md:table-cell text-muted-foreground">{r.salesPersonName}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </TabsContent>
 
         {/* ─────── 4. PENDING QUOTATIONS ─────── */}
         <TabsContent value="pending" className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-lg font-semibold">
-              Pending Quotation Pipeline
-              {loading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportPending}
-              disabled={!pendingReport?.data?.length}
-              className="h-9 gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
-
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  From
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={startDate}
                   onChange={handleStartDateChange}
@@ -1872,10 +1673,8 @@ const Reports: React.FC = () => {
                   disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={endDate}
                   onChange={handleEndDateChange}
@@ -1885,141 +1684,84 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-              <Button
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={applyFilters}
-                disabled={filtersApplied}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => clearFilters()}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
             </div>
 
-            {/* ★ Active filter badges */}
+            {renderActionRow(
+              exportPending,
+              "report-pending",
+              "Pending_Quotations",
+              !!pendingReport?.data?.length
+            )}
             {renderActiveFilterBadges()}
           </div>
 
-          {pendingReport?.summary && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <MiniStatCard
-                value={pendingReport.summary.totalPending}
-                label="Total Pending"
-                icon={Clock}
-              />
-              <MiniStatCard
-                value={formatCurrency(
-                  pendingReport.summary.totalPendingValue,
-                )}
-                label="Pending Value"
-              />
-              <MiniStatCard
-                value={pendingReport.summary.avgDaysPending}
-                label="Avg Days Pending"
-              />
-              <MiniStatCard
-                value={pendingReport.summary.overdueCount}
-                label="Overdue (>7d)"
-                className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                valueClassName="text-red-600 dark:text-red-400"
-              />
-            </div>
-          )}
+          {/* Report Content */}
+          <div id="report-pending" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Pending Quotation Pipeline
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
 
-          <div className="enterprise-card p-5 md:p-6">
-            <div className="table-container max-h-96">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Quote No</th>
-                    <th>Customer</th>
-                    <th>Amount</th>
-                    <th>Days Pending</th>
-                    <th>Follow-up Date</th>
-                    <th className="hidden sm:table-cell">Salesperson</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!pendingReport?.data?.length ? (
+            {pendingReport?.summary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <MiniStatCard value={pendingReport.summary.totalPending} label="Total Pending" />
+                <MiniStatCard value={formatCurrency(pendingReport.summary.totalPendingValue)} label="Pending Value" />
+                <MiniStatCard value={pendingReport.summary.avgDaysPending} label="Avg Days Pending" />
+                <MiniStatCard
+                  value={pendingReport.summary.overdueCount}
+                  label="Overdue (>7d)"
+                  className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                  valueClassName="text-red-600 dark:text-red-400"
+                />
+              </div>
+            )}
+
+            <div className="enterprise-card p-5 md:p-6">
+              <div className="table-container max-h-96">
+                <table className="enterprise-table text-sm">
+                  <thead>
                     <tr>
-                      <td
-                        colSpan={6}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading ? "Loading…" : "No pending quotations"}
-                      </td>
+                      <th>Quote No</th>
+                      <th>Customer</th>
+                      <th>Amount</th>
+                      <th>Days Pending</th>
+                      <th>Follow-up Date</th>
+                      <th className="hidden sm:table-cell">Salesperson</th>
                     </tr>
-                  ) : (
-                    pendingReport.data.map((r) => (
-                      <tr key={r.id}>
-                        <td className="font-medium">{r.quoteNo}</td>
-                        <td>{r.customer}</td>
-                        <td className="font-semibold">
-                          {formatCurrency(r.amount)}
-                        </td>
-                        <td>
-                          <span
-                            className={getDaysPendingClass(r.daysPending)}
-                          >
-                            {r.daysPending} days
-                          </span>
-                        </td>
-                        <td className="text-muted-foreground">
-                          {formatDate(r.followUpDate)}
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {r.salesPersonName}
+                  </thead>
+                  <tbody>
+                    {!pendingReport?.data?.length ? (
+                      <tr>
+                        <td colSpan={6} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No pending quotations"}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      pendingReport.data.map((r) => (
+                        <tr key={r.id}>
+                          <td className="font-medium">{r.quoteNo}</td>
+                          <td>{r.customer}</td>
+                          <td className="font-semibold">{formatCurrency(r.amount)}</td>
+                          <td><span className={getDaysPendingClass(r.daysPending)}>{r.daysPending} days</span></td>
+                          <td className="text-muted-foreground">{formatDate(r.followUpDate)}</td>
+                          <td className="hidden sm:table-cell text-muted-foreground">{r.salesPersonName}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </TabsContent>
 
         {/* ─────── 5. SALES PERFORMANCE ─────── */}
         <TabsContent value="sales-performance" className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-lg font-semibold">
-              Salesman Performance Report
-              {loading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportSalesman}
-              disabled={!salesmanReport?.data?.length}
-              className="h-9 gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
-
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  From
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={startDate}
                   onChange={handleStartDateChange}
@@ -2028,10 +1770,8 @@ const Reports: React.FC = () => {
                   disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={endDate}
                   onChange={handleEndDateChange}
@@ -2041,178 +1781,105 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-              <Button
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={applyFilters}
-                disabled={filtersApplied}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => clearFilters()}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
             </div>
 
-            {/* ★ Active filter badges */}
+            {renderActionRow(
+              exportSalesman,
+              "report-sales-performance",
+              "Sales_Performance",
+              !!salesmanReport?.data?.length
+            )}
             {renderActiveFilterBadges()}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Report Content */}
+          <div id="report-sales-performance" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Salesman Performance Report
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
+
+            {salesmanReport?.summary && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <MiniStatCard value={salesmanReport.summary.totalSalespeople} label="Active Salespeople" />
+                <MiniStatCard value={formatCurrency(salesmanReport.summary.totalRevenue)} label="Total Revenue" />
+                <MiniStatCard value={`${salesmanReport.summary.avgConversion}%`} label="Avg Conversion Rate" />
+              </div>
+            )}
+
             <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Salesperson vs Revenue
-              </h3>
+              <h3 className="font-semibold text-foreground mb-4">Sales Performance Table</h3>
+              <div className="table-container max-h-72">
+                <table className="enterprise-table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Salesperson</th>
+                      <th>Quotations</th>
+                      <th>Converted</th>
+                      <th>Conversion %</th>
+                      <th>Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!salesmanReport?.data?.length ? (
+                      <tr>
+                        <td colSpan={5} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No data available"}
+                        </td>
+                      </tr>
+                    ) : (
+                      salesmanReport.data.map((s) => (
+                        <tr key={s.salesPersonId}>
+                          <td className="font-medium">{s.salesPersonName}</td>
+                          <td>{s.totalQuotations}</td>
+                          <td>{s.converted}</td>
+                          <td>
+                            <span className={cn(
+                              "font-semibold",
+                              s.conversionPercent >= 40 ? "text-green-600" :
+                                s.conversionPercent >= 20 ? "text-amber-600" : "text-red-600"
+                            )}>
+                              {s.conversionPercent}%
+                            </span>
+                          </td>
+                          <td className="font-semibold text-accent">{formatCurrency(s.totalRevenue)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">Salesperson vs Revenue</h3>
               {(salesmanReport?.data?.length || 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={salesmanReport!.data} layout="vertical">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`}
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis
-                      dataKey="salesPersonName"
-                      type="category"
-                      width={100}
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis dataKey="salesPersonName" type="category" width={100} stroke="hsl(var(--muted-foreground))" fontSize={11} />
                     <Tooltip
                       formatter={(v: number) => formatCurrency(v)}
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
                     />
-                    <Bar
-                      dataKey="totalRevenue"
-                      fill="#A16207"
-                      radius={[0, 6, 6, 0]}
-                      name="Revenue"
-                    />
+                    <Bar dataKey="totalRevenue" fill="#A16207" radius={[0, 6, 6, 0]} name="Revenue" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="text-center text-muted-foreground py-16">
-                  No data available
-                </div>
+                <div className="text-center text-muted-foreground py-16">No data available</div>
               )}
-            </div>
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">Summary</h3>
-              {salesmanReport?.summary && (
-                <div className="grid grid-cols-1 gap-4">
-                  <MiniStatCard
-                    value={salesmanReport.summary.totalSalespeople}
-                    label="Active Salespeople"
-                  />
-                  <MiniStatCard
-                    value={formatCurrency(
-                      salesmanReport.summary.totalRevenue,
-                    )}
-                    label="Total Revenue"
-                  />
-                  <MiniStatCard
-                    value={`${salesmanReport.summary.avgConversion}%`}
-                    label="Avg Conversion Rate"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Sales Performance Table
-            </h3>
-            <div className="table-container max-h-72">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Salesperson</th>
-                    <th>Quotations</th>
-                    <th>Converted</th>
-                    <th>Conversion %</th>
-                    <th>Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!salesmanReport?.data?.length ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading ? "Loading…" : "No data available"}
-                      </td>
-                    </tr>
-                  ) : (
-                    salesmanReport.data.map((s) => (
-                      <tr key={s.salesPersonId}>
-                        <td className="font-medium">{s.salesPersonName}</td>
-                        <td>{s.totalQuotations}</td>
-                        <td>{s.converted}</td>
-                        <td>
-                          <span
-                            className={cn(
-                              "font-semibold",
-                              s.conversionPercent >= 40
-                                ? "text-green-600"
-                                : s.conversionPercent >= 20
-                                  ? "text-amber-600"
-                                  : "text-red-600",
-                            )}
-                          >
-                            {s.conversionPercent}%
-                          </span>
-                        </td>
-                        <td className="font-semibold text-accent">
-                          {formatCurrency(s.totalRevenue)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
             </div>
           </div>
         </TabsContent>
 
         {/* ─────── 6. CUSTOMER HISTORY ─────── */}
         <TabsContent value="customer-history" className="space-y-6">
-          <h2 className="text-lg font-semibold">
-            Customer History Report
-            {loading && (
-              <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-            )}
-          </h2>
-
-          {/* Filter Panel */}
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Select Customer
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Select Customer</label>
                 <CustomerSearchSelect
                   value={custHistoryCustomerId}
                   onChange={setCustHistoryCustomerId}
@@ -2220,10 +1887,8 @@ const Reports: React.FC = () => {
                   apiFn={api.get}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Date From
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={custHistoryStart}
                   onChange={handleCustHistoryStartChange}
@@ -2231,10 +1896,8 @@ const Reports: React.FC = () => {
                   placeholder="Start date"
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Date To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={custHistoryEnd}
                   onChange={setCustHistoryEnd}
@@ -2244,15 +1907,17 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
+            </div>
+
+            {/* Action Row */}
+            <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-border">
               <Button
                 size="sm"
                 className="h-9 gap-1.5"
+                disabled={custDateIncomplete}
                 onClick={() =>
                   fetchCustomerHistory({
-                    customerId:
-                      custHistoryCustomerId !== "all"
-                        ? custHistoryCustomerId
-                        : undefined,
+                    customerId: custHistoryCustomerId !== "all" ? custHistoryCustomerId : undefined,
                     startDate: custHistoryStart || undefined,
                     endDate: custHistoryEnd || undefined,
                   })
@@ -2265,42 +1930,57 @@ const Reports: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 gap-1.5"
+                  className="h-9 gap-1.5 text-destructive hover:text-destructive"
                   onClick={clearCustHistoryFilters}
                 >
                   <X className="h-3.5 w-3.5" />
                   Clear
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportCustomerHistory}
-                disabled={!customerHistory?.quotations?.length}
-                className="ml-auto h-9 gap-1.5"
-              >
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
+              {custDateIncomplete && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  Both start & end dates are required
+                </p>
+              )}
+
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportCustomerHistory}
+                  disabled={!customerHistory?.quotations?.length}
+                  className="h-9 gap-1.5"
+                >
+                  <Download className="h-4 w-4" />
+                  Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const labels = custHistoryFilterBadges.length > 0 ? custHistoryFilterBadges.map((b) => b.label) : undefined;
+                    handleExportPDF("report-customer-history", "Customer_History", labels);
+                  }}
+                  disabled={!customerHistory}
+                  className="h-9 gap-1.5"
+                >
+                  <FileText className="h-4 w-4" />
+                  PDF
+                </Button>
+              </div>
             </div>
 
-            {/* ★ Customer-history active filter badges */}
+            {/* Active filter badges */}
             {custHistoryFilterBadges.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border w-full">
-                <span className="text-xs text-muted-foreground font-medium">
-                  Active Filters:
-                </span>
+              <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-border">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filters:</span>
                 {custHistoryFilterBadges.map((badge) => (
-                  <FilterBadge
-                    key={badge.key}
-                    label={badge.label}
-                    onRemove={() => removeCustHistoryFilter(badge.key)}
-                  />
+                  <FilterBadge key={badge.key} label={badge.label} onRemove={() => removeCustHistoryFilter(badge.key)} />
                 ))}
                 <button
                   type="button"
                   onClick={clearCustHistoryFilters}
-                  className="text-xs text-destructive hover:text-destructive/80 hover:underline font-medium ml-1 transition-colors"
+                  className="ml-auto text-xs font-semibold text-destructive hover:opacity-75 transition-opacity"
                 >
                   Clear All
                 </button>
@@ -2308,71 +1988,53 @@ const Reports: React.FC = () => {
             )}
           </div>
 
-          {/* Customer Profile (when selected) */}
-          {customerHistory?.mode === "detail" &&
-            customerHistory.profile && (
+          {/* Report Content */}
+          <div id="report-customer-history" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Customer History Report
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
+
+            {/* Customer Profile (when selected) */}
+            {customerHistory?.mode === "detail" && customerHistory.profile && (
               <>
                 <div className="enterprise-card p-5 md:p-6">
-                  <h3 className="font-semibold text-foreground mb-4">
-                    Customer Profile
-                  </h3>
+                  <h3 className="font-semibold text-foreground mb-4">Customer Profile</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div>
-                      <p className="text-xs text-muted-foreground">
-                        Customer Name
-                      </p>
-                      <p className="font-semibold">
-                        {customerHistory.profile.name}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Customer Name</p>
+                      <p className="font-semibold">{customerHistory.profile.name}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Mobile</p>
-                      <p className="font-semibold">
-                        {customerHistory.profile.mobile}
-                      </p>
+                      <p className="font-semibold">{customerHistory.profile.mobile}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">GST</p>
-                      <p className="font-semibold">
-                        {customerHistory.profile.gstin || "-"}
-                      </p>
+                      <p className="font-semibold">{customerHistory.profile.gstin || "-"}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">
-                        Address
-                      </p>
-                      <p className="font-semibold">
-                        {customerHistory.profile.address || "-"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Address</p>
+                      <p className="font-semibold">{customerHistory.profile.address || "-"}</p>
                     </div>
                   </div>
                   {customerHistory.summary && (
                     <div className="grid grid-cols-3 gap-4">
-                      <MiniStatCard
-                        value={customerHistory.summary.totalQuotations}
-                        label="Total Quotations"
-                      />
+                      <MiniStatCard value={customerHistory.summary.totalQuotations} label="Total Quotations" />
                       <MiniStatCard
                         value={customerHistory.summary.totalOrders}
                         label="Total Orders"
                         className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
                         valueClassName="text-green-700 dark:text-green-400"
                       />
-                      <MiniStatCard
-                        value={formatCurrency(
-                          customerHistory.summary.totalRevenue,
-                        )}
-                        label="Total Revenue"
-                      />
+                      <MiniStatCard value={formatCurrency(customerHistory.summary.totalRevenue)} label="Total Revenue" />
                     </div>
                   )}
                 </div>
 
                 {/* Quotation Ledger with Drill-Down */}
                 <div className="enterprise-card p-5 md:p-6">
-                  <h3 className="font-semibold text-foreground mb-4">
-                    Quotation Ledger
-                  </h3>
+                  <h3 className="font-semibold text-foreground mb-4">Quotation Ledger</h3>
                   <div className="table-container max-h-[500px]">
                     <table className="enterprise-table text-sm">
                       <thead>
@@ -2383,109 +2045,61 @@ const Reports: React.FC = () => {
                           <th>Amount</th>
                           <th className="hidden sm:table-cell">Discount</th>
                           <th>Status</th>
-                          <th className="hidden md:table-cell">
-                            Salesperson
-                          </th>
+                          <th className="hidden md:table-cell">Salesperson</th>
                         </tr>
                       </thead>
                       <tbody>
                         {!customerHistory.quotations?.length ? (
                           <tr>
-                            <td
-                              colSpan={7}
-                              className="text-center text-muted-foreground py-8"
-                            >
+                            <td colSpan={7} className="text-center text-muted-foreground py-8">
                               No quotations found
                             </td>
                           </tr>
                         ) : (
                           customerHistory.quotations.map((q) => (
                             <React.Fragment key={q.id}>
-                              <tr
-                                className="cursor-pointer hover:bg-muted/50"
-                                onClick={() => toggleRow(q.id)}
-                              >
+                              <tr className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRow(q.id)}>
                                 <td>
-                                  {expandedRows.has(q.id) ? (
-                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                  )}
+                                  {expandedRows.has(q.id)
+                                    ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                 </td>
-                                <td className="text-muted-foreground">
-                                  {formatDate(q.date)}
-                                </td>
+                                <td className="text-muted-foreground">{formatDate(q.date)}</td>
                                 <td className="font-medium">{q.quoteNo}</td>
-                                <td className="font-semibold">
-                                  {formatCurrency(q.amount)}
-                                </td>
-                                <td className="hidden sm:table-cell text-muted-foreground">
-                                  {q.discountPercent}%
-                                </td>
-                                <td>
-                                  <span
-                                    className={getStatusBadgeClass(q.status)}
-                                  >
-                                    {q.status}
-                                  </span>
-                                </td>
-                                <td className="hidden md:table-cell text-muted-foreground">
-                                  {q.salesPersonName}
-                                </td>
+                                <td className="font-semibold">{formatCurrency(q.amount)}</td>
+                                <td className="hidden sm:table-cell text-muted-foreground">{q.discountPercent}%</td>
+                                <td><span className={getStatusBadgeClass(q.status)}>{q.status}</span></td>
+                                <td className="hidden md:table-cell text-muted-foreground">{q.salesPersonName}</td>
                               </tr>
-                              {expandedRows.has(q.id) &&
-                                q.items.length > 0 && (
-                                  <tr>
-                                    <td colSpan={7} className="p-0">
-                                      <div className="bg-muted/30 p-4 border-t border-b border-border">
-                                        <p className="text-xs font-semibold text-muted-foreground mb-2">
-                                          Product Details
-                                        </p>
-                                        <table className="w-full text-xs">
-                                          <thead>
-                                            <tr className="border-b border-border">
-                                              <th className="text-left py-1 px-2 font-medium">
-                                                Product
-                                              </th>
-                                              <th className="text-left py-1 px-2 font-medium">
-                                                Qty
-                                              </th>
-                                              <th className="text-left py-1 px-2 font-medium">
-                                                Rate
-                                              </th>
-                                              <th className="text-left py-1 px-2 font-medium">
-                                                Amount
-                                              </th>
+                              {expandedRows.has(q.id) && q.items.length > 0 && (
+                                <tr>
+                                  <td colSpan={7} className="p-0">
+                                    <div className="bg-muted/30 p-4 border-t border-b border-border">
+                                      <p className="text-xs font-semibold text-muted-foreground mb-2">Product Details</p>
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr className="border-b border-border">
+                                            <th className="text-left py-1 px-2 font-medium">Product</th>
+                                            <th className="text-left py-1 px-2 font-medium">Qty</th>
+                                            <th className="text-left py-1 px-2 font-medium">Rate</th>
+                                            <th className="text-left py-1 px-2 font-medium">Amount</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {q.items.map((item) => (
+                                            <tr key={item.id} className="border-b border-border/50">
+                                              <td className="py-1 px-2">{item.product}</td>
+                                              <td className="py-1 px-2">{item.quantity}</td>
+                                              <td className="py-1 px-2">{formatCurrency(item.rate)}</td>
+                                              <td className="py-1 px-2 font-semibold">{formatCurrency(item.amount)}</td>
                                             </tr>
-                                          </thead>
-                                          <tbody>
-                                            {q.items.map((item) => (
-                                              <tr
-                                                key={item.id}
-                                                className="border-b border-border/50"
-                                              >
-                                                <td className="py-1 px-2">
-                                                  {item.product}
-                                                </td>
-                                                <td className="py-1 px-2">
-                                                  {item.quantity}
-                                                </td>
-                                                <td className="py-1 px-2">
-                                                  {formatCurrency(item.rate)}
-                                                </td>
-                                                <td className="py-1 px-2 font-semibold">
-                                                  {formatCurrency(
-                                                    item.amount,
-                                                  )}
-                                                </td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
                             </React.Fragment>
                           ))
                         )}
@@ -2496,96 +2110,64 @@ const Reports: React.FC = () => {
               </>
             )}
 
-          {/* Customer List (when no customer selected) */}
-          {customerHistory?.mode === "list" && (
-            <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Select a customer to view history
-              </h3>
-              <div className="table-container max-h-96">
-                <table className="enterprise-table text-sm">
-                  <thead>
-                    <tr>
-                      <th>Customer</th>
-                      <th className="hidden sm:table-cell">Mobile</th>
-                      <th className="hidden md:table-cell">City</th>
-                      <th className="hidden lg:table-cell">GST</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(customerHistory.customers || []).map((c: any) => (
-                      <tr key={c.id}>
-                        <td className="font-medium">{c.name}</td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {c.mobile}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {c.city || "-"}
-                        </td>
-                        <td className="hidden lg:table-cell text-muted-foreground font-mono text-xs">
-                          {c.gstin || "-"}
-                        </td>
-                        <td>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            onClick={() => {
-                              setCustHistoryCustomerId(c.id);
-                              fetchCustomerHistory({
-                                customerId: c.id,
-                              });
-                            }}
-                          >
-                            View
-                          </Button>
-                        </td>
+            {/* Customer List (when no customer selected) */}
+            {customerHistory?.mode === "list" && (
+              <div className="enterprise-card p-5 md:p-6">
+                <h3 className="font-semibold text-foreground mb-4">Select a customer to view history</h3>
+                <div className="table-container max-h-96">
+                  <table className="enterprise-table text-sm">
+                    <thead>
+                      <tr>
+                        <th>Customer</th>
+                        <th className="hidden sm:table-cell">Mobile</th>
+                        <th className="hidden md:table-cell">City</th>
+                        <th className="hidden lg:table-cell">GST</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {(customerHistory.customers || []).map((c: any) => (
+                        <tr key={c.id}>
+                          <td className="font-medium">{c.name}</td>
+                          <td className="hidden sm:table-cell text-muted-foreground">{c.mobile}</td>
+                          <td className="hidden md:table-cell text-muted-foreground">{c.city || "-"}</td>
+                          <td className="hidden lg:table-cell text-muted-foreground font-mono text-xs">{c.gstin || "-"}</td>
+                          <td>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => {
+                                setCustHistoryCustomerId(c.id);
+                                fetchCustomerHistory({ customerId: c.id });
+                              }}
+                            >
+                              View
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {!customerHistory && !loading && (
-            <div className="enterprise-card p-5 md:p-6 text-center text-muted-foreground py-16">
-              Click "View Report" to load customer history
-            </div>
-          )}
+            {!customerHistory && !loading && (
+              <div className="enterprise-card p-5 md:p-6 text-center text-muted-foreground py-16">
+                Click "View Report" to load customer history
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* ─────── 7. PRODUCT REPORT ─────── */}
         <TabsContent value="product" className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-lg font-semibold">
-              Product Report
-              {loading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportProduct}
-              disabled={!productReport?.details?.length}
-              className="h-9 gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
-
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  From
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={startDate}
                   onChange={handleStartDateChange}
@@ -2594,10 +2176,8 @@ const Reports: React.FC = () => {
                   disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={endDate}
                   onChange={handleEndDateChange}
@@ -2607,16 +2187,10 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  Status
-                </label>
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                  disabled={filtersApplied}
-                >
-                  <SelectTrigger className="w-32 h-9">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter} disabled={filtersApplied}>
+                  <SelectTrigger className="w-full h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2628,174 +2202,113 @@ const Reports: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={applyFilters}
-                disabled={filtersApplied}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => clearFilters()}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
             </div>
 
-            {/* ★ Active filter badges */}
+            {renderActionRow(
+              exportProduct,
+              "report-product",
+              "Product_Report",
+              !!productReport?.details?.length
+            )}
             {renderActiveFilterBadges()}
           </div>
 
-          {/* Product Summary */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Product-wise Summary
-            </h3>
-            <div className="table-container max-h-72">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th className="hidden sm:table-cell">Code</th>
-                    <th>Used</th>
-                    <th>Total Qty</th>
-                    <th>Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!productReport?.summary?.length ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading ? "Loading…" : "No data available"}
-                      </td>
-                    </tr>
-                  ) : (
-                    productReport.summary.map((p: any, i: number) => (
-                      <tr key={i}>
-                        <td className="font-medium max-w-[150px] truncate">
-                          {p.quotationName}
-                        </td>
-                        <td className="hidden sm:table-cell font-mono text-xs text-muted-foreground">
-                          {p.quotationCode}
-                        </td>
-                        <td>
-                          <span className="bg-accent/10 text-accent px-2 py-0.5 rounded text-xs font-medium">
-                            {p.timesUsed}x
-                          </span>
-                        </td>
-                        <td>{p.totalQuantity}</td>
-                        <td className="font-semibold text-accent">
-                          {formatCurrency(Number(p.totalRevenue))}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Report Content */}
+          <div id="report-product" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Product Report
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
 
-          {/* Product Details */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Product Detail Records (
-              {productReport?.details?.length || 0})
-            </h3>
-            <div className="table-container max-h-96">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Quote No</th>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Rate</th>
-                    <th>Amount</th>
-                    <th className="hidden sm:table-cell">Salesperson</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!productReport?.details?.length ? (
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">Product-wise Summary</h3>
+              <div className="table-container max-h-72">
+                <table className="enterprise-table text-sm">
+                  <thead>
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading ? "Loading…" : "No data available"}
-                      </td>
+                      <th>Product</th>
+                      <th className="hidden sm:table-cell">Code</th>
+                      <th>Used</th>
+                      <th>Total Qty</th>
+                      <th>Revenue</th>
                     </tr>
-                  ) : (
-                    productReport.details.map((d: any) => (
-                      <tr key={d.id}>
-                        <td className="text-muted-foreground">
-                          {formatDate(d.project?.date)}
-                        </td>
-                        <td className="font-medium">
-                          {d.project?.projectNo || "-"}
-                        </td>
-                        <td className="max-w-[120px] truncate">
-                          {d.quotationName}
-                        </td>
-                        <td>{d.quantity}</td>
-                        <td>
-                          {formatCurrency(Number(d.finalPrice) || 0)}
-                        </td>
-                        <td className="font-semibold">
-                          {formatCurrency(Number(d.totalWithGst) || 0)}
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {d.project?.salesPerson?.name || "-"}
+                  </thead>
+                  <tbody>
+                    {!productReport?.summary?.length ? (
+                      <tr>
+                        <td colSpan={5} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No data available"}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      productReport.summary.map((p: any, i: number) => (
+                        <tr key={i}>
+                          <td className="font-medium max-w-[150px] truncate">{p.quotationName}</td>
+                          <td className="hidden sm:table-cell font-mono text-xs text-muted-foreground">{p.quotationCode}</td>
+                          <td>
+                            <span className="bg-accent/10 text-accent px-2 py-0.5 rounded text-xs font-medium">{p.timesUsed}x</span>
+                          </td>
+                          <td>{p.totalQuantity}</td>
+                          <td className="font-semibold text-accent">{formatCurrency(Number(p.totalRevenue))}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="enterprise-card p-5 md:p-6">
+              <h3 className="font-semibold text-foreground mb-4">
+                Product Detail Records ({productReport?.details?.length || 0})
+              </h3>
+              <div className="table-container max-h-96">
+                <table className="enterprise-table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Quote No</th>
+                      <th>Product</th>
+                      <th>Qty</th>
+                      <th>Rate</th>
+                      <th>Amount</th>
+                      <th className="hidden sm:table-cell">Salesperson</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!productReport?.details?.length ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No data available"}
+                        </td>
+                      </tr>
+                    ) : (
+                      productReport.details.map((d: any) => (
+                        <tr key={d.id}>
+                          <td className="text-muted-foreground">{formatDate(d.project?.date)}</td>
+                          <td className="font-medium">{d.project?.projectNo || "-"}</td>
+                          <td className="max-w-[120px] truncate">{d.quotationName}</td>
+                          <td>{d.quantity}</td>
+                          <td>{formatCurrency(Number(d.finalPrice) || 0)}</td>
+                          <td className="font-semibold">{formatCurrency(Number(d.totalWithGst) || 0)}</td>
+                          <td className="hidden sm:table-cell text-muted-foreground">{d.project?.salesPerson?.name || "-"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </TabsContent>
 
         {/* ─────── 8. DISCOUNT APPROVAL ─────── */}
         <TabsContent value="discounts" className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-lg font-semibold">
-              Discount Approval Report
-              {loading && (
-                <Loader2 className="inline h-4 w-4 animate-spin ml-2" />
-              )}
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportDiscount}
-              disabled={!discountReport?.items?.length}
-              className="h-9 gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
-
-          <div className="enterprise-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex items-center h-9">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  From
-                </label>
+          {/* Filter Section */}
+          <div className="enterprise-card p-4 md:p-5 no-pdf">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date From</label>
                 <DatePickerInput
                   value={startDate}
                   onChange={handleStartDateChange}
@@ -2804,10 +2317,8 @@ const Reports: React.FC = () => {
                   disabled={filtersApplied}
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
-                  To
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Date To</label>
                 <DatePickerInput
                   value={endDate}
                   onChange={handleEndDateChange}
@@ -2817,172 +2328,115 @@ const Reports: React.FC = () => {
                   placeholder="End date"
                 />
               </div>
-              <Button
-                size="sm"
-                className="h-9 gap-1.5"
-                onClick={applyFilters}
-                disabled={filtersApplied}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search
-              </Button>
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => clearFilters()}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </Button>
-              )}
             </div>
 
-            {/* ★ Active filter badges */}
+            {renderActionRow(
+              exportDiscount,
+              "report-discounts",
+              "Discount_Report",
+              !!discountReport?.items?.length
+            )}
             {renderActiveFilterBadges()}
           </div>
 
-          {discountReport?.summary && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <MiniStatCard
-                value={discountReport.summary.totalDiscountedItems}
-                label="Discounted Items"
-              />
-              <MiniStatCard
-                value={formatCurrency(
-                  discountReport.summary.totalDiscountValue,
-                )}
-                label="Total Discount Value"
-              />
-              <MiniStatCard
-                value={discountReport.summary.totalOTPRequests}
-                label="OTP Requests"
-              />
-              <MiniStatCard
-                value={discountReport.summary.approvedOTPs}
-                label="Approved OTPs"
-                className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                valueClassName="text-green-700 dark:text-green-400"
-              />
-            </div>
-          )}
+          {/* Report Content */}
+          <div id="report-discounts" className="space-y-6">
+            <h2 className="text-lg font-semibold">
+              Discount Approval Report
+              {loading && <Loader2 className="inline h-4 w-4 animate-spin ml-2 no-pdf" />}
+            </h2>
 
-          {/* Discount Items Table */}
-          <div className="enterprise-card p-5 md:p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Discounted Items
-            </h3>
-            <div className="table-container max-h-96">
-              <table className="enterprise-table text-sm">
-                <thead>
-                  <tr>
-                    <th>Quote No</th>
-                    <th>Product</th>
-                    <th>Discount %</th>
-                    <th className="hidden sm:table-cell">Discount Amt</th>
-                    <th className="hidden md:table-cell">Customer</th>
-                    <th className="hidden lg:table-cell">Salesperson</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!discountReport?.items?.length ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        {loading
-                          ? "Loading…"
-                          : "No discounted items found"}
-                      </td>
-                    </tr>
-                  ) : (
-                    discountReport.items.map((item: any) => (
-                      <tr key={item.id}>
-                        <td className="font-medium">
-                          {item.project?.projectNo || "-"}
-                        </td>
-                        <td className="max-w-[120px] truncate">
-                          {item.quotationName}
-                        </td>
-                        <td className="text-destructive font-medium">
-                          {item.discountPercent}%
-                        </td>
-                        <td className="hidden sm:table-cell text-destructive">
-                          -
-                          {formatCurrency(
-                            Number(item.discountAmount) || 0,
-                          )}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {item.project?.customer?.name || "-"}
-                        </td>
-                        <td className="hidden lg:table-cell text-muted-foreground">
-                          {item.project?.salesPerson?.name || "-"}
-                        </td>
-                        <td className="text-muted-foreground">
-                          {formatDate(item.project?.date)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            {discountReport?.summary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <MiniStatCard value={discountReport.summary.totalDiscountedItems} label="Discounted Items" />
+                <MiniStatCard value={formatCurrency(discountReport.summary.totalDiscountValue)} label="Total Discount Value" />
+                <MiniStatCard value={discountReport.summary.totalOTPRequests} label="OTP Requests" />
+                <MiniStatCard
+                  value={discountReport.summary.approvedOTPs}
+                  label="Approved OTPs"
+                  className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  valueClassName="text-green-700 dark:text-green-400"
+                />
+              </div>
+            )}
 
-          {/* OTP Approval Logs */}
-          {(discountReport?.otpLogs?.length || 0) > 0 && (
             <div className="enterprise-card p-5 md:p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                OTP Approval Logs
-              </h3>
-              <div className="table-container max-h-72">
+              <h3 className="font-semibold text-foreground mb-4">Discounted Items</h3>
+              <div className="table-container max-h-96">
                 <table className="enterprise-table text-sm">
                   <thead>
                     <tr>
+                      <th>Quote No</th>
+                      <th>Product</th>
+                      <th>Discount %</th>
+                      <th className="hidden sm:table-cell">Discount Amt</th>
+                      <th className="hidden md:table-cell">Customer</th>
+                      <th className="hidden lg:table-cell">Salesperson</th>
                       <th>Date</th>
-                      <th>Email</th>
-                      <th>Status</th>
-                      <th className="hidden sm:table-cell">Requested By</th>
-                      <th className="hidden md:table-cell">Approved By</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {discountReport!.otpLogs.map((log: any) => (
-                      <tr key={log.id}>
-                        <td className="text-muted-foreground">
-                          {formatDate(log.createdAt)}
-                        </td>
-                        <td>{log.email}</td>
-                        <td>
-                          <span
-                            className={getStatusBadgeClass(
-                              log.status === "approved"
-                                ? "approved"
-                                : log.status === "pending"
-                                  ? "pending"
-                                  : "expired",
-                            )}
-                          >
-                            {log.status}
-                          </span>
-                        </td>
-                        <td className="hidden sm:table-cell text-muted-foreground">
-                          {log.requestedByName || "-"}
-                        </td>
-                        <td className="hidden md:table-cell text-muted-foreground">
-                          {log.approvedByName || "-"}
+                    {!discountReport?.items?.length ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted-foreground py-8">
+                          {loading ? "Loading…" : "No discounted items found"}
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      discountReport.items.map((item: any) => (
+                        <tr key={item.id}>
+                          <td className="font-medium">{item.project?.projectNo || "-"}</td>
+                          <td className="max-w-[120px] truncate">{item.quotationName}</td>
+                          <td className="text-destructive font-medium">{item.discountPercent}%</td>
+                          <td className="hidden sm:table-cell text-destructive">-{formatCurrency(Number(item.discountAmount) || 0)}</td>
+                          <td className="hidden md:table-cell text-muted-foreground">{item.project?.customer?.name || "-"}</td>
+                          <td className="hidden lg:table-cell text-muted-foreground">{item.project?.salesPerson?.name || "-"}</td>
+                          <td className="text-muted-foreground">{formatDate(item.project?.date)}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
+
+            {(discountReport?.otpLogs?.length || 0) > 0 && (
+              <div className="enterprise-card p-5 md:p-6">
+                <h3 className="font-semibold text-foreground mb-4">OTP Approval Logs</h3>
+                <div className="table-container max-h-72">
+                  <table className="enterprise-table text-sm">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th className="hidden sm:table-cell">Requested By</th>
+                        <th className="hidden md:table-cell">Approved By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {discountReport!.otpLogs.map((log: any) => (
+                        <tr key={log.id}>
+                          <td className="text-muted-foreground">{formatDate(log.createdAt)}</td>
+                          <td>{log.email}</td>
+                          <td>
+                            <span className={getStatusBadgeClass(
+                              log.status === "approved" ? "approved" :
+                                log.status === "pending" ? "pending" : "expired"
+                            )}>
+                              {log.status}
+                            </span>
+                          </td>
+                          <td className="hidden sm:table-cell text-muted-foreground">{log.requestedByName || "-"}</td>
+                          <td className="hidden md:table-cell text-muted-foreground">{log.approvedByName || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

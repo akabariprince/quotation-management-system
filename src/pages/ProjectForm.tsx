@@ -106,13 +106,7 @@ const generateQuotationUniqueNumber = (
   projectNo: string,
   itemIndex: number,
 ): string => {
-  const prefix =
-    projectNo
-      .replace(/[^A-Z0-9]/gi, "")
-      .slice(0, 4)
-      .toUpperCase() || "PJ";
-  const num = String(itemIndex + 1).padStart(4, "0");
-  return `${prefix}Q${num}`;
+  return `${projectNo}-${itemIndex + 1}`;
 };
 
 const states = [
@@ -1141,6 +1135,7 @@ const ProjectForm: React.FC = () => {
 
   /* ── Build Payload ── */
   const buildPayload = (status: "draft" | "sent") => ({
+    projectNo: projectNo,
     date: new Date().toISOString().split("T")[0],
     customerId,
     projectName: projectName || null,

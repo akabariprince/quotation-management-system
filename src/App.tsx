@@ -20,6 +20,7 @@ import UserManagement from "@/pages/UserManagement";
 import ApprovalManagement from "@/pages/ApprovalManagement";
 import EmailLogs from "@/pages/EmailLogs";
 import NotFound from "@/pages/NotFound";
+import Settings from "@/pages/Settings";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -255,6 +256,16 @@ const AppRoutes: React.FC = () => {
           element={
             <PermissionRoute permission="email_log:view">
               <EmailLogs />
+            </PermissionRoute>
+          }
+        />
+
+        {/* Settings */}
+        <Route
+          path="settings"
+          element={
+            <PermissionRoute permission="setting:manage">
+              <Settings />
             </PermissionRoute>
           }
         />

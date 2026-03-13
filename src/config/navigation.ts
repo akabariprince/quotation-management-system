@@ -8,6 +8,7 @@ import {
   UserCog,
   Mail,
   BarChart3,
+  Settings,
   type LucideIcon,
   Plus,
 } from 'lucide-react';
@@ -84,6 +85,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Plus,
     permission: 'report:view',
     description: 'MIS & business reports',
+  },
+  {
+    path: '/settings',
+    label: 'Settings',
+    icon: Plus,
+    permission: 'setting:manage', // or anyPermission: ['admin'] or just rely on 'admin' role having all
+    description: 'Manage application settings',
   },
 ];
 
