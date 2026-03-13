@@ -22,7 +22,7 @@ interface QuotationSearchSelectProps {
 const QuotationSearchSelect: React.FC<QuotationSearchSelectProps> = ({
   value,
   onChange,
-  placeholder = "Search quotation by name or part code...",
+  placeholder = "Search quotation by name or Product Code...",
   className = "",
   getImageUrl,
   formatCurrency,

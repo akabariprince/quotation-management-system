@@ -324,6 +324,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   items,
 }) => {
   const api = useApi();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [toEmail, setToEmail] = useState(customer?.email || "");
   const [ccEmail, setCcEmail] = useState("");
@@ -365,6 +366,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         subject: subject.trim(),
         message: message.trim(),
         type: "sent",
+        userId: user?.id,
       });
       if (res.success) {
         setSent(true);
@@ -1727,8 +1729,8 @@ const ProjectForm: React.FC = () => {
                         key={item.id}
                         onClick={() => scrollToItem(item.id)}
                         className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${highlightedItemId === item.id
-                            ? "bg-primary/10 border-l-2 border-l-primary"
-                            : "hover:bg-muted/60"
+                          ? "bg-primary/10 border-l-2 border-l-primary"
+                          : "hover:bg-muted/60"
                           }`}
                       >
                         <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">

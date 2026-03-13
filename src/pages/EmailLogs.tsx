@@ -75,7 +75,7 @@ const emailTypeConfig: Record<string, { label: string; icon: React.ReactNode; co
   welcome: { label: 'Welcome', icon: <Mail className="h-4 w-4" />, color: 'text-emerald-600' },
   approved_notification: { label: 'Approved', icon: <CheckCircle className="h-4 w-4" />, color: 'text-success' },
   rejected_notification: { label: 'Rejected', icon: <XCircle className="h-4 w-4" />, color: 'text-destructive' },
-  otp : { label: 'Master OTP', icon: <Shield className="h-4 w-4" />, color: 'text-accent' }
+  otp: { label: 'Master OTP', icon: <Shield className="h-4 w-4" />, color: 'text-accent' }
 };
 
 const getTypeInfo = (type: string) =>

@@ -528,7 +528,7 @@ const Quotations: React.FC = () => {
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or part code..."
+                placeholder="Search by name or Product Code..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10 h-11"

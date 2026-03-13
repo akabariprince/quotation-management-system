@@ -340,7 +340,7 @@ const ApprovalManagement: React.FC = () => {
     item: OTPLog | null;
   }>({ open: false, item: null });
 
-  // Confirm dialog for admin direct approval
+  // Confirm dialog for admin approval
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -442,13 +442,13 @@ const ApprovalManagement: React.FC = () => {
 
   // ─── Actions ────────────────────────────────────────────────────────
 
-  // Admin direct approve (no OTP)
+  // Admin approve (no OTP)
   const handleDirectApprove = (log: OTPLog) => {
     const entityLabel = getEntityDisplayName(log);
 
     setConfirmDialog({
       open: true,
-      title: "Direct Approval",
+      title: "Approval",
       description: `As admin, you can directly approve "${entityLabel}" without OTP verification. This will immediately activate the item. Do you want to proceed?`,
       variant: "info",
       loading: false,
@@ -478,7 +478,7 @@ const ApprovalManagement: React.FC = () => {
     });
   };
 
-  // Batch direct approve all pending (admin only)
+  // Batch approve all pending (admin only)
   const handleBatchDirectApprove = () => {
     const nonExpiredLogs = pendingLogs.filter(
       (log) => !isExpired(log.expiresAt),
@@ -711,12 +711,6 @@ const ApprovalManagement: React.FC = () => {
           <h1 className="page-title">Approval Management</h1>
           <p className="text-muted-foreground mt-1">
             Review and approve pending OTP requests
-            {isAdmin && (
-              <span className="ml-2 inline-flex items-center gap-1 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-xs font-medium">
-                <ShieldCheck className="h-3 w-3" />
-                Admin — Direct Approval
-              </span>
-            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -896,9 +890,7 @@ const ApprovalManagement: React.FC = () => {
                                         onClick={() => handleDirectApprove(log)}
                                       >
                                         <ShieldCheck className="h-3.5 w-3.5" />
-                                        <span className="hidden xl:inline">
-                                          Direct
-                                        </span>{" "}
+
                                         Approve
                                       </Button>
                                     ) : (

@@ -52,7 +52,7 @@ const PAGE_LIMIT = 10;
 const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
   <>
     {Array.from({ length: 5 }).map((_, rowIdx) => (
-      <tr key={rowIdx} className="animate-pulse">
+      <tr key={rowIdx}>
         {Array.from({ length: columns }).map((_, colIdx) => (
           <td key={colIdx}>
             <div
@@ -69,7 +69,7 @@ const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
 const QuotationTableSkeleton: React.FC = () => (
   <>
     {Array.from({ length: 5 }).map((_, i) => (
-      <tr key={i} className="animate-pulse">
+      <tr key={i}>
         <td>
           <div className="w-10 h-10 bg-muted rounded" />
         </td>
@@ -454,7 +454,7 @@ const Masters: React.FC = () => {
   );
   const activeVariants = variants.filter((v) => v.status === "active");
 
-  // Auto-generate part code
+  // Auto-generate Product Code
   useEffect(() => {
     const { categoryId, categoryNoId, quotationTypeId, variantId } =
       quotationForm;
@@ -685,7 +685,7 @@ const Masters: React.FC = () => {
       return;
     }
     if (!quotationForm.partCode.trim()) {
-      toast.error("Please select all 4 fields to generate part code");
+      toast.error("Please select all 4 fields to generate Product Code");
       return;
     }
     if (!quotationForm.categoryId) {
@@ -1462,16 +1462,6 @@ const Masters: React.FC = () => {
                 />
               </div>
 
-              {isAdmin && (
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200/50 rounded-lg p-3 flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  <p className="text-xs text-green-700 dark:text-green-400">
-                    As admin, this item will be created and activated
-                    immediately without OTP.
-                  </p>
-                </div>
-              )}
-
               <div className="flex gap-3 pt-4">
                 <Button
                   variant="outline"
@@ -1638,16 +1628,6 @@ const Masters: React.FC = () => {
             </div>
 
             <div className="space-y-6">
-              {isAdmin && !editingQuotation && (
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200/50 rounded-lg p-3 flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  <p className="text-xs text-green-700 dark:text-green-400">
-                    As admin, this product will be created and activated
-                    immediately without OTP verification.
-                  </p>
-                </div>
-              )}
-
               {/* Basic Info */}
               <div className="space-y-4">
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
@@ -1672,7 +1652,7 @@ const Masters: React.FC = () => {
               {/* Classification */}
               <div className="space-y-4">
                 <h3 className="font-medium text-foreground border-b border-border pb-2">
-                  Classification & Part Code
+                  Classification & Product Code
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1781,11 +1761,11 @@ const Masters: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Part Code (auto-generated)</Label>
+                  <Label>Product Code (auto-generated)</Label>
                   <Input
                     value={quotationForm.partCode}
                     readOnly
-                    placeholder="Select all 4 fields above to generate part code"
+                    placeholder="Select all 4 fields above to generate Product Code"
                     className="h-11 font-mono bg-muted/50"
                   />
                 </div>
