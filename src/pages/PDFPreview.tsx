@@ -301,9 +301,17 @@ const PDFPreview: React.FC = () => {
           <span style={{ color: "#666", minWidth: "95px" }}>Client name</span>
           <span style={{ fontWeight: 600 }}>{customer.name}</span>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", marginBottom: "5px" }}>
           <span style={{ color: "#666", minWidth: "95px" }}>Contact No</span>
           <span>{customer.mobile}</span>
+        </div>
+        <div style={{ display: "flex", gap: "8px", marginBottom: "5px" }}>
+          <span style={{ color: "#666", minWidth: "95px" }}>Project Name</span>
+          <span style={{ fontWeight: 600 }}>{project.projectName || "—"}</span>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <span style={{ color: "#666", minWidth: "95px" }}>Project No</span>
+          <span style={{ fontWeight: 600 }}>{project.projectNo || "—"}</span>
         </div>
       </div>
       <div
@@ -1152,23 +1160,18 @@ const PDFPreview: React.FC = () => {
                           </tr>
 
                           <tr>
-                            <td
-                              style={{
-                                padding: "7px 13px",
-                                textAlign: "left",
-                              }}
-                            >
-                              Quotation
+                            <td style={{ padding: "7px 13px", textAlign: "left" }}>
+                              Quotation No
                             </td>
                             <td
                               style={{
                                 padding: "7px 13px",
                                 textAlign: "right",
                                 fontWeight: 700,
-                                fontSize: "16px",
+                                fontSize: "14px",
                               }}
                             >
-                              {index + 1}
+                              {item.projectQuotationNo || index + 1}
                             </td>
                           </tr>
                         </tbody>

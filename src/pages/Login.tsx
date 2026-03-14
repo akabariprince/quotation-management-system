@@ -115,9 +115,15 @@ const Login: React.FC = () => {
                       <Loader2 className="h-4 w-4 animate-spin" /> Loading...
                     </span>
                   ) : selectedUser ? (
-                    <span className="text-sm text-gray-800 font-medium">
-                      {selectedUser.name}
-                    </span>
+                    <><div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-800 font-medium">
+                        {selectedUser.name}
+                      </span>
+
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">
+                        {selectedUser.role?.displayName}
+                      </span>
+                    </div></>
                   ) : (
                     <span className="text-sm text-gray-400">Select User</span>
                   )}
@@ -152,7 +158,13 @@ const Login: React.FC = () => {
                               "bg-gray-100 font-medium"
                             )}
                           >
-                            {u.name}
+                            <div className="flex items-center justify-between">
+                              <span>{u.name}</span>
+
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-orange-100 text-orange-600 font-medium">
+                                {u.role?.displayName}
+                              </span>
+                            </div>
                           </button>
                         ))
                       )}
