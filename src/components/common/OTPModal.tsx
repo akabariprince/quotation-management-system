@@ -366,9 +366,9 @@ const OTPModal: React.FC<OTPModalProps> = ({
             {/* Sent info */}
             <div className="bg-muted/50 rounded-lg p-4 text-sm text-center">
               <p className="text-muted-foreground">
-                OTP sent to{" "}
+                OTP has been sent to admin for verification.<br/>
                 <span className="font-semibold text-foreground">
-                  {sentToEmail || "admin"}
+                  Please contact your administrator.
                 </span>
               </p>
             </div>
@@ -386,10 +386,10 @@ const OTPModal: React.FC<OTPModalProps> = ({
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   className={`otp-input transition-all ${error
-                      ? "border-destructive ring-destructive/20"
-                      : digit
-                        ? "border-accent ring-accent/20"
-                        : ""
+                    ? "border-destructive ring-destructive/20"
+                    : digit
+                      ? "border-accent ring-accent/20"
+                      : ""
                     }`}
                   disabled={verifying}
                   autoComplete="one-time-code"

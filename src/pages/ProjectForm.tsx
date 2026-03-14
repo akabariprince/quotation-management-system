@@ -320,8 +320,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   const api = useApi();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [toEmail, setToEmail] = useState(customer?.email || "");
-  const [ccEmail, setCcEmail] = useState("");
+  const [sendToCustomer, setSendToCustomer] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -329,8 +328,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
 
   useEffect(() => {
     if (isOpen && project) {
-      setToEmail(customer?.email || "");
-      setCcEmail("");
+      setSendToCustomer(false);
       setSubject(
         `Quotation ${project.projectNo || project.quotationNo || ""} - Ecstatics Spaces India`,
       );
@@ -343,20 +341,14 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   }, [isOpen, project]);
 
   const handleSendEmail = async () => {
-    if (!toEmail.trim()) {
-      toast.error("Please enter a recipient email address");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(toEmail.trim())) {
-      toast.error("Please enter a valid email address");
+    if (sendToCustomer && !customer?.email) {
+      toast.error("Customer does not have an email address");
       return;
     }
     setSending(true);
     try {
       const res = await api.post(`/projects/${project.id}/send-email`, {
-        to: toEmail.trim(),
-        cc: ccEmail.trim() || undefined,
+        sendToCustomer,
         subject: subject.trim(),
         message: message.trim(),
         type: "sent",
@@ -364,7 +356,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
       });
       if (res.success) {
         setSent(true);
-        toast.success(`Email sent successfully to ${toEmail}`);
+        toast.success("Email sent successfully!");
       } else toast.error(res.message || "Failed to send email");
     } catch (err: any) {
       toast.error(err?.message || "Failed to send email.");
@@ -417,10 +409,15 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
             <p className="text-lg font-semibold text-success mb-2">
               Email Sent Successfully!
             </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              The project quotation has been sent to <strong>{toEmail}</strong>
+            <p className="text-sm text-muted-foreground mb-1">
+              Quotation sent to <strong>Admin(s)</strong>
             </p>
-            <div className="flex gap-3 justify-center">
+            {sendToCustomer && customer?.email && (
+              <p className="text-sm text-muted-foreground mb-1">
+                and to customer <strong>{customer.email}</strong>
+              </p>
+            )}
+            <div className="flex gap-3 justify-center mt-6">
               <Button
                 variant="outline"
                 onClick={() => navigate("/projects")}
@@ -438,28 +435,66 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">To *</Label>
-              <Input
-                type="email"
-                value={toEmail}
-                onChange={(e) => setToEmail(e.target.value)}
-                placeholder="customer@email.com"
-                className="h-11"
-                disabled={sending}
-              />
+            {/* Admin notification info */}
+            <div className="bg-muted/60 rounded-lg p-4 flex items-start gap-3">
+              <div className="p-1.5 bg-accent/10 rounded mt-0.5">
+                <Mail className="h-4 w-4 text-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Admin Notification
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  This email will automatically be sent to all admin users.
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">CC (optional)</Label>
-              <Input
-                type="email"
-                value={ccEmail}
-                onChange={(e) => setCcEmail(e.target.value)}
-                placeholder="cc@email.com"
-                className="h-11"
-                disabled={sending}
-              />
+
+            {/* Send to Customer toggle */}
+            <div
+              className={`rounded-lg border p-4 transition-colors ${
+                sendToCustomer
+                  ? "border-accent bg-accent/5"
+                  : "border-border bg-card"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="sendToCustomer"
+                    checked={sendToCustomer}
+                    onChange={(e) => setSendToCustomer(e.target.checked)}
+                    disabled={sending || !customer?.email}
+                    className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                  />
+                  <label
+                    htmlFor="sendToCustomer"
+                    className="cursor-pointer select-none"
+                  >
+                    <p className="text-sm font-semibold text-foreground">
+                      Also send to Customer
+                    </p>
+                    {customer?.email ? (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {customer.email}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-destructive mt-0.5">
+                        No email address on file for this customer
+                      </p>
+                    )}
+                  </label>
+                </div>
+                {sendToCustomer && customer?.email && (
+                  <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded">
+                    Will receive
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Subject */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Subject</Label>
               <Input
@@ -469,6 +504,8 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
+
+            {/* Project summary */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Project</span>
@@ -493,6 +530,8 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Message */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Message</Label>
               <Textarea
@@ -502,6 +541,8 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
+
+            {/* Actions */}
             <div className="flex gap-3 pt-2 border-t border-border">
               <Button
                 variant="outline"
@@ -522,7 +563,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               <Button
                 onClick={handleSendEmail}
                 className="flex-1 btn-accent gap-2 h-11"
-                disabled={sending || !toEmail.trim()}
+                disabled={sending}
               >
                 {sending ? (
                   <>
