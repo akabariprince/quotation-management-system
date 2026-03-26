@@ -1014,7 +1014,30 @@ const PDFPreview: React.FC = () => {
                               </td>
                             </tr>
                           )}
-
+                          {item.specialNote && (
+                            <tr>
+                              <td
+                                style={{
+                                  padding: "5px 13px",
+                                  borderBottom: borderThin,
+                                  color: "#555",
+                                  verticalAlign: "top",
+                                }}
+                              >
+                                Special Note
+                              </td>
+                              <td
+                                style={{
+                                  padding: "5px 13px",
+                                  borderBottom: borderThin,
+                                  color: "#444",
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                : {item.specialNote}
+                              </td>
+                            </tr>
+                          )}
                           <tr>
                             <td
                               colSpan={2}
