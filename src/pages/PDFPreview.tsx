@@ -824,13 +824,12 @@ const PDFPreview: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
                   {/* Large Image */}
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      width: "100%",
+                      aspectRatio: "16/9",
+                      overflow: "hidden",
                       borderBottom: borderThin,
                     }}
                   >
@@ -839,10 +838,9 @@ const PDFPreview: React.FC = () => {
                         src={getImageUrl(item.images[0])}
                         alt={item.quotationName}
                         style={{
-                          maxHeight: "400px",
-                          width: "auto",
-                          height: "auto",
-                          objectFit: "contain",
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
                           display: "block",
                         }}
                         crossOrigin="anonymous"
@@ -853,7 +851,11 @@ const PDFPreview: React.FC = () => {
                           color: "#999",
                           fontSize: "17px",
                           textAlign: "center",
-                          padding: "40px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "100%",
+                          height: "100%",
                         }}
                       >
                         No Image Available
