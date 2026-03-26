@@ -25,7 +25,7 @@ const AdminLayout: React.FC = () => {
       {/* ═══ Top Header — always visible on every page ═══ */}
       <header className="relative flex items-center px-6 py-6 flex-shrink-0 border-b border-gray-100">
         {/* Center — Logo (absolutely centered) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-start pointer-events-none ml-3">
           <NavLink to="/dashboard" className="pointer-events-auto">
             <img
               src="/logo.png"
@@ -101,7 +101,7 @@ const AdminLayout: React.FC = () => {
                         style={{ color: "#d9d9d9" }}
                       />
                       <span
-                        className="text-xs font-normal"
+                        className="text-sm font-semibold"
                         style={{ color: isActive ? "#fff" : "#d9d9d9" }}
                       >
                         {item.label}

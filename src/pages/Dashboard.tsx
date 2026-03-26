@@ -71,8 +71,8 @@ const Dashboard: React.FC = () => {
                       style={{ color: "#d9d9d9" }}
                     />
                     <span
-                      className="text-xs font-normal"
-                      style={{ color: "#d9d9d9" }}
+                      className="text-sm font-semibold"
+                      style={{ color: "white" }}
                     >
                       {card.label}
                     </span>
