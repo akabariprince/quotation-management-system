@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -12,6 +12,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ZoomIn,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -162,8 +163,8 @@ const ImageCarousel: React.FC<{
                 key={idx}
                 onClick={() => setActiveIndex(idx)}
                 className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${activeIndex === idx
-                    ? "border-primary ring-2 ring-primary/20 scale-105"
-                    : "border-transparent hover:border-muted-foreground/30 opacity-70 hover:opacity-100"
+                  ? "border-primary ring-2 ring-primary/20 scale-105"
+                  : "border-transparent hover:border-muted-foreground/30 opacity-70 hover:opacity-100"
                   }`}
               >
                 <img
@@ -191,8 +192,8 @@ const ImageCarousel: React.FC<{
               key={idx}
               onClick={() => setActiveIndex(idx)}
               className={`rounded-full transition-all duration-200 ${activeIndex === idx
-                  ? "w-6 h-2 bg-primary"
-                  : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                ? "w-6 h-2 bg-primary"
+                : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
                 }`}
             />
           ))}
@@ -263,8 +264,8 @@ const ImageCarousel: React.FC<{
                     setActiveIndex(idx);
                   }}
                   className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${activeIndex === idx
-                      ? "border-white scale-110"
-                      : "border-transparent opacity-50 hover:opacity-80"
+                    ? "border-white scale-110"
+                    : "border-transparent opacity-50 hover:opacity-80"
                     }`}
                 >
                   <img
@@ -510,15 +511,24 @@ const Quotations: React.FC = () => {
             Manage your product catalog
           </p>
         </div>
-        {hasPermission("master:manage") && (
-          <Button
-            className="btn-accent gap-2"
-            onClick={() => navigate("/masters?tab=quotation&from=product")}
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Product</span>
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2" size="sm">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+            </Button>
+          </Link>
+          {hasPermission("master:manage") && (
+            <Button
+              className="btn-accent gap-2" size="sm"
+              onClick={() => navigate("/masters?tab=quotation&from=product")}
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Product</span>
+            </Button>
+          )}
+        </div>
+
       </div>
 
       {/* Search & Filters */}
@@ -642,8 +652,8 @@ const Quotations: React.FC = () => {
 
                   <span
                     className={`capitalize absolute top-3 right-3 ${quotation.status === "active"
-                        ? "badge-success"
-                        : "badge-warning"
+                      ? "badge-success"
+                      : "badge-warning"
                       }`}
                   >
                     {quotation.status}
@@ -757,8 +767,8 @@ const Quotations: React.FC = () => {
                       key={page}
                       onClick={() => setCurrentPage(page as number)}
                       className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${currentPage === page
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "hover:bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "hover:bg-muted text-muted-foreground"
                         }`}
                     >
                       {page}
@@ -812,8 +822,8 @@ const Quotations: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span
                   className={`capitalize text-xs ${selectedQuotation.status === "active"
-                      ? "badge-success"
-                      : "badge-warning"
+                    ? "badge-success"
+                    : "badge-warning"
                     }`}
                 >
                   {selectedQuotation.status}

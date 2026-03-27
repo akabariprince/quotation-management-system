@@ -12,6 +12,7 @@ import {
   Users,
   KeyRound,
   Percent,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { useRoles, Role, PermissionsMeta } from "@/hooks/useRoles";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import TableSkeleton from "@/components/common/TableSkeleton";
 import Pagination from "@/components/common/Pagination";
+import { Link } from "react-router-dom";
 
 const PAGE_LIMIT = 10;
 
@@ -512,6 +514,12 @@ const UserManagement: React.FC = () => {
             Manage users, roles, and permissions dynamically
           </p>
         </div>
+        <Link to="/dashboard">
+          <Button variant="outline" className="gap-2" size="sm">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to Dashboard</span>
+          </Button>
+        </Link>
       </div>
 
       <Tabs
@@ -785,8 +793,8 @@ const UserManagement: React.FC = () => {
                     </div>
                     <div
                       className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${r.requireOtpForMaster
-                          ? "bg-blue-100/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
-                          : "bg-green-100/50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
+                        ? "bg-blue-100/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400"
+                        : "bg-green-100/50 dark:bg-green-950/20 text-green-700 dark:text-green-400"
                         }`}
                     >
                       <KeyRound className="h-3 w-3" />

@@ -102,7 +102,7 @@ const AdminLayout: React.FC = () => {
                       />
                       <span
                         className="text-sm font-semibold"
-                        style={{ color: isActive ? "#fff" : "#d9d9d9" }}
+                        style={{ color: isActive ? "#fff" : "#d9d9d9" , textTransform: "uppercase" }}
                       >
                         {item.label}
                       </span>

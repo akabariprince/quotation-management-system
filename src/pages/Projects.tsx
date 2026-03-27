@@ -198,14 +198,14 @@ const Projects: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <Link to="/dashboard">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" size="sm">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Dashboard</span>
             </Button>
           </Link>
           {hasPermission("project:create") && (
             <Link to="/projects/new">
-              <Button className="btn-accent gap-2">
+              <Button className="btn-accent gap-2" size="sm">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Add Project</span>
               </Button>

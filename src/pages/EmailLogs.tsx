@@ -15,6 +15,7 @@ import {
   Calendar,
   AlertCircle,
   Loader2,
+  ArrowLeft,
 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -259,6 +261,12 @@ const EmailLogs: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2" size="sm">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" className="gap-2" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4" />
             <span className="hidden sm:inline">Refresh</span>

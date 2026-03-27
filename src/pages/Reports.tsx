@@ -38,6 +38,7 @@ import {
   Search,
   X,
   Calendar as CalendarIcon,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,6 +65,7 @@ import {
   generateCSV,
 } from "@/utils/reportHelpers";
 import { downloadA4PDF } from "@/utils/pdfExport";
+import { Link } from "react-router-dom";
 
 /* ─── Utility ─── */
 const cn = (...classes: (string | boolean | undefined | null)[]) =>
@@ -1217,19 +1219,26 @@ const Reports: React.FC = () => {
             Comprehensive analytics and business intelligence
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            fetchMasterReport();
-            toast.success("Reports refreshed");
-          }}
-          disabled={loading}
-          className="gap-2 h-9"
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2" size="sm">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchMasterReport();
+              toast.success("Reports refreshed");
+            }}
+            disabled={loading}
+            className="gap-2 h-9"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            Refresh
+          </Button></div>
       </div>
 
       {/* ── Error Banner ── */}

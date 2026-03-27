@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Send,
   FileText,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApi } from "@/hooks/useApi";
@@ -31,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { Link } from "react-router-dom";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -714,7 +716,13 @@ const ApprovalManagement: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Batch approve button for admin */}
+           <div className="flex gap-2">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2" size="sm">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+            </Button>
+          </Link>
           {isAdmin &&
             hasPermission("approval:manage") &&
             nonExpiredPendingCount > 0 && (
@@ -730,15 +738,8 @@ const ApprovalManagement: React.FC = () => {
                 </span>
               </Button>
             )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handleRefresh}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+         
+        </div>
         </div>
       </div>
 
@@ -768,7 +769,7 @@ const ApprovalManagement: React.FC = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="pending" className="space-y-6 mt-4">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto display flex items-center gap-4 mb-4">
           <TabsList>
             <TabsTrigger value="pending">
               Pending Queue
@@ -780,6 +781,15 @@ const ApprovalManagement: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="all">All OTP Logs</TabsTrigger>
           </TabsList>
+           <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 ml-2"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
         </div>
 
         {/* ─── Pending Tab ─────────────────────────────────────────── */}

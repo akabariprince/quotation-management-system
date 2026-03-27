@@ -4,8 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getVisibleNavItems } from "@/config/navigation";
 
 const CARD_W = 180;
-const CARD_H = 140;
-const GAP = 12;
+const CARD_H = 146;
+const GAP = 10;
 
 const Dashboard: React.FC = () => {
   const { hasPermission, hasAnyPermission } = useAuth();
@@ -21,7 +21,8 @@ const Dashboard: React.FC = () => {
     const calc = () => {
       if (!containerRef.current) return;
       const h = containerRef.current.clientHeight;
-      const fit = Math.max(1, Math.floor((h + GAP) / (CARD_H + GAP)));
+      const available = h - GAP; // top padding only
+      const fit = Math.max(1, Math.floor((available + GAP) / (CARD_H + GAP)));
       setPerCol(fit);
     };
     calc();
@@ -38,11 +39,17 @@ const Dashboard: React.FC = () => {
     <div className="flex flex-col h-full">
       {/* ═══ Main ═══ */}
       <div className="flex flex-1 min-h-0">
-        {/* ─── Cards — left ─── */}
+        {/* ─── Cards section ─── */}
         <div
           ref={containerRef}
-          className="flex gap-3 px-3  flex-shrink-0"
-          style={{ alignItems: "flex-start" }}
+          className="flex flex-shrink-0"
+          style={{
+            gap: `${GAP}px`,
+            paddingLeft: `${GAP}px`,
+            paddingTop: 0,
+            paddingBottom: 0,
+            paddingRight: 0,
+          }}
         >
           {cards.length === 0 ? (
             <div className="flex items-center justify-center h-full px-12">
@@ -59,7 +66,10 @@ const Dashboard: React.FC = () => {
                   <button
                     key={card.path}
                     onClick={() => navigate(card.path)}
-                    className="group flex flex-col justify-between p-4 cursor-pointer transition-all duration-200 border border-transparent hover:border-white/30 hover:shadow-lg text-left flex-shrink-0"
+                    className="group flex flex-col justify-between p-4 cursor-pointer
+                               transition-all duration-200
+                               border border-transparent hover:border-white/30
+                               hover:shadow-lg text-left flex-shrink-0"
                     style={{
                       background: "#e06b0a",
                       width: `${CARD_W}px`,
@@ -72,20 +82,32 @@ const Dashboard: React.FC = () => {
                     />
                     <span
                       className="text-sm font-semibold"
-                      style={{ color: "white" }}
+                      style={{ color: "white" , textTransform: "uppercase" }}
                     >
                       {card.label}
                     </span>
                   </button>
                 ))}
+
+                {/* ▼ Orange fill for incomplete column ▼ */}
+                {col.length < perCol && (
+                  <div
+                    className="flex-1"
+                    style={{
+                      background: "#e06b0a",
+                      width: `${CARD_W}px`,
+                      minHeight: `${GAP}px`,
+                    }}
+                  />
+                )}
               </div>
             ))
           )}
         </div>
 
-        {/* ─── Right fill — orange background ─── */}
+        {/* ─── Right fill — seamless orange ─── */}
         <div
-          className="flex-1 min-w-0 mr-3"
+          className={`flex-1 min-w-0 mx-[10px]`}
           style={{ background: "#e06b0a" }}
         />
       </div>

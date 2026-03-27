@@ -1,6 +1,6 @@
 // src/pages/Masters.tsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus,
   Trash2,
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Filter,
   ShieldCheck,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -1340,15 +1341,23 @@ const Masters: React.FC = () => {
             Manage categories, product types, variants, and products
           </p>
         </div>
-        {/* ✅ CHANGED — uses canCreate */}
-        {canCreate && (
-          <Button className="btn-accent gap-2" onClick={handleAddClick}>
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              Add {getTabLabel(activeTab)}
-            </span>
-          </Button>
-        )}
+
+        <div className="flex gap-2">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2" size="sm">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+            </Button>
+          </Link>
+          {canCreate && (
+            <Button className="btn-accent gap-2" size="sm" onClick={handleAddClick}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                Add {getTabLabel(activeTab)}
+              </span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

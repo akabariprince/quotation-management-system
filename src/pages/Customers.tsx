@@ -165,7 +165,7 @@ const Customers: React.FC = () => {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="page-header flex items-center justify-between">
-        <div className="flex gap-2">
+        <div>
           <h1 className="page-title">Customers</h1>
           <p className="text-muted-foreground mt-1">
             Manage your customer database
@@ -173,14 +173,14 @@ const Customers: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <Link to="/dashboard">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" size="sm">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Dashboard</span>
             </Button>
           </Link>
           {hasPermission("customer:create") && (
             <Link to="/customers/new">
-              <Button className="btn-accent gap-2">
+              <Button className="btn-accent gap-2" size="sm">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Add Customer</span>
               </Button>

@@ -121,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <item.icon className={cn('flex-shrink-0', isCollapsed ? 'h-6 w-6' : 'h-5 w-5')} />
               {!isCollapsed && (
-                <span className="text-sm">{item.label}</span>
+                <span className="text-sm ">{item.label}</span>
               )}
             </NavLink>
           ))}
