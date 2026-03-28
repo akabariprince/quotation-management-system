@@ -16,30 +16,61 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const FormSkeleton = () => (
-  <div className="space-y-6 animate-pulse">
-    <div className="page-header flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="w-9 h-9 bg-muted rounded-md" />
+  <div className="space-y-3 animate-pulse">
+    <div className="flex items-center justify-between py-1">
+      <div className="flex items-center gap-2">
+        <Skeleton className="w-7 h-7 rounded" />
         <div>
-          <div className="h-6 bg-muted rounded w-40 mb-2" />
-          <div className="h-4 bg-muted rounded w-52" />
+          <Skeleton className="h-4 w-32 mb-1" />
+          <Skeleton className="h-3 w-44" />
         </div>
       </div>
-      <div className="h-10 bg-muted rounded w-36" />
+      <div className="flex gap-1">
+        <Skeleton className="h-7 w-28 rounded" />
+        <Skeleton className="h-7 w-32 rounded" />
+      </div>
     </div>
-    <div className="max-w-3xl">
-      <div className="form-section">
-        <div className="h-5 bg-muted rounded w-36 mb-4" />
-        <div className="form-grid">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-4 bg-muted rounded w-24" />
-              <div className="h-11 bg-muted rounded" />
+    <div className="max-w-3xl space-y-3">
+      <div className="enterprise-card p-3">
+        <Skeleton className="h-4 w-28 mb-3" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className={i >= 5 ? "md:col-span-2 lg:col-span-3" : ""}>
+              <Skeleton className="h-3 w-20 mb-1" />
+              <Skeleton className="h-8 w-full rounded" />
             </div>
           ))}
         </div>
+      </div>
+      <div className="enterprise-card p-3">
+        <Skeleton className="h-4 w-28 mb-3" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={i < 2 ? "md:col-span-2 lg:col-span-3" : ""}>
+              <Skeleton className="h-3 w-20 mb-1" />
+              <Skeleton className="h-8 w-full rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="enterprise-card p-3">
+        <Skeleton className="h-4 w-32 mb-3" />
+        <Skeleton className="h-9 w-full rounded mb-3" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={i < 2 ? "md:col-span-2 lg:col-span-3" : ""}>
+              <Skeleton className="h-3 w-20 mb-1" />
+              <Skeleton className="h-8 w-full rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-7 w-20 rounded" />
+        <Skeleton className="h-7 w-28 rounded" />
       </div>
     </div>
   </div>
@@ -80,14 +111,12 @@ const CustomerForm: React.FC = () => {
     email: "",
     contactPerson: "",
     gstin: "",
-    // Billing address
     address: "",
     landmark: "",
     city: "",
     state: "",
     region: "",
     pincode: "",
-    // Delivery address
     deliverySameAsBilling: true,
     deliveryAddress: "",
     deliveryLandmark: "",
@@ -114,8 +143,7 @@ const CustomerForm: React.FC = () => {
               state: customer.state || "",
               region: customer.region || "",
               pincode: (customer as any).pincode || "",
-              deliverySameAsBilling:
-                (customer as any).deliverySameAsBilling !== false,
+              deliverySameAsBilling: (customer as any).deliverySameAsBilling !== false,
               deliveryAddress: (customer as any).deliveryAddress || "",
               deliveryLandmark: (customer as any).deliveryLandmark || "",
               deliveryCity: (customer as any).deliveryCity || "",
@@ -145,13 +173,7 @@ const CustomerForm: React.FC = () => {
       ...prev,
       deliverySameAsBilling: checked,
       ...(checked
-        ? {
-            deliveryAddress: "",
-            deliveryLandmark: "",
-            deliveryCity: "",
-            deliveryState: "",
-            deliveryPincode: "",
-          }
+        ? { deliveryAddress: "", deliveryLandmark: "", deliveryCity: "", deliveryState: "", deliveryPincode: "" }
         : {}),
     }));
   };
@@ -191,21 +213,11 @@ const CustomerForm: React.FC = () => {
         region: formData.region || null,
         pincode: formData.pincode || null,
         deliverySameAsBilling: formData.deliverySameAsBilling,
-        deliveryAddress: formData.deliverySameAsBilling
-          ? null
-          : formData.deliveryAddress || null,
-        deliveryLandmark: formData.deliverySameAsBilling
-          ? null
-          : formData.deliveryLandmark || null,
-        deliveryCity: formData.deliverySameAsBilling
-          ? null
-          : formData.deliveryCity || null,
-        deliveryState: formData.deliverySameAsBilling
-          ? null
-          : formData.deliveryState || null,
-        deliveryPincode: formData.deliverySameAsBilling
-          ? null
-          : formData.deliveryPincode || null,
+        deliveryAddress: formData.deliverySameAsBilling ? null : formData.deliveryAddress || null,
+        deliveryLandmark: formData.deliverySameAsBilling ? null : formData.deliveryLandmark || null,
+        deliveryCity: formData.deliverySameAsBilling ? null : formData.deliveryCity || null,
+        deliveryState: formData.deliverySameAsBilling ? null : formData.deliveryState || null,
+        deliveryPincode: formData.deliverySameAsBilling ? null : formData.deliveryPincode || null,
       };
 
       if (id) {
@@ -228,170 +240,177 @@ const CustomerForm: React.FC = () => {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="page-header flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between py-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => navigate("/customers")}
-            className="p-2 hover:bg-muted rounded-md transition-colors"
+            className="p-1 hover:bg-muted rounded transition-colors"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <h1 className="page-title">
+            <h1 className="text-sm font-semibold leading-none">
               {id ? "Edit Customer" : "Add New Customer"}
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground text-xs">
               {id ? "Update customer information" : "Enter customer details"}
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">Back to Dashboard</span>
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="outline"
+            className="gap-1 h-7 text-xs px-2"
+            size="sm"
+            onClick={() => navigate("/customers")}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            <span className="hidden sm:inline text-white">Back to Customers</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1 h-7 text-xs px-2"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            <span className="hidden sm:inline text-white">Back to Dashboard</span>
+          </Button>
+        </div>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+      <form onSubmit={handleSubmit} className="max-w-3xl space-y-3 mt-1">
         {/* ──── Basic Information ──── */}
-        <div className="form-section">
-          <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
-          <div className="form-grid">
-            <div className="space-y-2">
-              <Label htmlFor="name">Customer Name *</Label>
+        <div className="enterprise-card p-3">
+          <h2 className="text-xs font-semibold mb-3 flex items-center gap-1.5">
+            Basic Information
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-xs">Customer Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
                 placeholder="Enter customer name"
                 required
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="contactPerson">Contact Person</Label>
+            <div className="space-y-1">
+              <Label htmlFor="contactPerson" className="text-xs">Contact Person</Label>
               <Input
                 id="contactPerson"
                 value={formData.contactPerson}
                 onChange={(e) => handleChange("contactPerson", e.target.value)}
                 placeholder="Enter contact person name"
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile">Mobile Number *</Label>
+            <div className="space-y-1">
+              <Label htmlFor="mobile" className="text-xs">Mobile Number *</Label>
               <Input
                 id="mobile"
                 value={formData.mobile}
                 onChange={(e) => handleChange("mobile", e.target.value)}
                 placeholder="+91 XXXXXXXXXX"
                 required
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+            <div className="space-y-1">
+              <Label htmlFor="email" className="text-xs">Email Address</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange("email", e.target.value)}
                 placeholder="customer@example.com"
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-              <Label htmlFor="gstin">GSTIN</Label>
+            <div className="space-y-1 md:col-span-2 lg:col-span-2">
+              <Label htmlFor="gstin" className="text-xs">GSTIN</Label>
               <Input
                 id="gstin"
                 value={formData.gstin}
-                onChange={(e) =>
-                  handleChange("gstin", e.target.value.toUpperCase())
-                }
+                onChange={(e) => handleChange("gstin", e.target.value.toUpperCase())}
                 placeholder="27AAFCS1234M1ZM"
                 maxLength={15}
+                className="h-8 text-sm font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* ──── Billing Address ──── */}
-        <div className="form-section">
-          <div className="flex items-center gap-2 mb-4">
-            <MapPin className="h-5 w-5 text-accent" />
-            <h2 className="text-lg font-semibold">Billing Address</h2>
+        <div className="enterprise-card p-3">
+          <div className="flex items-center gap-1.5 mb-3">
+            <MapPin className="h-3.5 w-3.5 text-blue-600" />
+            <h2 className="text-xs font-semibold">Billing Address</h2>
           </div>
-          <div className="form-grid">
-            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-              <Label htmlFor="address">Address Line *</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-1 md:col-span-2 lg:col-span-3">
+              <Label htmlFor="address" className="text-xs">Address Line *</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleChange("address", e.target.value)}
                 placeholder="Street address, building, flat number"
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-              <Label htmlFor="landmark">Near / Landmark</Label>
+            <div className="space-y-1 md:col-span-2 lg:col-span-3">
+              <Label htmlFor="landmark" className="text-xs">Near / Landmark</Label>
               <Input
                 id="landmark"
                 value={formData.landmark}
                 onChange={(e) => handleChange("landmark", e.target.value)}
                 placeholder="Near landmark, area"
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
+            <div className="space-y-1">
+              <Label htmlFor="city" className="text-xs">City</Label>
               <Input
                 id="city"
                 value={formData.city}
                 onChange={(e) => handleChange("city", e.target.value)}
                 placeholder="Enter city"
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Select
-                value={formData.state}
-                onValueChange={(v) => handleChange("state", v)}
-              >
-                <SelectTrigger>
+            <div className="space-y-1">
+              <Label htmlFor="state" className="text-xs">State</Label>
+              <Select value={formData.state} onValueChange={(v) => handleChange("state", v)}>
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
-                  {states.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
+                  {states.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="pincode">Pincode</Label>
+            <div className="space-y-1">
+              <Label htmlFor="pincode" className="text-xs">Pincode</Label>
               <Input
                 id="pincode"
                 value={formData.pincode}
                 onChange={(e) => handleChange("pincode", e.target.value)}
                 placeholder="411014"
                 maxLength={6}
+                className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="region">Region</Label>
-              <Select
-                value={formData.region}
-                onValueChange={(v) => handleChange("region", v)}
-              >
-                <SelectTrigger>
+            <div className="space-y-1">
+              <Label htmlFor="region" className="text-xs">Region</Label>
+              <Select value={formData.region} onValueChange={(v) => handleChange("region", v)}>
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Select region" />
                 </SelectTrigger>
                 <SelectContent>
-                  {regions.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
+                  {regions.map((r) => (<SelectItem key={r} value={r}>{r}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -399,109 +418,90 @@ const CustomerForm: React.FC = () => {
         </div>
 
         {/* ──── Delivery Address ──── */}
-        <div className="form-section">
-          <div className="flex items-center gap-2 mb-4">
-            <Truck className="h-5 w-5 text-accent" />
-            <h2 className="text-lg font-semibold">Delivery Address</h2>
+        <div className="enterprise-card p-3">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Truck className="h-3.5 w-3.5 text-green-600" />
+            <h2 className="text-xs font-semibold">Delivery Address</h2>
           </div>
 
           {/* Same as billing checkbox */}
-          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+          <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-md border border-border">
             <Checkbox
               id="deliverySameAsBilling"
               checked={formData.deliverySameAsBilling}
-              onCheckedChange={(checked) =>
-                handleDeliverySameToggle(checked as boolean)
-              }
+              onCheckedChange={(checked) => handleDeliverySameToggle(checked as boolean)}
             />
             <Label
               htmlFor="deliverySameAsBilling"
-              className="text-sm font-medium cursor-pointer flex items-center gap-2"
+              className="text-xs font-medium cursor-pointer flex items-center gap-1.5"
             >
-              <Check className="h-4 w-4 text-success" />
+              <Check className="h-3 w-3 text-success" />
               Delivery address is same as billing address
             </Label>
           </div>
 
           {!formData.deliverySameAsBilling && (
-            <div className="form-grid">
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="deliveryAddress">Address Line</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="deliveryAddress" className="text-xs">Address Line</Label>
                 <Input
                   id="deliveryAddress"
                   value={formData.deliveryAddress}
-                  onChange={(e) =>
-                    handleChange("deliveryAddress", e.target.value)
-                  }
+                  onChange={(e) => handleChange("deliveryAddress", e.target.value)}
                   placeholder="Delivery street address"
+                  className="h-8 text-sm"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="deliveryLandmark">Near / Landmark</Label>
+              <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="deliveryLandmark" className="text-xs">Near / Landmark</Label>
                 <Input
                   id="deliveryLandmark"
                   value={formData.deliveryLandmark}
-                  onChange={(e) =>
-                    handleChange("deliveryLandmark", e.target.value)
-                  }
+                  onChange={(e) => handleChange("deliveryLandmark", e.target.value)}
                   placeholder="Near landmark"
+                  className="h-8 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="deliveryCity">City</Label>
+              <div className="space-y-1">
+                <Label htmlFor="deliveryCity" className="text-xs">City</Label>
                 <Input
                   id="deliveryCity"
                   value={formData.deliveryCity}
                   onChange={(e) => handleChange("deliveryCity", e.target.value)}
                   placeholder="Delivery city"
+                  className="h-8 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="deliveryState">State</Label>
-                <Select
-                  value={formData.deliveryState}
-                  onValueChange={(v) => handleChange("deliveryState", v)}
-                >
-                  <SelectTrigger>
+              <div className="space-y-1">
+                <Label htmlFor="deliveryState" className="text-xs">State</Label>
+                <Select value={formData.deliveryState} onValueChange={(v) => handleChange("deliveryState", v)}>
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
-                    {states.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {states.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="deliveryPincode">Pincode</Label>
+              <div className="space-y-1">
+                <Label htmlFor="deliveryPincode" className="text-xs">Pincode</Label>
                 <Input
                   id="deliveryPincode"
                   value={formData.deliveryPincode}
-                  onChange={(e) =>
-                    handleChange("deliveryPincode", e.target.value)
-                  }
+                  onChange={(e) => handleChange("deliveryPincode", e.target.value)}
                   placeholder="411014"
                   maxLength={6}
+                  className="h-8 text-sm"
                 />
               </div>
             </div>
           )}
 
           {formData.deliverySameAsBilling && formData.address && (
-            <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">
-                Delivery will use billing address:
-              </p>
+            <div className="bg-muted/30 rounded-md p-2 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground mb-0.5">Delivery will use billing address:</p>
               <p>
-                {[
-                  formData.address,
-                  formData.landmark,
-                  formData.city,
-                  formData.state,
-                  formData.pincode,
-                ]
+                {[formData.address, formData.landmark, formData.city, formData.state, formData.pincode]
                   .filter(Boolean)
                   .join(", ")}
               </p>
@@ -510,23 +510,24 @@ const CustomerForm: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-4">
+        <div className="flex gap-2 pt-1">
           <Button
             type="button"
             variant="outline"
+            className="h-7 text-xs px-3"
             onClick={() => navigate("/customers")}
           >
             Cancel
           </Button>
-          <Button type="submit" className="btn-accent" disabled={saving}>
+          <Button type="submit" className="btn-accent h-7 text-xs px-3" disabled={saving}>
             {saving ? (
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <div className="flex items-center gap-1">
+                <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 Saving...
               </div>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-3 w-3 mr-1" />
                 {id ? "Update Customer" : "Add Customer"}
               </>
             )}

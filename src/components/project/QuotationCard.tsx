@@ -103,7 +103,7 @@ const DebouncedDiscountInput: React.FC<DebouncedDiscountInputProps> = ({
         userEditingRef.current = true;
         setLocalValue(e.target.value);
       }}
-      className="w-full h-6 sm:h-7 text-[11px] sm:text-xs text-right border-0 bg-transparent p-0 px-1 focus-visible:ring-0"
+      className="w-full h-6 sm:h-7 text-[11px] sm:text-xs text-right px-1"
       min={min}
       max={max}
       step={0.5}
@@ -158,10 +158,11 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
     return (
       <div
         ref={ref}
-        className={`border bg-card overflow-hidden transition-all duration-500 ${isHighlighted
+        className={`border bg-card overflow-hidden transition-all duration-500 ${
+          isHighlighted
             ? "border-primary ring-2 ring-primary/30 shadow-xl scale-[1.01]"
             : "border-border hover:shadow-md"
-          }`}
+        }`}
       >
         {/* ═══════ TOP HEADER ROW ═══════ */}
         <div className="grid grid-cols-12 border-b border-border bg-muted/50">
@@ -352,10 +353,11 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                   </td>
                   <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right">
                     <span
-                      className={`text-xs sm:text-sm font-semibold tabular-nums ${item.discountAmount > 0
+                      className={`text-xs sm:text-sm font-semibold tabular-nums ${
+                        item.discountAmount > 0
                           ? "text-destructive"
                           : "text-muted-foreground/50"
-                        }`}
+                      }`}
                     >
                       {item.discountAmount > 0
                         ? `-${formatCurrency(item.discountAmount)}`
@@ -372,9 +374,9 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                   <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-right font-semibold tabular-nums text-xs sm:text-sm">
                     {formatCurrency(
                       item.basePrice -
-                      (item.quantity > 0
-                        ? item.discountAmount / item.quantity
-                        : 0),
+                        (item.quantity > 0
+                          ? item.discountAmount / item.quantity
+                          : 0),
                     )}
                   </td>
                 </tr>
@@ -465,7 +467,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                   <td className="px-2 sm:px-3 py-2 sm:py-2.5 font-bold border-r border-border/60 text-[9px] sm:text-[10px] uppercase tracking-wide">
                     Total w/GST
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-sm sm:text-base tabular-nums text-accent">
+                  <td className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-sm sm:text-base tabular-nums text-foreground font-bold">
                     {formatCurrency(grandTotal)}
                   </td>
                 </tr>

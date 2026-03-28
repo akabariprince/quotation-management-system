@@ -20,6 +20,12 @@ export interface Customer {
   deliveryState?: string | null;
   deliveryPincode?: string | null;
   deliverySameAsBilling?: boolean;
+  createdBy?: string | null;          // ← NEW
+  creator?: {                          // ← NEW (from include)
+    id: string;
+    name: string;
+    email: string;
+  } | null;
 }
 
 export interface PaginationMeta {

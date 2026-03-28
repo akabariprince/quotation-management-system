@@ -445,38 +445,37 @@ const PDFPreview: React.FC = () => {
       `}</style>
 
       {/* ─── Toolbar ─────────────────────────────────────────────── */}
-      <div className="no-print sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between z-10 shadow-sm">
-        <div className="flex items-center gap-2 sm:gap-4">
+      <div className="no-print sticky top-0 bg-card border-b border-border p-2 sm:p-3 flex items-center justify-between z-10 shadow-sm">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(`/projects/${id}`)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-muted rounded transition-colors"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <h1 className="font-semibold text-gray-900 text-sm sm:text-base">
+            <h1 className="text-sm font-semibold leading-none">
               PDF Preview
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 truncate max-w-[140px] sm:max-w-none">
+            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[140px] sm:max-w-none">
               {project.quotationNo || project.quotation_no}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             onClick={() => navigate(`/projects/${id}`)}
             variant="outline"
-            size="sm"
-            className="gap-2 hidden sm:flex"
+            className="gap-1 h-7 text-xs px-2 hidden sm:flex"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Project
+            <ArrowLeft className="h-3 w-3" />
+            <span className="text-white">Back to Project</span>
           </Button>
           <Button
             onClick={() => downloadProjectPDF(project.id)}
-            className="btn-accent gap-1 sm:gap-2 text-xs sm:text-sm"
-            size="sm"
+            className="btn-accent gap-1 h-7 text-xs px-2"
           >
-            <Printer className="h-4 w-4" /> PDF
+            <Printer className="h-3 w-3" /> PDF
           </Button>
         </div>
       </div>

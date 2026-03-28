@@ -48,7 +48,6 @@ const Projects: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -86,11 +85,9 @@ const Projects: React.FC = () => {
   useEffect(() => {
     loadProjects(1);
   }, []);
-
   useEffect(() => {
     loadProjects(currentPage);
   }, [currentPage]);
-
   useEffect(() => {
     setCurrentPage(1);
     loadProjects(1, searchTerm, statusFilter);
@@ -169,6 +166,7 @@ const Projects: React.FC = () => {
 
   const totalPages = meta?.totalPages || 1;
   const totalCount = meta?.totalCount || 0;
+  const hasActiveFilters = searchTerm || statusFilter !== "all";
 
   const getPageNumbers = (): (number | string)[] => {
     const pages: (number | string)[] = [];
@@ -189,25 +187,29 @@ const Projects: React.FC = () => {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="page-header flex items-center justify-between">
+      <div className="flex items-center justify-between py-1">
         <div>
-          <h1 className="page-title">Projects</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-sm font-semibold leading-none">Projects</h1>
+          <p className="text-muted-foreground text-xs">
             Manage and track all projects
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           <Link to="/dashboard">
-            <Button variant="outline" className="gap-2" size="sm">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
+            <Button
+              variant="outline"
+              className="gap-1 h-7 text-xs px-2"
+              size="sm"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              <span className="hidden sm:inline text-white">Back to Dashboard</span>
             </Button>
           </Link>
           {hasPermission("project:create") && (
             <Link to="/projects/new">
-              <Button className="btn-accent gap-2" size="sm">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Project</span>
+              <Button className="btn-accent gap-1 h-7 text-xs px-2" size="sm">
+                <Plus className="h-3 w-3" />
+                <span className="hidden sm:inline text-white">Add Project</span>
               </Button>
             </Link>
           )}
@@ -215,19 +217,19 @@ const Projects: React.FC = () => {
       </div>
 
       {/* Search & Filters */}
-      <div className="enterprise-card p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="enterprise-card p-2 mt-1">
+        <div className="flex flex-col sm:flex-row items-center gap-1.5">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search by project number, project name, or customer..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 h-11"
+              className="pl-7 h-7 text-xs"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40">
+            <SelectTrigger className="w-full sm:w-[120px] h-7 text-xs px-2">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -240,7 +242,7 @@ const Projects: React.FC = () => {
           </Select>
         </div>
         {!loading && totalCount > 0 && (
-          <div className="mt-2 text-sm text-muted-foreground">
+          <div className="text-xs text-muted-foreground mt-1">
             {totalCount} project{totalCount !== 1 ? "s" : ""} found
           </div>
         )}
@@ -250,18 +252,26 @@ const Projects: React.FC = () => {
       {loading ? (
         <TableSkeleton columns={7} rows={PAGE_SIZE} />
       ) : (
-        <div className="enterprise-card overflow-hidden mt-4">
+        <div className="enterprise-card overflow-hidden mt-1">
           <div className="table-container">
-            <table className="enterprise-table">
+            <table className="enterprise-table w-full">
               <thead>
                 <tr>
-                  <th>Project No</th>
-                  <th className="hidden lg:table-cell">Project Name</th>
-                  <th className="hidden sm:table-cell">Customer</th>
-                  <th className="hidden md:table-cell">Date</th>
-                  <th>Total Value</th>
-                  <th className="hidden sm:table-cell">Status</th>
-                  <th>Actions</th>
+                  <th className="px-3 py-1.5 text-xs">Project No</th>
+                  <th className="hidden lg:table-cell px-3 py-1.5 text-xs">
+                    Project Name
+                  </th>
+                  <th className="hidden sm:table-cell px-3 py-1.5 text-xs">
+                    Customer
+                  </th>
+                  <th className="hidden md:table-cell px-3 py-1.5 text-xs">
+                    Date
+                  </th>
+                  <th className="px-3 py-1.5 text-xs">Total Value</th>
+                  <th className="hidden sm:table-cell px-3 py-1.5 text-xs">
+                    Status
+                  </th>
+                  <th className="px-3 py-1.5 text-xs w-28">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,35 +279,31 @@ const Projects: React.FC = () => {
                   <tr>
                     <td
                       colSpan={7}
-                      className="text-center text-muted-foreground py-12"
+                      className="text-center text-muted-foreground py-8 text-sm"
                     >
-                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      {searchTerm || statusFilter !== "all"
+                      <FileText className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                      {hasActiveFilters
                         ? "No projects found matching your filters."
                         : "No projects yet. Create your first project."}
                     </td>
                   </tr>
                 ) : (
                   projects.map((project) => (
-                    <tr key={project.id}>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-accent flex-shrink-0" />
-                          <div className="min-w-0">
-                            <span className="font-medium block truncate">
-                              {project.projectNo}
-                            </span>
-                            {/* Show project name on mobile under project no */}
-                            {(project as any).projectName && (
-                              <span className="text-xs text-muted-foreground block truncate lg:hidden">
-                                {(project as any).projectName}
-                              </span>
-                            )}
-                          </div>
+                    <tr key={project.id} className="hover:bg-muted/50">
+                      <td className="px-3 py-1">
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5 text-accent flex-shrink-0" />
+                          <span className="font-medium text-sm">
+                            {project.projectNo}
+                          </span>
                         </div>
+                        {(project as any).projectName && (
+                          <span className="text-xs text-muted-foreground block truncate lg:hidden">
+                            {(project as any).projectName}
+                          </span>
+                        )}
                       </td>
-                      {/* Project Name column - visible on lg+ */}
-                      <td className="hidden lg:table-cell">
+                      <td className="hidden lg:table-cell px-3 py-1">
                         {(project as any).projectName ? (
                           <span className="text-sm font-medium truncate block max-w-[200px]">
                             {(project as any).projectName}
@@ -308,53 +314,53 @@ const Projects: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="hidden sm:table-cell">
-                        <div>
-                          <p className="font-medium">
-                            {project.customer?.name || "Unknown"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {project.customer?.mobile}
-                          </p>
-                        </div>
+                      <td className="hidden sm:table-cell px-3 py-1">
+                        <span className="font-medium text-sm">
+                          {project.customer?.name || "Unknown"}
+                        </span>
+                        {project.customer?.mobile && (
+                          <span className="text-xs text-muted-foreground ml-1.5">
+                            · {project.customer.mobile}
+                          </span>
+                        )}
                       </td>
-                      <td className="hidden md:table-cell text-muted-foreground">
+                      <td className="hidden md:table-cell px-3 py-1 text-muted-foreground text-sm">
                         {formatDate(project.date)}
                       </td>
-                      <td className="font-semibold">
+                      <td className="px-3 py-1 font-semibold text-sm">
                         {formatCurrency(project.grandTotalWithGst)}
                       </td>
-                      <td className="hidden sm:table-cell">
+                      <td className="hidden sm:table-cell px-3 py-1">
                         <span className={getStatusBadge(project.status)}>
                           {project.status.charAt(0).toUpperCase() +
                             project.status.slice(1)}
                         </span>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-1">
+                      <td className="px-3 py-1">
+                        <div className="flex items-center gap-0.5">
                           <button
                             onClick={() => navigate(`/projects/${project.id}`)}
-                            className="action-btn"
+                            className="action-btn p-1"
                             title="View"
                           >
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                           </button>
                           <button
                             onClick={() =>
                               navigate(`/projects/${project.id}/pdf`)
                             }
-                            className="action-btn"
+                            className="action-btn p-1"
                             title="Generate PDF"
                           >
-                            <Download className="h-4 w-4 text-muted-foreground" />
+                            <Download className="h-3.5 w-3.5 text-muted-foreground" />
                           </button>
                           {hasPermission("project:create") && (
                             <button
                               onClick={() => handleDuplicate(project.id)}
-                              className="action-btn"
+                              className="action-btn p-1"
                               title="Duplicate"
                             >
-                              <Copy className="h-4 w-4 text-muted-foreground" />
+                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
                           {hasPermission("project:edit") && (
@@ -362,10 +368,10 @@ const Projects: React.FC = () => {
                               onClick={() =>
                                 navigate(`/projects/edit/${project.id}`)
                               }
-                              className="action-btn"
+                              className="action-btn p-1"
                               title="Edit"
                             >
-                              <Edit className="h-4 w-4 text-muted-foreground" />
+                              <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
                           {hasPermission("project:delete") && (
@@ -373,10 +379,10 @@ const Projects: React.FC = () => {
                               onClick={() =>
                                 handleDelete(project.id, project.projectNo)
                               }
-                              className="action-btn action-btn-danger"
+                              className="action-btn action-btn-danger p-1"
                               title="Delete"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
                             </button>
                           )}
                         </div>
@@ -390,45 +396,44 @@ const Projects: React.FC = () => {
 
           {/* Pagination */}
           {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <div className="flex items-center justify-between px-3 py-1.5 border-t border-border">
               <div className="text-xs text-muted-foreground hidden sm:block">
                 Showing{" "}
                 <span className="font-medium text-foreground">
                   {(currentPage - 1) * PAGE_SIZE + 1}
-                </span>{" "}
-                to{" "}
+                </span>
+                –
                 <span className="font-medium text-foreground">
                   {Math.min(currentPage * PAGE_SIZE, totalCount)}
                 </span>{" "}
                 of{" "}
                 <span className="font-medium text-foreground">
                   {totalCount}
-                </span>{" "}
-                projects
+                </span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="First page"
                 >
-                  <ChevronsLeft className="h-4 w-4" />
+                  <ChevronsLeft className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Previous page"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </button>
-                <div className="flex items-center gap-0.5 mx-1">
+                <div className="flex items-center gap-px mx-0.5">
                   {getPageNumbers().map((page, idx) =>
                     page === "..." ? (
                       <span
                         key={`dots-${idx}`}
-                        className="w-8 text-center text-xs text-muted-foreground"
+                        className="w-6 text-center text-xs text-muted-foreground"
                       >
                         ...
                       </span>
@@ -436,7 +441,7 @@ const Projects: React.FC = () => {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page as number)}
-                        className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
+                        className={`w-6 h-6 rounded text-xs font-medium transition-colors ${
                           currentPage === page
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "hover:bg-muted text-muted-foreground"
@@ -452,18 +457,18 @@ const Projects: React.FC = () => {
                     setCurrentPage((p) => Math.min(totalPages, p + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Next page"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Last page"
                 >
-                  <ChevronsRight className="h-4 w-4" />
+                  <ChevronsRight className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

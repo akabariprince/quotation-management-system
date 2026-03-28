@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, X, User, Phone, MapPin, Check } from 'lucide-react';
-import { useApi } from '@/hooks/useApi';
-import { Customer } from '@/hooks/useCustomers';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Search, X, User, Phone, MapPin, Check } from "lucide-react";
+import { useApi } from "@/hooks/useApi";
+import { Customer } from "@/hooks/useCustomers";
+import clsx from "clsx";
 
 interface CustomerSearchSelectProps {
   value: string;
@@ -13,14 +14,16 @@ interface CustomerSearchSelectProps {
 const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
   value,
   onChange,
-  placeholder = 'Search customer by name or mobile...',
-  className = '',
+  placeholder = "Search customer by name or mobile...",
+  className = "",
 }) => {
   const { get } = useApi();
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,7 +33,9 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
   const loadInitialCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await get('/customers?limit=20&sortBy=updatedAt&sortOrder=DESC');
+      const res = await get(
+        "/customers?limit=20&sortBy=updatedAt&sortOrder=DESC",
+      );
       setCustomers(res.data || []);
     } catch {
       setCustomers([]);
@@ -49,7 +54,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
       setLoading(true);
       try {
         const res = await get(
-          `/customers?search=${encodeURIComponent(term)}&limit=20&sortBy=updatedAt&sortOrder=DESC`
+          `/customers?search=${encodeURIComponent(term)}&limit=20&sortBy=updatedAt&sortOrder=DESC`,
         );
         setCustomers(res.data || []);
       } catch {
@@ -58,7 +63,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
         setLoading(false);
       }
     },
-    [get, loadInitialCustomers]
+    [get, loadInitialCustomers],
   );
 
   // Load selected customer details when value changes externally
@@ -94,14 +99,14 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
     setSelectedCustomer(customer);
     onChange(customer.id);
     setIsOpen(false);
-    setSearchTerm('');
+    setSearchTerm("");
   };
 
   // Handle clear
   const handleClear = () => {
     setSelectedCustomer(null);
-    onChange('');
-    setSearchTerm('');
+    onChange("");
+    setSearchTerm("");
   };
 
   // Handle open
@@ -114,20 +119,26 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
-        setSearchTerm('');
+        setSearchTerm("");
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Skeleton for dropdown
   const DropdownSkeleton = () => (
     <div className="space-y-1">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-3 py-2.5 animate-pulse">
+        <div
+          key={i}
+          className="flex items-center gap-3 px-3 py-2.5 animate-pulse"
+        >
           <div className="w-8 h-8 bg-muted rounded-full flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="h-3.5 bg-muted rounded w-28 mb-1" />
@@ -145,17 +156,21 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
       {!isOpen && (
         <div
           onClick={handleOpen}
-          className="flex items-center justify-between h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 transition-colors"
+          className="flex items-center justify-between h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:bg-muted/50"
         >
           {selectedCustomer ? (
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="w-6 h-6 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-accent font-semibold text-xs">
+                <span className="text-foreground font-bold font-semibold text-xs">
                   {selectedCustomer.name.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <span className="font-medium truncate">{selectedCustomer.name}</span>
-              <span className="text-muted-foreground text-xs">- {selectedCustomer.mobile}</span>
+              <span className="font-medium truncate">
+                {selectedCustomer.name}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                - {selectedCustomer.mobile}
+              </span>
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -190,9 +205,9 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
             placeholder="Type to search customers..."
             className="flex h-11 w-full rounded-md border border-accent bg-background px-3 py-2 pl-10 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onKeyDown={(e) => {
-              if (e.key === 'Escape') {
+              if (e.key === "Escape") {
                 setIsOpen(false);
-                setSearchTerm('');
+                setSearchTerm("");
               }
             }}
           />
@@ -200,7 +215,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
             type="button"
             onClick={() => {
               setIsOpen(false);
-              setSearchTerm('');
+              setSearchTerm("");
             }}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
           >
@@ -218,7 +233,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
               {searchTerm
                 ? `No customers found for "${searchTerm}"`
-                : 'No customers available'}
+                : "No customers available"}
             </div>
           ) : (
             <div className="py-1">
@@ -227,17 +242,23 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
                   key={customer.id}
                   type="button"
                   onClick={() => handleSelect(customer)}
-                  className={`w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-accent/5 transition-colors ${
-                    value === customer.id ? 'bg-accent/10' : ''
+                  className={`w-full text-left px-3 py-2.5 flex items-center gap-3 bg-white ${
+                    value === customer.id ? "" : ""
                   }`}
                 >
-                  <div className="w-8 h-8 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-accent font-semibold text-xs">
+                  <div
+                    className={`w-8 h-8  ${
+                      value === customer.id ? "bg-accent/10" : "bg-accent/10"
+                    } rounded-full flex items-center justify-center flex-shrink-0`}
+                  >
+                    <span className="text-foreground font-bold font-semibold text-xs">
                       {customer.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{customer.name}</p>
+                    <p className="font-medium text-sm truncate">
+                      {customer.name}
+                    </p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Phone className="h-3 w-3" />
@@ -252,7 +273,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
                     </div>
                   </div>
                   {value === customer.id && (
-                    <Check className="h-4 w-4 text-accent flex-shrink-0" />
+                    <Check className="h-4 w-4 text-foreground font-bold flex-shrink-0" />
                   )}
                 </button>
               ))}

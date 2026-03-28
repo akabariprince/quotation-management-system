@@ -48,6 +48,7 @@ import QuotationCard from "@/components/project/QuotationCard";
 import CustomerSearchSelect from "@/components/common/CustomerSearchSelect";
 import { toast } from "sonner";
 import { getImageUrl } from "@/utils/reportHelpers";
+import { Skeleton } from "@/components/ui/skeleton";
 // import QuotationSearchSelect from "@/components/common/QuotationSearchSelect"; // Replaced with 4-field filter
 
 /* ── Interfaces ── */
@@ -151,36 +152,43 @@ const getQuotationImageUrl = (imagePath: string) => {
 
 /* ── Form Page Skeleton ── */
 const FormPageSkeleton = () => (
-  <div className="space-y-6 animate-pulse">
-    <div className="page-header mb-4 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="w-9 h-9 bg-muted rounded-md" />
+  <div className="space-y-3 animate-pulse">
+    <div className="flex items-center justify-between py-1">
+      <div className="flex items-center gap-2">
+        <Skeleton className="w-7 h-7 rounded" />
         <div>
-          <div className="h-6 bg-muted rounded w-48 mb-2" />
-          <div className="h-4 bg-muted rounded w-32" />
+          <Skeleton className="h-4 w-36 mb-1" />
+          <Skeleton className="h-3 w-28" />
         </div>
       </div>
-      <div className="h-10 bg-muted rounded w-36" />
+      <div className="flex gap-1">
+        <Skeleton className="h-7 w-28 rounded" />
+        <Skeleton className="h-7 w-32 rounded" />
+      </div>
     </div>
-    <div className="max-w-3xl space-y-6">
-      <div className="form-section">
-        <div className="h-5 bg-muted rounded w-32 mb-4" />
-        <div className="h-20 bg-muted rounded" />
+    <div className="max-w-3xl space-y-3">
+      <div className="enterprise-card p-3">
+        <Skeleton className="h-4 w-28 mb-3" />
+        <Skeleton className="h-16 w-full rounded" />
       </div>
-      <div className="form-section">
-        <div className="h-5 bg-muted rounded w-40 mb-4" />
-        <div className="form-grid">
-          <div className="space-y-2 lg:col-span-2">
-            <div className="h-4 bg-muted rounded w-36" />
-            <div className="h-11 bg-muted rounded" />
+      <div className="enterprise-card p-3">
+        <Skeleton className="h-4 w-28 mb-3" />
+        <Skeleton className="h-8 w-full rounded mb-2" />
+      </div>
+      <div className="enterprise-card p-3">
+        <Skeleton className="h-4 w-36 mb-3" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="lg:col-span-2">
+            <Skeleton className="h-3 w-28 mb-1" />
+            <Skeleton className="h-8 w-full rounded" />
           </div>
-          <div className="space-y-2">
-            <div className="h-4 bg-muted rounded w-24" />
-            <div className="h-11 bg-muted rounded" />
+          <div>
+            <Skeleton className="h-3 w-24 mb-1" />
+            <Skeleton className="h-8 w-full rounded" />
           </div>
         </div>
       </div>
-      <div className="h-10 bg-muted rounded w-28" />
+      <Skeleton className="h-7 w-20 rounded" />
     </div>
   </div>
 );
@@ -378,116 +386,107 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-card shadow-2xl w-full max-w-2xl p-6 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-accent/10 rounded-lg">
-              <Mail className="h-5 w-5 text-accent" />
-            </div>
+      <div className="relative bg-card shadow-2xl w-full max-w-xl p-3 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto rounded-md border border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
             <div>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-sm font-semibold leading-none">
                 {sent ? "Email Sent!" : "Send Project Email"}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {project.projectNo || project.quotationNo}
               </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="p-1 hover:bg-muted rounded transition-colors"
           >
-            <X className="h-5 w-5 text-muted-foreground" />
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
         </div>
 
         {sent ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-              <Mail className="h-8 w-8 text-success" />
-            </div>
-            <p className="text-lg font-semibold text-success mb-2">
+          <div className="text-center py-6">
+            <p className="text-sm font-semibold text-success mb-1">
               Email Sent Successfully!
             </p>
-            <p className="text-sm text-muted-foreground mb-1">
+            <p className="text-xs text-muted-foreground">
               Quotation sent to <strong>Admin(s)</strong>
             </p>
             {sendToCustomer && customer?.email && (
-              <p className="text-sm text-muted-foreground mb-1">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 and to customer <strong>{customer.email}</strong>
               </p>
             )}
-            <div className="flex gap-3 justify-center mt-6">
+            <div className="flex gap-2 justify-center mt-4">
               <Button
                 variant="outline"
                 onClick={() => navigate("/projects")}
-                className="gap-2"
+                className="gap-1 h-7 text-xs px-3"
               >
+                <ArrowLeft className="h-3 w-3" />
                 Go to Projects
               </Button>
               <Button
                 onClick={() => navigate(`/projects/${project.id}/pdf`)}
-                className="btn-accent gap-2"
+                className="btn-accent gap-1 h-7 text-xs px-3"
               >
-                <Eye className="h-4 w-4" /> View PDF
+                <Eye className="h-3 w-3" /> View PDF
               </Button>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Admin notification info */}
-            <div className="bg-muted/60 rounded-lg p-4 flex items-start gap-3">
-              <div className="p-1.5 bg-accent/10 rounded mt-0.5">
-                <Mail className="h-4 w-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Admin Notification
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  This email will automatically be sent to all admin users.
-                </p>
-              </div>
+            <div className="bg-muted/50 rounded-md p-2 border border-border">
+              <p className="text-xs font-semibold text-foreground">
+                Admin Notification
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                This email will automatically be sent to all admin users.
+              </p>
             </div>
 
             {/* Send to Customer toggle */}
             <div
-              className={`rounded-lg border p-4 transition-colors ${
+              className={`rounded-md border p-2 transition-colors ${
                 sendToCustomer
                   ? "border-accent bg-accent/5"
                   : "border-border bg-card"
               }`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-2">
+                  <Checkbox
                     id="sendToCustomer"
                     checked={sendToCustomer}
-                    onChange={(e) => setSendToCustomer(e.target.checked)}
+                    onCheckedChange={(checked) =>
+                      setSendToCustomer(checked as boolean)
+                    }
                     disabled={sending || !customer?.email}
-                    className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
                   />
                   <label
                     htmlFor="sendToCustomer"
                     className="cursor-pointer select-none"
                   >
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="text-xs font-semibold text-foreground">
                       Also send to Customer
                     </p>
                     {customer?.email ? (
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         {customer.email}
                       </p>
                     ) : (
-                      <p className="text-xs text-destructive mt-0.5">
+                      <p className="text-[11px] text-destructive mt-0.5">
                         No email address on file for this customer
                       </p>
                     )}
                   </label>
                 </div>
                 {sendToCustomer && customer?.email && (
-                  <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded">
+                  <span className="text-[10px] font-medium text-accent bg-accent/10 px-1.5 py-0.5 rounded">
                     Will receive
                   </span>
                 )}
@@ -495,59 +494,66 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
             </div>
 
             {/* Subject */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Subject</Label>
+            <div className="space-y-1">
+              <Label htmlFor="emailSubject" className="text-xs">
+                Subject
+              </Label>
               <Input
+                id="emailSubject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="h-11"
+                className="h-8 text-sm"
                 disabled={sending}
               />
             </div>
 
             {/* Project summary */}
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-              <div className="flex items-center justify-between">
+            <div className="enterprise-card p-2 space-y-1.5">
+              <h3 className="text-xs font-semibold mb-1.5">Project Summary</h3>
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Project</span>
-                <span className="font-semibold font-mono">
+                <span className="font-semibold font-mono text-xs">
                   {project.projectNo || project.quotationNo}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Customer</span>
                 <span className="font-medium">{customer?.name}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Items</span>
                 <span>{items.length} quotation(s)</span>
               </div>
-              <div className="flex items-center justify-between border-t border-border pt-2">
+              <div className="flex items-center justify-between border-t border-border pt-1.5 text-xs">
                 <span className="text-muted-foreground font-semibold">
                   Grand Total (incl. GST)
                 </span>
-                <span className="font-bold text-accent">
+                <span className="font-bold text-foreground">
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
             </div>
 
             {/* Message */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Message</Label>
+            <div className="space-y-1">
+              <Label htmlFor="emailMessage" className="text-xs">
+                Message
+              </Label>
               <Textarea
+                id="emailMessage"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="min-h-[120px] text-sm"
+                className="min-h-[100px] text-sm"
                 disabled={sending}
               />
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-2 border-t border-border">
+            <div className="flex gap-2 pt-1 border-t border-border">
               <Button
                 variant="outline"
                 onClick={handleClose}
-                className="flex-1 h-11"
+                className="flex-1 h-7 text-xs px-3"
                 disabled={sending}
               >
                 Cancel
@@ -555,23 +561,24 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               <Button
                 onClick={() => navigate(`/projects/${project.id}/pdf`)}
                 variant="outline"
-                className="gap-2 h-11"
+                className="gap-1 h-7 text-xs px-3"
                 disabled={sending}
               >
-                <Eye className="h-4 w-4" /> Preview PDF
+                <Eye className="h-3 w-3" /> Preview PDF
               </Button>
               <Button
                 onClick={handleSendEmail}
-                className="flex-1 btn-accent gap-2 h-11"
+                className="flex-1 btn-accent gap-1 h-7 text-xs px-3"
                 disabled={sending}
               >
                 {sending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Sending...
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Sending...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4" /> Send Email
+                    <Send className="h-3 w-3" /> Send Email
                   </>
                 )}
               </Button>
@@ -1276,98 +1283,100 @@ const ProjectForm: React.FC = () => {
   return (
     <div className="space-y-0 animate-fade-in">
       {/* Header */}
-      <div className="page-header mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between py-1 mb-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() =>
-              step === 2 && !existingProject
-                ? setStep(1)
-                : navigate("/projects")
+              step === 2 && !existingProject ? setStep(1) : navigate("/projects")
             }
-            className="p-2 hover:bg-muted rounded-md transition-colors"
+            className="p-1 hover:bg-muted rounded transition-colors"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
-          <div className="flex flex-row gap-2">
-            <h1 className="page-title">
-              {existingProject
-                ? `Edit ${existingProject.projectNo}`
-                : "Create Project"}
+          <div>
+            <h1 className="text-sm font-semibold leading-none">
+              {existingProject ? `Edit ${existingProject.projectNo}` : "Create Project"}
             </h1>
-            <p className="text-muted-foreground mt-1">
-              {existingProject
-                ? "Update project details"
-                : `New Project: ${projectNo}`}
+            <p className="text-muted-foreground text-xs">
+              {existingProject ? "Update project details" : `New Project: ${projectNo}`}
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">Back to Dashboard</span>
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="outline"
+            className="gap-1 h-7 text-xs px-2"
+            size="sm"
+            onClick={() => navigate("/projects")}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            <span className="hidden sm:inline text-white">Back to Projects</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1 h-7 text-xs px-2"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            <span className="hidden sm:inline text-white">Back to Dashboard</span>
+          </Button>
+        </div>
       </div>
 
       {/* ===== STEP 1 ===== */}
       {step === 1 && (
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-3 max-w-3xl">
           {/* Company Details */}
-          <div className="form-section">
-            <h2 className="text-lg font-semibold mb-4">Company Details</h2>
-            <div className="bg-muted/50 rounded-lg p-4 text-sm">
-              <p className="font-semibold">Ecstatics Spaces India Pvt. Ltd.</p>
-              <p className="text-muted-foreground">
-                3120, Ganga Trueno, Airport Road, Viman Nagar, Pune
-              </p>
-              <p className="text-muted-foreground">GST No: 27AAFCE9942B1ZM</p>
-              <p className="text-muted-foreground">
-                (+91) 7066466060 | info@esipl.in
-              </p>
+          <div className="enterprise-card p-3">
+            <h2 className="text-xs font-semibold mb-2">Company Details</h2>
+            <div className="bg-muted/50 rounded-md p-3 text-sm">
+              <p className="font-semibold text-sm">Ecstatics Spaces India Pvt. Ltd.</p>
+              <p className="text-xs text-muted-foreground">3120, Ganga Trueno, Airport Road, Viman Nagar, Pune</p>
+              <p className="text-xs text-muted-foreground">GST No: 27AAFCE9942B1ZM</p>
+              <p className="text-xs text-muted-foreground">(+91) 7066466060 | info@esipl.in</p>
             </div>
           </div>
 
           {/* Project Name */}
-          <div className="form-section">
-            <h2 className="text-lg font-semibold mb-4">Project Details</h2>
-            <div className="space-y-2">
-              <Label htmlFor="projectName">Project Name</Label>
+          <div className="enterprise-card p-3">
+            <h2 className="text-xs font-semibold mb-2">Project Details</h2>
+            <div className="space-y-1">
+              <Label htmlFor="projectName" className="text-xs">Project Name</Label>
               <Input
                 id="projectName"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 placeholder="Enter project name (e.g., Living Room Furniture, Office Setup)"
-                className="h-11"
+                className="h-8 text-sm"
               />
             </div>
           </div>
 
           {/* Customer Information */}
-          <div className="rounded-lg border bg-card overflow-visible p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Customer Information</h2>
+          <div className="enterprise-card overflow-visible p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-semibold">Customer Information</h2>
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 text-xs"
+                className="gap-1 h-6 text-[11px] px-2"
                 onClick={() => navigate("/customers/new")}
               >
-                <Plus className="h-3.5 w-3.5" /> Add New Customer
+                <Plus className="h-3 w-3" /> Add New Customer
               </Button>
             </div>
-            <div className="form-grid">
-              <div className="space-y-2 lg:col-span-2">
-                <Label>Search & Select Customer *</Label>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="space-y-1 lg:col-span-2">
+                <Label className="text-xs">Search & Select Customer *</Label>
                 <CustomerSearchSelect
                   value={customerId}
                   onChange={setCustomerId}
                   placeholder="Search customer by name or mobile..."
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Sales Manager</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Sales Manager</Label>
                 <Select
                   value={
                     existingProject
@@ -1379,14 +1388,12 @@ const ProjectForm: React.FC = () => {
                   onValueChange={setSalesPersonId}
                   disabled
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Select sales person" />
                   </SelectTrigger>
                   <SelectContent>
                     {salesPersons.map((sp) => (
-                      <SelectItem key={sp.id} value={sp.id}>
-                        {sp.name}
-                      </SelectItem>
+                      <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1395,90 +1402,59 @@ const ProjectForm: React.FC = () => {
 
             {/* Customer Details + Addresses */}
             {selectedCustomer && (
-              <div className="mt-4 space-y-4">
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Customer Details
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1 text-xs h-7"
-                      onClick={() =>
-                        navigate(`/customers/edit/${selectedCustomer.id}`)
-                      }
-                    >
-                      <Edit className="h-3 w-3" /> Edit Customer
+              <div className="mt-3 space-y-2">
+                <div className="bg-muted/50 rounded-md p-3 text-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Customer Details</span>
+                    <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
+                      onClick={() => navigate(`/customers/edit/${selectedCustomer.id}`)}>
+                      <Edit className="h-2.5 w-2.5" /> Edit Customer
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-muted-foreground">Name</p>
-                      <p className="font-medium">{selectedCustomer.name}</p>
+                      <p className="text-xs text-muted-foreground">Name</p>
+                      <p className="font-medium text-sm">{selectedCustomer.name}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Contact</p>
-                      <p className="font-medium">{selectedCustomer.mobile}</p>
+                      <p className="text-xs text-muted-foreground">Contact</p>
+                      <p className="font-medium text-sm">{selectedCustomer.mobile}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">GSTIN</p>
-                      <p className="font-medium font-mono">
-                        {selectedCustomer.gstin || "—"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">GSTIN</p>
+                      <p className="font-medium font-mono text-sm">{selectedCustomer.gstin || "—"}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Billing Address */}
-                <div className="bg-blue-50/50 dark:bg-blue-950/10 rounded-lg p-4 text-sm border border-blue-200/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
-                      Billing Address
-                    </span>
+                <div className="bg-blue-50/50 dark:bg-blue-950/10 rounded-md p-3 text-sm border border-blue-200/30">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-blue-600" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">Billing Address</span>
                   </div>
-                  <p className="font-medium">
-                    {billingAddressString || "No billing address on file"}
-                  </p>
+                  <p className="font-medium text-sm">{billingAddressString || "No billing address on file"}</p>
                 </div>
 
                 {/* Delivery Address */}
-                <div className="bg-green-50/50 dark:bg-green-950/10 rounded-lg p-4 text-sm border border-green-200/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-green-600" />
-                      <span className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
-                        Delivery Address
-                      </span>
+                <div className="bg-green-50/50 dark:bg-green-950/10 rounded-md p-3 text-sm border border-green-200/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5 text-green-600" />
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Delivery Address</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1 text-xs h-7"
-                      onClick={() => setShowDeliveryEditor(!showDeliveryEditor)}
-                    >
-                      <Edit className="h-3 w-3" />
-                      {showDeliveryEditor
-                        ? "Close"
-                        : deliverySameAsBilling
-                          ? "Add Different Address"
-                          : "Edit"}
+                    <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
+                      onClick={() => setShowDeliveryEditor(!showDeliveryEditor)}>
+                      <Edit className="h-2.5 w-2.5" />
+                      {showDeliveryEditor ? "Close" : deliverySameAsBilling ? "Add Different Address" : "Edit"}
                     </Button>
                   </div>
                   {!showDeliveryEditor && (
-                    <p className="font-medium">
+                    <p className="font-medium text-sm">
                       {deliverySameAsBilling
                         ? "Same as billing address"
-                        : [
-                          deliveryAddr.address,
-                          deliveryAddr.landmark,
-                          deliveryAddr.city,
-                          deliveryAddr.state,
-                          deliveryAddr.pincode,
-                        ]
-                          .filter(Boolean)
-                          .join(", ") || "Not specified"}
+                        : [deliveryAddr.address, deliveryAddr.landmark, deliveryAddr.city, deliveryAddr.state, deliveryAddr.pincode]
+                          .filter(Boolean).join(", ") || "Not specified"}
                     </p>
                   )}
                   {showDeliveryEditor && (
@@ -1486,19 +1462,10 @@ const ProjectForm: React.FC = () => {
                       deliverySameAsBilling={deliverySameAsBilling}
                       onToggleSame={(checked) => {
                         setDeliverySameAsBilling(checked);
-                        if (checked)
-                          setDeliveryAddr({
-                            address: "",
-                            landmark: "",
-                            city: "",
-                            state: "",
-                            pincode: "",
-                          });
+                        if (checked) setDeliveryAddr({ address: "", landmark: "", city: "", state: "", pincode: "" });
                       }}
                       deliveryAddr={deliveryAddr}
-                      onChangeField={(field, value) =>
-                        setDeliveryAddr((prev) => ({ ...prev, [field]: value }))
-                      }
+                      onChangeField={(field, value) => setDeliveryAddr((prev) => ({ ...prev, [field]: value }))}
                       billingAddress={billingAddressString}
                     />
                   )}
@@ -1507,12 +1474,8 @@ const ProjectForm: React.FC = () => {
             )}
           </div>
 
-          <Button
-            onClick={handleNextStep}
-            className="btn-accent gap-2"
-            disabled={!customerId}
-          >
-            Next <ChevronRight className="h-4 w-4" />
+          <Button onClick={handleNextStep} className="btn-accent gap-1 h-7 text-xs px-3" disabled={!customerId}>
+            Next <ChevronRight className="h-3 w-3" />
           </Button>
         </div>
       )}
@@ -1521,47 +1484,29 @@ const ProjectForm: React.FC = () => {
       {step === 2 && (
         <>
           {/* Sticky Customer Info Bar */}
-          <div className="sticky top-0 z-30 bg-card border border-border shadow-sm mt-4 mb-0">
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-5 min-w-0 overflow-hidden">
+          <div className="sticky top-0 z-30 bg-card border border-border shadow-sm mt-1 mb-0">
+            <div className="flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-4 min-w-0 overflow-hidden">
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Customer
-                  </p>
-                  <p className="font-semibold text-sm truncate">
-                    {selectedCustomer?.name}
-                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Customer</p>
+                  <p className="font-semibold text-xs truncate">{selectedCustomer?.name}</p>
                 </div>
-                <div className="hidden sm:block min-w-0 border-l border-border pl-5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Contact
-                  </p>
-                  <p className="text-sm truncate">{selectedCustomer?.mobile}</p>
+                <div className="hidden sm:block min-w-0 border-l border-border pl-4">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contact</p>
+                  <p className="text-xs truncate">{selectedCustomer?.mobile}</p>
                 </div>
-                <div className="hidden md:block min-w-0 border-l border-border pl-5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    GSTIN
-                  </p>
-                  <p className="text-sm font-mono truncate">
-                    {selectedCustomer?.gstin || "—"}
-                  </p>
+                <div className="hidden md:block min-w-0 border-l border-border pl-4">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">GSTIN</p>
+                  <p className="text-xs font-mono truncate">{selectedCustomer?.gstin || "—"}</p>
                 </div>
-                <div className="hidden lg:block min-w-0 border-l border-border pl-5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Sales Manager
-                  </p>
-                  <p className="text-sm truncate">
-                    {selectedSalesPerson?.name || "—"}
-                  </p>
+                <div className="hidden lg:block min-w-0 border-l border-border pl-4">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Sales Manager</p>
+                  <p className="text-xs truncate">{selectedSalesPerson?.name || "—"}</p>
                 </div>
-                <div className="hidden xl:block min-w-0 border-l border-border pl-5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Delivery
-                  </p>
-                  <p className="text-sm truncate">
-                    {deliverySameAsBilling
-                      ? "Same as billing"
-                      : deliveryAddr.city || deliveryAddr.address || "Custom"}
+                <div className="hidden xl:block min-w-0 border-l border-border pl-4">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Delivery</p>
+                  <p className="text-xs truncate">
+                    {deliverySameAsBilling ? "Same as billing" : deliveryAddr.city || deliveryAddr.address || "Custom"}
                   </p>
                 </div>
               </div>
@@ -1705,7 +1650,7 @@ const ProjectForm: React.FC = () => {
                               className="btn-accent gap-2 flex-shrink-0 h-10"
                             >
                               <Plus className="h-4 w-4" />
-                              <span className="hidden sm:inline">Add Cart</span>
+                              <span className="hidden sm:inline text-white">Add Cart</span>
                             </Button>
                           </>
                         ) : (
@@ -1765,22 +1710,22 @@ const ProjectForm: React.FC = () => {
                         key={item.id}
                         onClick={() => scrollToItem(item.id)}
                         className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${highlightedItemId === item.id
-                          ? "bg-primary/10 border-l-2 border-l-primary"
+                          ? "bg-primary/5 border-l-2 border-l-primary"
                           : "hover:bg-muted/60"
                           }`}
                       >
-                        <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 text-white">
                           {item.itemNumber || i + 1}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-semibold text-[11px] leading-tight">
                             {item.quotationName}
                           </p>
-                          <p className="text-muted-foreground font-mono text-[9px]">
+                          <p className=" font-mono text-[9px]">
                             {item.uniqueNumber || item.quotationCode}
                           </p>
                         </div>
-                        <span className="text-[10px] font-bold tabular-nums text-accent flex-shrink-0">
+                        <span className="text-[10px] font-bold tabular-nums  flex-shrink-0">
                           {formatCurrency(item.totalWithGst || 0)}
                         </span>
                       </button>
@@ -1826,7 +1771,7 @@ const ProjectForm: React.FC = () => {
                       )}
                       <div className="flex justify-between font-semibold pt-1">
                         <span className="text-muted-foreground">Total GST</span>
-                        <span className="text-blue-600 tabular-nums">
+                        <span className="text-muted-foreground tabular-nums">
                           +{formatCurrency(totalGst)}
                         </span>
                       </div>
@@ -1846,7 +1791,7 @@ const ProjectForm: React.FC = () => {
                     <div className="pt-2">
                       <div className="flex justify-between text-base font-bold">
                         <span>Grand Total</span>
-                        <span className="text-accent tabular-nums">
+                        <span className="font-bold tabular-nums text-foreground">
                           {formatCurrency(grandTotal)}
                         </span>
                       </div>
