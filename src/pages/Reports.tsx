@@ -1070,7 +1070,6 @@ const Reports: React.FC = () => {
         {/* ─────── 1. OVERVIEW ─────── */}
         <TabsContent value="overview" className="space-y-2">
           <div id="report-overview">
-            <h2 className="text-sm font-semibold mb-3">Master Report – Hierarchy</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className="enterprise-card p-3">
                 <h3 className="text-xs font-semibold text-foreground mb-3">Status Breakdown</h3>

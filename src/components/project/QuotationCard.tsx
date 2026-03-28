@@ -55,6 +55,8 @@ interface DebouncedDiscountInputProps {
   value: number;
   min: number;
   max: number;
+  authorizedMin: number;
+  authorizedMax: number;
   onChange: (val: number) => void;
   delay?: number;
 }
@@ -63,6 +65,8 @@ const DebouncedDiscountInput: React.FC<DebouncedDiscountInputProps> = ({
   value,
   min,
   max,
+  authorizedMin,
+  authorizedMax,
   onChange,
   delay = 600,
 }) => {
@@ -85,6 +89,11 @@ const DebouncedDiscountInput: React.FC<DebouncedDiscountInputProps> = ({
     timerRef.current = setTimeout(() => {
       const num = Number(localValue);
       if (!isNaN(num)) {
+        // ─── CHANGED: Only clamp to absolute bounds (0–100).
+        // Do NOT clamp to the role's authorized range here.
+        // The parent component (handleDiscountChange) will decide
+        // whether to apply directly or require OTP based on the
+        // role's authorized range.
         const clamped = Math.max(min, Math.min(max, num));
         userEditingRef.current = false;
         onChangeRef.current(clamped);
@@ -95,19 +104,37 @@ const DebouncedDiscountInput: React.FC<DebouncedDiscountInputProps> = ({
     };
   }, [localValue, min, max, delay]);
 
+  // Determine if current local value is outside authorized range (for visual hint)
+  const numericLocal = Number(localValue);
+  const isOutsideAuthorized =
+    !isNaN(numericLocal) &&
+    localValue !== "" &&
+    (numericLocal < authorizedMin || numericLocal > authorizedMax);
+
   return (
-    <Input
-      type="number"
-      value={localValue}
-      onChange={(e) => {
-        userEditingRef.current = true;
-        setLocalValue(e.target.value);
-      }}
-      className="w-full h-6 sm:h-7 text-[11px] sm:text-xs text-right px-1"
-      min={min}
-      max={max}
-      step={0.5}
-    />
+    <div className="relative w-full">
+      <Input
+        type="number"
+        value={localValue}
+        onChange={(e) => {
+          userEditingRef.current = true;
+          setLocalValue(e.target.value);
+        }}
+        className={`w-full h-6 sm:h-7 text-[11px] sm:text-xs text-right px-1 ${
+          isOutsideAuthorized
+            ? "border-orange-400 focus-visible:ring-orange-300"
+            : ""
+        }`}
+        min={min}
+        max={max}
+        step={0.5}
+      />
+      {isOutsideAuthorized && (
+        <span className="absolute -bottom-3.5 right-0 text-[7px] text-orange-500 whitespace-nowrap">
+          OTP required
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -136,18 +163,10 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
     const dMin = discountRange?.min ?? 0;
     const dMax = discountRange?.max ?? 100;
 
-    // const activeWoods = woods.filter((w) => w.status === "active");
-    // const activePolishes = polishes.filter((p) => p.status === "active");
-    // const activeFabrics = fabrics.filter((f) => f.status === "active");
-
     const itemAmount = item.basePrice * item.quantity;
     const gstAmount = item.cgst + item.sgst + item.igst;
     const subtotalWithGst = itemAmount + gstAmount;
     const grandTotal = subtotalWithGst - item.discountAmount;
-
-    // const woodObj = item.woodId ? woods.find((w) => w.id === item.woodId) : null;
-    // const polishObj = item.polishId ? polishes.find((p) => p.id === item.polishId) : null;
-    // const fabricObj = item.fabricId ? fabrics.find((f) => f.id === item.fabricId) : null;
 
     const uniqueNumber =
       (item as any).uniqueNumber ||
@@ -226,13 +245,6 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
               )}
             </div>
           </div>
-
-          {/* Material circles - COMMENTED OUT */}
-          {/*
-          <div className="col-span-12 sm:col-span-3 flex sm:flex-col items-center justify-center gap-4 sm:gap-5 py-4 sm:py-5 px-3 border-t sm:border-t-0 border-border">
-            ... wood, polish, fabric circles ...
-          </div>
-          */}
         </div>
 
         {/* ═══════ DETAILS + PRICING TABLE ═══════ */}
@@ -319,17 +331,22 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                     </div>
                     {canEditDiscount && (dMin > 0 || dMax < 100) && (
                       <span className="text-[7px] sm:text-[8px] font-normal text-orange-500/70 block leading-tight mt-0.5">
-                        {dMin}% – {dMax}%
+                        {dMin}% – {dMax}% (no OTP)
                       </span>
                     )}
                   </td>
                   <td className="px-2 sm:px-3 py-1 sm:py-1.5">
                     {canEditDiscount ? (
                       <div className="flex items-center gap-1 bg-white dark:bg-muted/50 rounded-lg px-1.5 sm:px-2 py-0.5 border border-border shadow-sm">
+                        {/* ─── CHANGED: Pass 0–100 as min/max (absolute bounds)
+                             and the role's authorized range separately.
+                             The parent handles OTP logic for out-of-range values. ─── */}
                         <DebouncedDiscountInput
                           value={item.discountPercent}
-                          min={dMin}
-                          max={dMax}
+                          min={0}
+                          max={100}
+                          authorizedMin={dMin}
+                          authorizedMax={dMax}
                           onChange={(val) => onDiscountChange(item.id, val)}
                           delay={700}
                         />
@@ -475,70 +492,6 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
             </table>
           </div>
         </div>
-
-        {/* ═══════ FOOTER ROW — COMMENTED OUT ═══════ */}
-        {/*
-        <div className="flex flex-wrap items-center justify-between bg-muted/40 px-3 sm:px-4 py-1.5 sm:py-2 gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
-              Item #{item.itemNumber || index + 1}
-            </span>
-            <span className="text-[8px] sm:text-[9px] font-mono text-primary/70 bg-primary/5 px-1.5 sm:px-2 py-0.5 whitespace-nowrap">
-              {uniqueNumber}
-            </span>
-          </div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors uppercase tracking-wide whitespace-nowrap"
-          >
-            {isExpanded ? (
-              <><ChevronUp className="h-3 w-3" /> Hide Materials</>
-            ) : (
-              <><ChevronDown className="h-3 w-3" /> Edit Materials</>
-            )}
-          </button>
-        </div>
-        */}
-
-        {/* ═══════ EXPANDABLE MATERIALS — COMMENTED OUT ═══════ */}
-        {/*
-        {isExpanded && (
-          <div className="border-t border-border bg-muted/10 p-3 sm:p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide">Wood Type</Label>
-                <Select value={item.woodId || "none"} onValueChange={(v) => onUpdateMaterial(item.id, "wood", v)}>
-                  <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm"><SelectValue placeholder="Select wood" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none"><span className="text-muted-foreground">None</span></SelectItem>
-                    {activeWoods.map((w) => (<SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide">Polish</Label>
-                <Select value={item.polishId || "none"} onValueChange={(v) => onUpdateMaterial(item.id, "polish", v)}>
-                  <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm"><SelectValue placeholder="Select polish" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none"><span className="text-muted-foreground">None</span></SelectItem>
-                    {activePolishes.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide">Fabric</Label>
-                <Select value={item.fabricId || "none"} onValueChange={(v) => onUpdateMaterial(item.id, "fabric", v)}>
-                  <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm"><SelectValue placeholder="Select fabric" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none"><span className="text-muted-foreground">None</span></SelectItem>
-                    {activeFabrics.map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        )}
-        */}
       </div>
     );
   },

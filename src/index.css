@@ -249,6 +249,18 @@
     color: #323232;
   }
 
+  /* ═══ FIX: Select triggers are <button role="combobox"> — override button styles ═══ */
+  button[role="combobox"],
+  button[data-slot="select-trigger"],
+  [data-radix-select-trigger] {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+    letter-spacing: -0.006em !important;
+    font-family: var(--font-sans) !important;
+    color: #323232 !important;
+  }
+
   button[class*="bg-primary"],
   button[class*="bg-accent"],
   [role="button"][class*="bg-primary"],
@@ -268,7 +280,7 @@
   input,
   select,
   textarea {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: 400;
     color: #323232;
   }
@@ -279,6 +291,16 @@
     font-weight: 400;
     color: #323232;
     opacity: 0.5;
+  }
+
+  /* ═══ Native select & option elements ═══ */
+  select,
+  select option {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    font-family: var(--font-sans) !important;
+    color: #323232 !important;
+    text-transform: none !important;
   }
 
   /* ═══ Table base typography ═══ */
@@ -342,19 +364,16 @@
   }
 
   /* ═══ Enterprise Table ═══ */
-  /* ═══ Enterprise Table ═══ */
   .enterprise-table {
     @apply w-full border-collapse;
     font-size: var(--text-sm);
     color: #323232;
   }
 
-  /* Sticky header fix */
   .enterprise-table thead {
-    @apply sticky top-0 z-10 bg-white; /* added bg for overlap fix */
+    @apply sticky top-0 z-10 bg-white;
   }
 
-  /* Header */
   .enterprise-table th {
     @apply bg-muted text-left border-b-2 border-primary/20 align-middle;
     font-size: var(--text-xs);
@@ -363,10 +382,9 @@
     letter-spacing: 0.05em;
     padding: var(--space-sm) var(--space-lg);
     color: #323232;
-    white-space: nowrap; /* prevent breaking */
+    white-space: nowrap;
   }
 
-  /* Cells */
   .enterprise-table td {
     @apply border-b border-border align-middle;
     padding: var(--space-md) var(--space-lg);
@@ -376,12 +394,10 @@
     vertical-align: middle;
   }
 
-  /* Alternate rows */
   .enterprise-table tbody tr:nth-child(even) {
     @apply bg-muted/20;
   }
 
-  /* Row hover */
   .enterprise-table tbody tr {
     @apply transition-colors duration-150;
   }
@@ -390,7 +406,6 @@
     @apply bg-secondary/20;
   }
 
-  /* ═══ FIX: Contact & Location Alignment ═══ */
   .enterprise-table td.contact,
   .enterprise-table td.location {
     max-width: 220px;
@@ -399,27 +414,20 @@
     white-space: nowrap;
   }
 
-  /* Expand on hover */
   .enterprise-table td.contact:hover,
   .enterprise-table td.location:hover {
     white-space: normal;
   }
 
-  /* ═══ Container ═══ */
   .table-container {
     @apply overflow-x-auto rounded-none;
   }
 
-  /* ═══ FIX: Title size reduced (as requested) ═══ */
   .table-title {
-    font-size: var(--text-md); /* reduced */
+    font-size: var(--text-md);
     font-weight: 600;
     color: #323232;
     margin-bottom: var(--space-sm);
-  }
-
-  .table-container {
-    @apply overflow-x-auto rounded-none;
   }
 
   /* ═══ PDF Styles ═══ */
@@ -597,7 +605,7 @@
   /* ═══ Input Fields — NO uppercase ═══ */
   .input-field {
     @apply w-full h-11 px-3 py-2 border border-input rounded-none bg-background focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all;
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-family: var(--font-sans);
     font-weight: 400;
     color: #323232;
@@ -605,7 +613,7 @@
 
   .select-field {
     @apply w-full h-11 px-3 py-2 border border-input rounded-none bg-background focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent;
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-family: var(--font-sans);
     font-weight: 400;
     color: #323232;
@@ -697,27 +705,163 @@
     @apply bg-destructive/10;
   }
 
-  /* ═══ Menu / Dropdown typography ═══ */
-  [role="menu"],
-  [role="menuitem"],
-  [data-radix-popper-content-wrapper] *,
-  [class*="dropdown"] *,
-  [class*="popover"] *,
-  [class*="select-content"] *,
-  [class*="command"] * {
+  /* ══════════════════════════════════════════════════════════════
+     ═══ DROPDOWN / SELECT / POPOVER — FONT SIZE FIX ═══
+     Radix portals render outside normal DOM flow, so they
+     don't inherit component-level font sizes. We force
+     --text-sm (0.8125rem / 13px) to match surrounding labels.
+     ══════════════════════════════════════════════════════════ */
+
+  /* --- Radix / shadcn Select trigger (rendered as <button>) --- */
+  button[role="combobox"],
+  button[data-slot="select-trigger"],
+  [data-radix-select-trigger],
+  [class*="SelectTrigger"] {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+    letter-spacing: -0.006em !important;
     font-family: var(--font-sans) !important;
-    color: #323232;
+    color: #323232 !important;
+  }
+
+  /* placeholder inside select trigger */
+  button[role="combobox"] span[data-placeholder],
+  [data-radix-select-trigger] span[data-placeholder],
+  [class*="SelectTrigger"] span[style*="pointer-events"],
+  button[role="combobox"] [class*="placeholder"] {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    opacity: 0.5;
+    text-transform: none !important;
+  }
+
+  /* --- Radix popper wrapper (portal content) --- */
+  [data-radix-popper-content-wrapper] {
+    font-size: var(--text-sm) !important;
+    font-family: var(--font-sans) !important;
+  }
+
+  /* --- Select dropdown content & viewport --- */
+  [data-radix-select-content],
+  [data-radix-select-viewport],
+  [class*="SelectContent"],
+  [class*="select-content"] {
+    font-size: var(--text-sm) !important;
+    font-family: var(--font-sans) !important;
+  }
+
+  /* --- Individual select options --- */
+  [role="option"],
+  [data-radix-select-item],
+  [class*="SelectItem"],
+  [class*="select-item"] {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    font-family: var(--font-sans) !important;
+    color: #323232 !important;
+    text-transform: none !important;
+    letter-spacing: -0.006em !important;
+  }
+
+  /* --- Select group labels inside dropdown --- */
+  [data-radix-select-group] > [class*="Label"],
+  [class*="SelectLabel"],
+  [class*="select-label"] {
+    font-size: var(--text-xs) !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    font-family: var(--font-sans) !important;
+    color: #323232 !important;
+  }
+
+  /* --- Combobox / Command (search-select) --- */
+  [cmdk-root],
+  [cmdk-list],
+  [cmdk-group] {
+    font-size: var(--text-sm) !important;
+    font-family: var(--font-sans) !important;
+  }
+
+  [cmdk-input] {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    font-family: var(--font-sans) !important;
+    color: #323232 !important;
+    text-transform: none !important;
+  }
+
+  [cmdk-item] {
+    font-size: var(--text-sm) !important;
+    font-weight: 400 !important;
+    font-family: var(--font-sans) !important;
+    color: #323232 !important;
+    text-transform: none !important;
+  }
+
+  [cmdk-group-heading] {
+    font-size: var(--text-xs) !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  /* --- Dropdown menu items --- */
+  [role="menu"],
+  [data-radix-menu-content] {
+    font-size: var(--text-sm) !important;
+    font-family: var(--font-sans) !important;
   }
 
   [role="menuitem"],
-  [role="option"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
   [class*="DropdownMenuItem"],
-  [class*="SelectItem"],
-  [class*="CommandItem"] {
+  [class*="ContextMenuItem"],
+  [class*="MenubarItem"] {
     font-size: var(--text-sm) !important;
-    font-weight: 500 !important;
+    font-weight: 400 !important;
+    font-family: var(--font-sans) !important;
     color: #323232 !important;
+    text-transform: none !important;
+    letter-spacing: -0.006em !important;
   }
+
+  /* --- Menu separator labels --- */
+  [role="menu"] [class*="Label"],
+  [class*="DropdownMenuLabel"],
+  [class*="MenubarLabel"] {
+    font-size: var(--text-xs) !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  /* --- Popover content --- */
+  [data-radix-popover-content],
+  [class*="PopoverContent"],
+  [class*="popover-content"] {
+    font-size: var(--text-sm) !important;
+    font-family: var(--font-sans) !important;
+  }
+
+  /* --- Catch-all for any Radix portal content --- */
+  [data-radix-popper-content-wrapper] *,
+  [data-radix-portal] * {
+    font-family: var(--font-sans) !important;
+  }
+
+  [data-radix-popper-content-wrapper] span,
+  [data-radix-popper-content-wrapper] div,
+  [data-radix-popper-content-wrapper] p,
+  [data-radix-popper-content-wrapper] li,
+  [data-radix-popper-content-wrapper] a {
+    font-size: var(--text-sm) !important;
+    color: #323232;
+  }
+
+  /* ═══ END DROPDOWN FIX ═══ */
 
   /* ═══ Dialog / Sheet typography ═══ */
   [role="dialog"] h2,

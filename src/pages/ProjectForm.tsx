@@ -49,7 +49,6 @@ import CustomerSearchSelect from "@/components/common/CustomerSearchSelect";
 import { toast } from "sonner";
 import { getImageUrl } from "@/utils/reportHelpers";
 import { Skeleton } from "@/components/ui/skeleton";
-// import QuotationSearchSelect from "@/components/common/QuotationSearchSelect"; // Replaced with 4-field filter
 
 /* ── Interfaces ── */
 interface ProjectItemLocal {
@@ -193,7 +192,7 @@ const FormPageSkeleton = () => (
   </div>
 );
 
-/* ── Inline Editable Project Name (unchanged) ── */
+/* ── Inline Editable Project Name ── */
 interface InlineProjectNameProps {
   value: string;
   onChange: (value: string) => void;
@@ -305,7 +304,7 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
   );
 };
 
-/* ── Email Send Modal (unchanged) ── */
+/* ── Email Send Modal ── */
 interface EmailSendModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -387,7 +386,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         onClick={handleClose}
       />
       <div className="relative bg-card shadow-2xl w-full max-w-xl p-3 animate-scale-in mx-4 max-h-[90vh] overflow-y-auto rounded-md border border-border">
-        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div>
@@ -439,7 +437,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Admin notification info */}
             <div className="bg-muted/50 rounded-md p-2 border border-border">
               <p className="text-xs font-semibold text-foreground">
                 Admin Notification
@@ -449,7 +446,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </p>
             </div>
 
-            {/* Send to Customer toggle */}
             <div
               className={`rounded-md border p-2 transition-colors ${
                 sendToCustomer
@@ -493,7 +489,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             </div>
 
-            {/* Subject */}
             <div className="space-y-1">
               <Label htmlFor="emailSubject" className="text-xs">
                 Subject
@@ -507,7 +502,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               />
             </div>
 
-            {/* Project summary */}
             <div className="enterprise-card p-2 space-y-1.5">
               <h3 className="text-xs font-semibold mb-1.5">Project Summary</h3>
               <div className="flex items-center justify-between text-xs">
@@ -534,7 +528,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             </div>
 
-            {/* Message */}
             <div className="space-y-1">
               <Label htmlFor="emailMessage" className="text-xs">
                 Message
@@ -548,7 +541,6 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               />
             </div>
 
-            {/* Actions */}
             <div className="flex gap-2 pt-1 border-t border-border">
               <Button
                 variant="outline"
@@ -590,7 +582,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   );
 };
 
-/* ── Delivery Address Editor (unchanged) ── */
+/* ── Delivery Address Editor ── */
 interface DeliveryAddressEditorProps {
   deliverySameAsBilling: boolean;
   onToggleSame: (checked: boolean) => void;
@@ -719,7 +711,6 @@ const ProjectForm: React.FC = () => {
   const { woods, polishes, fabrics } = useMaterials();
   const { salesPersons } = useSalesPersons();
 
-  // ── Load master data for filter dropdowns ──
   const { categories: allCategories, fetchCategories: fetchAllCats } =
     useCategories();
   const { categoryNos: allCategoryNos, fetchCategoryNos: fetchAllCatNos } =
@@ -753,7 +744,6 @@ const ProjectForm: React.FC = () => {
     null,
   );
 
-  // Delivery address
   const [deliverySameAsBilling, setDeliverySameAsBilling] = useState(true);
   const [deliveryAddr, setDeliveryAddr] = useState<DeliveryAddressData>({
     address: "",
@@ -764,7 +754,6 @@ const ProjectForm: React.FC = () => {
   });
   const [showDeliveryEditor, setShowDeliveryEditor] = useState(false);
 
-  // OTP
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [pendingDiscountEdit, setPendingDiscountEdit] = useState<{
     itemId: string;
@@ -774,11 +763,9 @@ const ProjectForm: React.FC = () => {
     ? items.find((i) => i.id === pendingDiscountEdit.itemId)
     : null;
 
-  // Email
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [savedProject, setSavedProject] = useState<any>(null);
 
-  // ── Quotation add — 4-field filter (NEW) ──
   const [filterCategory, setFilterCategory] = useState("");
   const [filterCategoryNo, setFilterCategoryNo] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -789,13 +776,11 @@ const ProjectForm: React.FC = () => {
   const [matchLoading, setMatchLoading] = useState(false);
   const [newlyAddedItemId, setNewlyAddedItemId] = useState<string | null>(null);
 
-  // Loading
   const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // ── Filtered dropdown options ──
   const activeCats = allCategories.filter((c) => c.status === "active");
   const filteredCatNos = allCategoryNos.filter(
     (cn) => cn.categoryId === filterCategory && cn.status === "active",
@@ -805,7 +790,6 @@ const ProjectForm: React.FC = () => {
   );
   const activeVariants = allVariants.filter((v) => v.status === "active");
 
-  // ── Reset dependent filters on category change ──
   useEffect(() => {
     setFilterCategoryNo("");
     setFilterType("");
@@ -816,7 +800,6 @@ const ProjectForm: React.FC = () => {
     setMatchedQuotation(null);
   }, [filterCategoryNo, filterType, filterVariant]);
 
-  // ── Search for matching quotation when all 4 are filled ──
   useEffect(() => {
     if (filterCategory && filterCategoryNo && filterType && filterVariant) {
       const search = async () => {
@@ -909,7 +892,6 @@ const ProjectForm: React.FC = () => {
     (sp) => sp.id === salesPersonId,
   );
 
-  /* ── Populate delivery address from customer ── */
   useEffect(() => {
     if (selectedCustomer && !existingProject) {
       const cust = selectedCustomer as any;
@@ -1027,30 +1009,61 @@ const ProjectForm: React.FC = () => {
     );
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // CHANGED: Role-based dynamic discount range from user's role
+  // The role object should carry discountMin / discountMax.
+  // e.g. Sales Manager → { discountMin: 15, discountMax: 40 }
+  // ─────────────────────────────────────────────────────────────
   const discountRange = {
     min: Number((user as any)?.role?.discountMin) || 0,
     max: Number((user as any)?.role?.discountMax) || 100,
   };
 
+  /**
+   * Role-based dynamic discount validation:
+   *
+   * 1. Admin → always apply directly (no OTP).
+   * 2. Any other role:
+   *    • Discount WITHIN the role's authorized range
+   *      (discountMin ≤ value ≤ discountMax)  → apply directly, no OTP.
+   *    • Discount OUTSIDE the authorized range → require OTP verification.
+   *
+   * The range is read from user.role.discountMin / discountMax so
+   * different roles can define different ranges without code changes.
+   */
   const handleDiscountChange = (itemId: string, newDiscount: number) => {
+    // Gate: check basic permission first
     if (!hasPermission("discount:edit")) {
       toast.error("No permission to edit discount");
       return;
     }
-    const clamped = Math.max(
-      discountRange.min,
-      Math.min(discountRange.max, newDiscount),
-    );
-    if (newDiscount !== clamped) {
-      toast.warning(
-        `Discount must be between ${discountRange.min}% and ${discountRange.max}%`,
-      );
+
+    // Clamp to absolute bounds (0–100 %)
+    const validDiscount = Math.max(0, Math.min(100, newDiscount));
+
+    // Admin bypasses all OTP checks
+    if (user?.role?.name === "admin") {
+      updateItem(itemId, "discountPercent", validDiscount);
+      return;
     }
-    if (user?.role?.name !== "admin") {
-      setPendingDiscountEdit({ itemId, newDiscount: clamped });
-      setShowOTPModal(true);
+
+    // Determine whether the requested discount falls within the
+    // user's role-authorized range
+    const isWithinAuthorizedRange =
+      validDiscount >= discountRange.min &&
+      validDiscount <= discountRange.max;
+
+    if (isWithinAuthorizedRange) {
+      // ✅ Within authorized range → apply directly, no OTP needed
+      updateItem(itemId, "discountPercent", validDiscount);
+      toast.success("Discount applied");
     } else {
-      updateItem(itemId, "discountPercent", clamped);
+      // ⚠️ Outside authorized range → require OTP verification
+      toast.info(
+        `Discount ${validDiscount}% is outside your authorized range (${discountRange.min}%–${discountRange.max}%). OTP verification required.`,
+      );
+      setPendingDiscountEdit({ itemId, newDiscount: validDiscount });
+      setShowOTPModal(true);
     }
   };
 
@@ -1061,7 +1074,7 @@ const ProjectForm: React.FC = () => {
         "discountPercent",
         pendingDiscountEdit.newDiscount,
       );
-      toast.success("Discount updated successfully");
+      toast.success("Discount updated successfully (OTP verified)");
     }
     setShowOTPModal(false);
     setPendingDiscountEdit(null);
@@ -1079,7 +1092,6 @@ const ProjectForm: React.FC = () => {
     toast.success("Quotation removed");
   };
 
-  // ── Add matched quotation to cart (NEW) ──
   const handleAddMatchedQuotation = () => {
     if (!matchedQuotation) {
       toast.error("No matching product found");
@@ -1138,7 +1150,6 @@ const ProjectForm: React.FC = () => {
     setItems((prev) => [...prev, newItem]);
     setNewlyAddedItemId(newItem.id);
 
-    // Reset filters
     setFilterCategory("");
     setFilterCategoryNo("");
     setFilterType("");
@@ -1327,7 +1338,6 @@ const ProjectForm: React.FC = () => {
       {/* ===== STEP 1 ===== */}
       {step === 1 && (
         <div className="space-y-3 max-w-3xl">
-          {/* Company Details */}
           <div className="enterprise-card p-3">
             <h2 className="text-xs font-semibold mb-2">Company Details</h2>
             <div className="bg-muted/50 rounded-md p-3 text-sm">
@@ -1338,7 +1348,6 @@ const ProjectForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Project Name */}
           <div className="enterprise-card p-3">
             <h2 className="text-xs font-semibold mb-2">Project Details</h2>
             <div className="space-y-1">
@@ -1353,7 +1362,6 @@ const ProjectForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Customer Information */}
           <div className="enterprise-card overflow-visible p-3">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xs font-semibold">Customer Information</h2>
@@ -1400,7 +1408,6 @@ const ProjectForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Customer Details + Addresses */}
             {selectedCustomer && (
               <div className="mt-3 space-y-2">
                 <div className="bg-muted/50 rounded-md p-3 text-sm">
@@ -1427,7 +1434,6 @@ const ProjectForm: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Billing Address */}
                 <div className="bg-blue-50/50 dark:bg-blue-950/10 rounded-md p-3 text-sm border border-blue-200/30">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <MapPin className="h-3.5 w-3.5 text-blue-600" />
@@ -1436,7 +1442,6 @@ const ProjectForm: React.FC = () => {
                   <p className="font-medium text-sm">{billingAddressString || "No billing address on file"}</p>
                 </div>
 
-                {/* Delivery Address */}
                 <div className="bg-green-50/50 dark:bg-green-950/10 rounded-md p-3 text-sm border border-green-200/30">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
@@ -1483,7 +1488,6 @@ const ProjectForm: React.FC = () => {
       {/* ===== STEP 2 ===== */}
       {step === 2 && (
         <>
-          {/* Sticky Customer Info Bar */}
           <div className="sticky top-0 z-30 bg-card border border-border shadow-sm mt-1 mb-0">
             <div className="flex items-center justify-between px-3 py-2">
               <div className="flex items-center gap-4 min-w-0 overflow-hidden">
@@ -1513,7 +1517,6 @@ const ProjectForm: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Inline Editable Project Name Bar ── */}
           <InlineProjectName
             value={projectName}
             onChange={setProjectName}
@@ -1521,12 +1524,9 @@ const ProjectForm: React.FC = () => {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Main Quotation List */}
             <div className="lg:col-span-3 space-y-5">
-              {/* ══ NEW: 4-Field Filter Add Quotation Bar ══ */}
               <div className="sticky top-[60px] z-20 bg-card border border-border shadow-sm mb-6">
                 <div className="px-4 py-3 space-y-3">
-                  {/* Header */}
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-accent" />
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1534,9 +1534,7 @@ const ProjectForm: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* 4 Filter Dropdowns */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {/* Category */}
                     <Select
                       value={filterCategory}
                       onValueChange={setFilterCategory}
@@ -1553,7 +1551,6 @@ const ProjectForm: React.FC = () => {
                       </SelectContent>
                     </Select>
 
-                    {/* Category No */}
                     <Select
                       value={filterCategoryNo}
                       onValueChange={setFilterCategoryNo}
@@ -1571,7 +1568,6 @@ const ProjectForm: React.FC = () => {
                       </SelectContent>
                     </Select>
 
-                    {/* Type */}
                     <Select
                       value={filterType}
                       onValueChange={setFilterType}
@@ -1589,7 +1585,6 @@ const ProjectForm: React.FC = () => {
                       </SelectContent>
                     </Select>
 
-                    {/* Variant */}
                     <Select
                       value={filterVariant}
                       onValueChange={setFilterVariant}
@@ -1608,7 +1603,6 @@ const ProjectForm: React.FC = () => {
                     </Select>
                   </div>
 
-                  {/* Match Result + Add Button */}
                   {filterCategory &&
                     filterCategoryNo &&
                     filterType &&
@@ -1847,8 +1841,12 @@ const ProjectForm: React.FC = () => {
           setPendingDiscountEdit(null);
         }}
         onVerify={handleOTPVerify}
-        title="Discount Edit Approval"
-        description="OTP verification required to modify discount percentage"
+        title="Discount Override Approval"
+        description={
+          pendingDiscountEdit
+            ? `Discount of ${pendingDiscountEdit.newDiscount}% is outside your authorized range (${discountRange.min}%–${discountRange.max}%). OTP verification is required to proceed.`
+            : "OTP verification required to modify discount percentage"
+        }
         type="discount"
         entityId={pendingDiscountEdit?.itemId}
         entityType="discount_override"
