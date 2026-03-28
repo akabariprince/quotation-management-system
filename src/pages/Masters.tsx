@@ -1003,11 +1003,11 @@ const Masters: React.FC = () => {
                 <h3 className="text-xs font-medium text-foreground border-b border-border pb-1">Basic Information</h3>
                  {/* Auto-generated part code */}
                 <div className="space-y-1">
-                  <Label className="text-xs">Product Description (auto-generated)</Label>
+                  <Label className="text-xs">Product name (auto-generated)</Label>
                   <Input
                     value={quotationForm.partCode}
                     readOnly
-                    placeholder="Select all 4 fields above to generate Product Description"
+                    placeholder="Select all 4 fields above to generate Product name"
                     className="h-8 text-sm font-mono bg-muted/50"
                   />
                 </div>
@@ -1096,7 +1096,7 @@ const Masters: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">Product Name</Label>
+                  <Label className="text-xs">Product description</Label>
                   <Input
                     value={quotationForm.name}
                     onChange={(e) => setQuotationForm((prev) => ({ ...prev, name: e.target.value }))}
