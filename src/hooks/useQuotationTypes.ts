@@ -4,7 +4,6 @@ import { useApi } from '@/hooks/useApi';
 export interface QuotationType {
   id: string;
   name: string;
-  categoryId: string;
   status: 'pending' | 'active';
   createdAt?: string;
   updatedAt?: string;
@@ -30,7 +29,6 @@ export const useQuotationTypes = () => {
       limit?: number;
       sortBy?: string;
       sortOrder?: string;
-      categoryId?: string;
       status?: string;
     }) => {
       setLoading(true);
@@ -43,8 +41,6 @@ export const useQuotationTypes = () => {
         if (params?.sortBy) queryParts.push(`sortBy=${params.sortBy}`);
         if (params?.sortOrder)
           queryParts.push(`sortOrder=${params.sortOrder}`);
-        if (params?.categoryId)
-          queryParts.push(`categoryId=${params.categoryId}`);
         if (params?.status) queryParts.push(`status=${params.status}`);
 
         const queryString =
@@ -79,7 +75,7 @@ export const useQuotationTypes = () => {
   );
 
   const createQuotationType = useCallback(
-    async (data: { name: string; categoryId: string; status?: string }) => {
+    async (data: { name: string; status?: string }) => {
       const res = await post('/quotation-types', data);
       return res.data;
     },

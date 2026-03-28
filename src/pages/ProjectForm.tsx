@@ -781,25 +781,25 @@ const ProjectForm: React.FC = () => {
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // ═══════════════════════════════════════════════════════════
+  // CHANGED: All 4 lists show ALL active items — no parent filter
+  // ═══════════════════════════════════════════════════════════
   const activeCats = allCategories.filter((c) => c.status === "active");
-  const filteredCatNos = allCategoryNos.filter(
-    (cn) => cn.categoryId === filterCategory && cn.status === "active",
-  );
-  const filteredTypes = allQuotationTypes.filter(
-    (qt) => qt.categoryId === filterCategory && qt.status === "active",
-  );
+  const activeCatNos = allCategoryNos.filter((cn) => cn.status === "active");
+  const activeTypes = allQuotationTypes.filter((qt) => qt.status === "active");
   const activeVariants = allVariants.filter((v) => v.status === "active");
 
-  useEffect(() => {
-    setFilterCategoryNo("");
-    setFilterType("");
-    setMatchedQuotation(null);
-  }, [filterCategory]);
+  // ═══════════════════════════════════════════════════════════
+  // CHANGED: Removed the useEffect that reset categoryNo & type
+  //          when category changed (they are independent now)
+  // ═══════════════════════════════════════════════════════════
 
+  // Reset matched quotation when ANY filter changes
   useEffect(() => {
     setMatchedQuotation(null);
-  }, [filterCategoryNo, filterType, filterVariant]);
+  }, [filterCategory, filterCategoryNo, filterType, filterVariant]);
 
+  // Auto-search when all 4 filters are selected
   useEffect(() => {
     if (filterCategory && filterCategoryNo && filterType && filterVariant) {
       const search = async () => {
@@ -1009,56 +1009,32 @@ const ProjectForm: React.FC = () => {
     );
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // CHANGED: Role-based dynamic discount range from user's role
-  // The role object should carry discountMin / discountMax.
-  // e.g. Sales Manager → { discountMin: 15, discountMax: 40 }
-  // ─────────────────────────────────────────────────────────────
   const discountRange = {
     min: Number((user as any)?.role?.discountMin) || 0,
     max: Number((user as any)?.role?.discountMax) || 100,
   };
 
-  /**
-   * Role-based dynamic discount validation:
-   *
-   * 1. Admin → always apply directly (no OTP).
-   * 2. Any other role:
-   *    • Discount WITHIN the role's authorized range
-   *      (discountMin ≤ value ≤ discountMax)  → apply directly, no OTP.
-   *    • Discount OUTSIDE the authorized range → require OTP verification.
-   *
-   * The range is read from user.role.discountMin / discountMax so
-   * different roles can define different ranges without code changes.
-   */
   const handleDiscountChange = (itemId: string, newDiscount: number) => {
-    // Gate: check basic permission first
     if (!hasPermission("discount:edit")) {
       toast.error("No permission to edit discount");
       return;
     }
 
-    // Clamp to absolute bounds (0–100 %)
     const validDiscount = Math.max(0, Math.min(100, newDiscount));
 
-    // Admin bypasses all OTP checks
     if (user?.role?.name === "admin") {
       updateItem(itemId, "discountPercent", validDiscount);
       return;
     }
 
-    // Determine whether the requested discount falls within the
-    // user's role-authorized range
     const isWithinAuthorizedRange =
       validDiscount >= discountRange.min &&
       validDiscount <= discountRange.max;
 
     if (isWithinAuthorizedRange) {
-      // ✅ Within authorized range → apply directly, no OTP needed
       updateItem(itemId, "discountPercent", validDiscount);
       toast.success("Discount applied");
     } else {
-      // ⚠️ Outside authorized range → require OTP verification
       toast.info(
         `Discount ${validDiscount}% is outside your authorized range (${discountRange.min}%–${discountRange.max}%). OTP verification required.`,
       );
@@ -1525,6 +1501,9 @@ const ProjectForm: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3 space-y-5">
+              {/* ═══════════════════════════════════════════════════════ */}
+              {/* CHANGED: All 4 selects are independent — no disabled  */}
+              {/* ═══════════════════════════════════════════════════════ */}
               <div className="sticky top-[60px] z-20 bg-card border border-border shadow-sm mb-6">
                 <div className="px-4 py-3 space-y-3">
                   <div className="flex items-center gap-2">
@@ -1535,6 +1514,7 @@ const ProjectForm: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* Category — independent */}
                     <Select
                       value={filterCategory}
                       onValueChange={setFilterCategory}
@@ -1551,16 +1531,16 @@ const ProjectForm: React.FC = () => {
                       </SelectContent>
                     </Select>
 
+                    {/* Category No — independent, shows ALL active */}
                     <Select
                       value={filterCategoryNo}
                       onValueChange={setFilterCategoryNo}
-                      disabled={!filterCategory}
                     >
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue placeholder="No" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredCatNos.map((cn) => (
+                        {activeCatNos.map((cn) => (
                           <SelectItem key={cn.id} value={cn.id}>
                             {cn.name}
                           </SelectItem>
@@ -1568,16 +1548,16 @@ const ProjectForm: React.FC = () => {
                       </SelectContent>
                     </Select>
 
+                    {/* Type — independent, shows ALL active */}
                     <Select
                       value={filterType}
                       onValueChange={setFilterType}
-                      disabled={!filterCategory}
                     >
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue placeholder="Type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredTypes.map((qt) => (
+                        {activeTypes.map((qt) => (
                           <SelectItem key={qt.id} value={qt.id}>
                             {qt.name}
                           </SelectItem>
@@ -1585,10 +1565,10 @@ const ProjectForm: React.FC = () => {
                       </SelectContent>
                     </Select>
 
+                    {/* Variant — independent, shows ALL active */}
                     <Select
                       value={filterVariant}
                       onValueChange={setFilterVariant}
-                      disabled={!filterCategory}
                     >
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue placeholder="Variant" />
@@ -1713,7 +1693,7 @@ const ProjectForm: React.FC = () => {
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-semibold text-[11px] leading-tight">
-                            {item.quotationName}
+                            {item.quotationCode}
                           </p>
                           <p className=" font-mono text-[9px]">
                             {item.uniqueNumber || item.quotationCode}

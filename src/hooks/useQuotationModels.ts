@@ -83,7 +83,7 @@ export const useQuotationModels = () => {
   const createQuotationModel = useCallback(
     async (data: {
       name: string;
-      quotationTypeId: string;
+      // quotationTypeId: string;
       status?: string;
     }) => {
       const res = await post('/quotation-models', data);

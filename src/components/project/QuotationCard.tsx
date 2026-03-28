@@ -190,7 +190,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
               {item.itemNumber || index + 1}
             </span>
             <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
-              {item.quotationName}
+              {item.quotationCode}
             </span>
           </div>
           <div className="hidden sm:flex col-span-3 md:col-span-4 border-r border-border px-2 sm:px-3 py-2 sm:py-2.5 items-center justify-start">
@@ -203,7 +203,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
           </div>
           <div className="col-span-6 sm:col-span-5 px-2 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between min-w-0">
             <span className="text-xs sm:text-sm font-bold font-mono tracking-wide truncate">
-              {item.quotationCode}
+              {item.quotationName}
             </span>
             <button
               onClick={() => onRemoveItem(item.id)}
