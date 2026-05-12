@@ -1,5 +1,6 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "ecstatics-quotation-management-system",
+  "description": "Premium interior and furniture quotation management system frontend built with React and Vite.",
   "private": true,
   "version": "0.0.0",
   "type": "module",
