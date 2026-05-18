@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <aside
         className={cn(
           'fixed lg:static inset-y-0 left-0 z-50 bg-card border-r-2 border-primary/20',
-          'flex flex-col h-screen transition-all duration-300 ease-in-out',
+          'flex flex-col h-dvh transition-all duration-300 ease-in-out',
           isCollapsed ? 'w-[82px]' : 'w-[280px]',
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
