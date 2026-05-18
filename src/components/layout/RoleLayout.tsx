@@ -22,17 +22,17 @@ const RoleLayout: React.FC = () => {
 
   if (isDashboard) {
     return (
-      <div className="h-screen overflow-hidden">
+      <div className="h-dvh overflow-hidden">
         <Outlet />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
+    <div className="flex h-dvh bg-white overflow-hidden">
       {/* ═══ Sidebar — always open, same card size as dashboard ═══ */}
       <aside
-        className="flex-shrink-0 flex flex-col h-screen bg-background"
+        className="flex-shrink-0 flex flex-col h-dvh bg-background"
         style={{
           width: `${CARD_W + GAP * 2}px`,
         }}
@@ -147,7 +147,7 @@ const RoleLayout: React.FC = () => {
       </aside>
 
       {/* ═══ Content ═══ */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-dvh">
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
             <Outlet />
