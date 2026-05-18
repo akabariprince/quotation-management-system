@@ -23,7 +23,7 @@ const AdminLayout: React.FC = () => {
   ]);
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-white overflow-hidden">
       {/* ═══ Top Header ═══ */}
       <header className="relative flex items-center  py-3 flex-shrink-0 m-3">
         <div className="absolute inset-0 flex items-center justify-start pointer-events-none ">
