@@ -61,7 +61,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-dvh bg-white">
       {/* ─── Logo ─── */}
       <div className="sticky top-0 z-50 flex justify-start py-3 sm:py-4 lg:py-5 bg-white ml-5">
         <img
