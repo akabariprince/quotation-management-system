@@ -1042,9 +1042,9 @@ const Masters: React.FC = () => {
               {formatOptionCount(normalizeSelectionValues(values).length)}
             </span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
             {values.map((value, index) => (
-              <div key={`${value}-${index}`} className="flex gap-2">
+              <div key={index} className="flex gap-2">
                 <Input
                   value={value}
                   onChange={(e) => updateSelectionValueList(values, setValues, index, e.target.value)}
