@@ -27,9 +27,22 @@ import { useWoods, Wood } from "@/hooks/useWoods";
 import { usePolishes, Polish } from "@/hooks/usePolishes";
 import { useFabrics, Fabric } from "@/hooks/useFabrics";
 import { useQuotations, Quotation, getQuotationImageUrl } from "@/hooks/useQuotations";
+import { getSelectionCategoryFromName, useSelections } from "@/hooks/useSelections";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const PAGE_LIMIT = 10;
+
+const normalizeSelectionValues = (values: string[]) =>
+  Array.from(
+    new Set(
+      values
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
+
+const formatOptionCount = (count: number) =>
+  count === 1 ? "1 option" : `${count} options`;
 
 // ── Skeleton Components ──
 const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
@@ -124,9 +137,14 @@ const Masters: React.FC = () => {
     fetchQuotations, createQuotation, updateQuotation, deleteQuotation,
   } = useQuotations();
 
+  const {
+    selections, meta: selectionsMeta, loading: selectionsLoading,
+    fetchSelections, createSelection, updateSelection, deleteSelection,
+  } = useSelections();
+
   const tabParam = searchParams.get("tab");
   const tabParamFrom = searchParams.get("from");
-  const validTabs = ["category", "categoryNo", "quotationType", "variant", "quotation", "quotationModel", "wood", "polish", "fabric"];
+  const validTabs = ["category", "categoryNo", "quotationType", "variant", "selection", "quotation", "quotationModel", "wood", "polish", "fabric"];
   const initialTab = tabParam && validTabs.includes(tabParam) ? tabParam : "category";
 
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -138,20 +156,26 @@ const Masters: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editItemName, setEditItemName] = useState("");
+  const [selectionType, setSelectionType] = useState<"variant-connected" | "general">("variant-connected");
+  const [selectionVariantIds, setSelectionVariantIds] = useState<string[]>([]);
+  const [selectionValues, setSelectionValues] = useState<string[]>([""]);
+  const [editSelectionType, setEditSelectionType] = useState<"variant-connected" | "general">("variant-connected");
+  const [editSelectionVariantIds, setEditSelectionVariantIds] = useState<string[]>([]);
+  const [editSelectionValues, setEditSelectionValues] = useState<string[]>([""]);
 
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({
     category: "", categoryNo: "", quotationType: "", quotationModel: "",
-    variant: "", wood: "", polish: "", fabric: "", quotation: "",
+    variant: "", selection: "", wood: "", polish: "", fabric: "", quotation: "",
   });
 
   const [statusFilters, setStatusFilters] = useState<Record<string, string>>({
     category: "", categoryNo: "", quotationType: "", quotationModel: "",
-    variant: "", wood: "", polish: "", fabric: "", quotation: "",
+    variant: "", selection: "", wood: "", polish: "", fabric: "", quotation: "",
   });
 
   const [currentPages, setCurrentPages] = useState<Record<string, number>>({
     category: 1, categoryNo: 1, quotationType: 1, quotationModel: 1,
-    variant: 1, wood: 1, polish: 1, fabric: 1, quotation: 1,
+    variant: 1, selection: 1, wood: 1, polish: 1, fabric: 1, quotation: 1,
   });
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -192,6 +216,7 @@ const Masters: React.FC = () => {
         case "quotationType": return fetchQuotationTypes(params);
         case "quotationModel": return fetchQuotationModels(params);
         case "variant": return fetchVariants(params);
+        case "selection": return fetchSelections(params);
         case "wood": return fetchWoods(params);
         case "polish": return fetchPolishes(params);
         case "fabric": return fetchFabrics(params);
@@ -200,7 +225,7 @@ const Masters: React.FC = () => {
     },
     [currentPages, searchQueries, statusFilters,
       fetchCategories, fetchCategoryNos, fetchQuotationTypes, fetchQuotationModels,
-      fetchVariants, fetchWoods, fetchPolishes, fetchFabrics, fetchQuotations]
+      fetchVariants, fetchSelections, fetchWoods, fetchPolishes, fetchFabrics, fetchQuotations]
   );
 
   useEffect(() => {
@@ -214,6 +239,7 @@ const Masters: React.FC = () => {
     fetchQuotationTypes({ limit: 1000 });
     fetchQuotationModels({ limit: 1000 });
     fetchVariants({ limit: 1000 });
+    fetchSelections({ limit: 1000 });
     fetchWoods({ limit: 1000 });
     fetchPolishes({ limit: 1000 });
     fetchFabrics({ limit: 1000 });
@@ -302,11 +328,49 @@ const Masters: React.FC = () => {
     quotationType: updateQuotationType,
     quotationModel: updateQuotationModel,
     variant: updateVariant,
+    selection: updateSelection,
     wood: updateWood,
     polish: updatePolish,
     fabric: updateFabric,
     quotation: updateQuotation,
   });
+
+  const toggleSelectionVariant = (variantId: string, editing = false) => {
+    const setter = editing ? setEditSelectionVariantIds : setSelectionVariantIds;
+    setter((prev) =>
+      prev.includes(variantId)
+        ? prev.filter((id) => id !== variantId)
+        : [...prev, variantId],
+    );
+  };
+
+  const updateSelectionValueList = (
+    values: string[],
+    setValues: React.Dispatch<React.SetStateAction<string[]>>,
+    index: number,
+    value: string,
+  ) => {
+    const nextValues = [...values];
+    nextValues[index] = value;
+    setValues(nextValues);
+  };
+
+  const addSelectionValue = (setValues: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setValues((prev) => [...prev, ""]);
+  };
+
+  const removeSelectionValue = (
+    values: string[],
+    setValues: React.Dispatch<React.SetStateAction<string[]>>,
+    index: number,
+  ) => {
+    if (values.length === 1) {
+      setValues([""]);
+      return;
+    }
+
+    setValues((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+  };
 
   const handleDirectApprove = async (item: any, type: string) => {
     try {
@@ -321,6 +385,10 @@ const Masters: React.FC = () => {
 
   const handleAdd = async () => {
     if (!newItemName.trim()) { toast.error("Please enter a name"); return; }
+    if (activeTab === "selection" && selectionType === "variant-connected" && selectionVariantIds.length === 0) {
+      toast.error("Selection Master requires at least one mapped variant");
+      return;
+    }
     setSubmitting(true);
     try {
       const itemStatus = isAdmin ? "active" : "pending";
@@ -336,6 +404,19 @@ const Masters: React.FC = () => {
           newItem = await createQuotationModel({ name: newItemName, status: itemStatus }); break;
         case "variant":
           newItem = await createVariant({ name: newItemName, status: itemStatus }); break;
+        case "selection":
+          newItem = await createSelection({
+            name: newItemName,
+            category: getSelectionCategoryFromName(newItemName),
+            type: selectionType,
+            variantIds: selectionType === "variant-connected" ? selectionVariantIds : [],
+            values: normalizeSelectionValues(selectionValues).map((name, index) => ({
+              name,
+              sortOrder: index,
+            })),
+            status: itemStatus,
+          });
+          break;
         case "wood":
           newItem = await createWood({ name: newItemName, status: itemStatus }); break;
         case "polish":
@@ -345,6 +426,9 @@ const Masters: React.FC = () => {
       }
       setShowAddModal(false);
       setNewItemName("");
+      setSelectionType("variant-connected");
+      setSelectionVariantIds([]);
+      setSelectionValues([""]);
       if (isAdmin)
         toast.success(`${getTabLabel(activeTab)} created and activated successfully`);
       else if (!roleRequiresOtp)
@@ -364,20 +448,40 @@ const Masters: React.FC = () => {
   const handleEditClick = (item: any, type: string) => {
     setEditingItem({ ...item, type });
     setEditItemName(item.name);
+    if (type === "selection") {
+      setEditSelectionType(item.type || "variant-connected");
+      setEditSelectionVariantIds((item.variantMappings || []).map((m: any) => m.variantId));
+      const nextValues = (item.values || []).map((value: any) => value.name).filter(Boolean);
+      setEditSelectionValues(nextValues.length > 0 ? nextValues : [""]);
+    }
     setShowEditModal(true);
   };
 
   const handleEditSave = async () => {
     if (!editItemName.trim()) { toast.error("Please enter a name"); return; }
+    if (editingItem.type === "selection" && editSelectionType === "variant-connected" && editSelectionVariantIds.length === 0) {
+      toast.error("Selection Master requires at least one mapped variant");
+      return;
+    }
     setSubmitting(true);
     try {
       const updateData: any = { name: editItemName };
+      if (editingItem.type === "selection") {
+        updateData.category = getSelectionCategoryFromName(editItemName);
+        updateData.type = editSelectionType;
+        updateData.variantIds = editSelectionType === "variant-connected" ? editSelectionVariantIds : [];
+        updateData.values = normalizeSelectionValues(editSelectionValues).map((name, index) => ({
+          name,
+          sortOrder: index,
+        }));
+      }
       const updateFn = getUpdateFnMap();
       await updateFn[editingItem.type]?.(editingItem.id, updateData);
       toast.success(`${getTabLabel(editingItem.type)} updated successfully`);
       setShowEditModal(false);
       setEditingItem(null);
       setEditItemName("");
+      setEditSelectionValues([""]);
       await refreshCurrentTab();
     } catch (error: any) {
       toast.error(error?.message || "Failed to update item");
@@ -520,6 +624,7 @@ const Masters: React.FC = () => {
             quotationType: deleteQuotationType,
             quotationModel: deleteQuotationModel,
             variant: deleteVariant,
+            selection: deleteSelection,
             wood: deleteWood,
             polish: deletePolish,
             fabric: deleteFabric,
@@ -550,7 +655,7 @@ const Masters: React.FC = () => {
     const labels: Record<string, string> = {
       category: "Category", categoryNo: "Category No", quotationType: "Type",
       quotationModel: "Product Model", variant: "Variant", wood: "Wood",
-      polish: "Polish", fabric: "Fabric", quotation: "Products",
+      selection: "Selections", polish: "Polish", fabric: "Fabric", quotation: "Products",
     };
     return labels[tab] || tab;
   };
@@ -567,6 +672,7 @@ const Masters: React.FC = () => {
       case "quotationType": return quotationTypesMeta;
       case "quotationModel": return quotationModelsMeta;
       case "variant": return variantsMeta;
+      case "selection": return selectionsMeta;
       case "wood": return woodsMeta;
       case "polish": return polishesMeta;
       case "fabric": return fabricsMeta;
@@ -582,6 +688,7 @@ const Masters: React.FC = () => {
       case "quotationType": return quotationTypesLoading;
       case "quotationModel": return quotationModelsLoading;
       case "variant": return variantsLoading;
+      case "selection": return selectionsLoading;
       case "wood": return woodsLoading;
       case "polish": return polishesLoading;
       case "fabric": return fabricsLoading;
@@ -688,7 +795,11 @@ const Masters: React.FC = () => {
   const renderTable = (items: any[], type: string) => {
     const isLoading = getLoadingForTab(type);
     const meta = getMetaForTab(type);
-    const colCount = (canEdit || canDelete || canApprove) ? 3 : 2;
+    const isSelection = type === "selection";
+    const hasActions = canEdit || canDelete || canApprove;
+    const colCount = isSelection
+      ? (hasActions ? 6 : 5)
+      : (hasActions ? 3 : 2);
 
     return (
       <div>
@@ -699,6 +810,13 @@ const Masters: React.FC = () => {
               <thead>
                 <tr>
                   <th className="px-3 py-1.5 text-xs">Name</th>
+                  {isSelection && (
+                    <>
+                      <th className="px-3 py-1.5 text-xs">Type</th>
+                      <th className="px-3 py-1.5 text-xs">Mapped Variants</th>
+                      <th className="px-3 py-1.5 text-xs">Options</th>
+                    </>
+                  )}
                   <th className="px-3 py-1.5 text-xs">Status</th>
                   {(canEdit || canDelete || canApprove) && (
                     <th className="px-3 py-1.5 text-xs">Actions</th>
@@ -721,6 +839,24 @@ const Masters: React.FC = () => {
                   items.map((item) => (
                     <tr key={item.id} className="hover:bg-muted/50">
                       <td className="px-3 py-1 font-medium text-sm">{item.name}</td>
+                      {isSelection && (
+                        <>
+                          <td className="px-3 py-1 text-xs">
+                            {item.type === "variant-connected" ? "Selection Master" : "Normal Master"}
+                          </td>
+                          <td className="px-3 py-1 text-xs">
+                            {item.type === "general"
+                              ? "Not connected"
+                              : (item.variantMappings || [])
+                                .map((m: any) => m.variant?.name)
+                                .filter(Boolean)
+                                .join(", ") || "No variants"}
+                          </td>
+                          <td className="px-3 py-1 text-xs">
+                            {formatOptionCount((item.values || []).length)}
+                          </td>
+                        </>
+                      )}
                       <td className="px-3 py-1">
                         <span className={item.status === "active" ? "badge-success" : "badge-warning"}>
                           {item.status === "active"
@@ -853,6 +989,92 @@ const Masters: React.FC = () => {
     );
   };
 
+  const renderSelectionFormFields = (editing = false) => {
+    const type = editing ? editSelectionType : selectionType;
+    const variantIds = editing ? editSelectionVariantIds : selectionVariantIds;
+    const setType = editing ? setEditSelectionType : setSelectionType;
+    const setVariantIds = editing ? setEditSelectionVariantIds : setSelectionVariantIds;
+    const values = editing ? editSelectionValues : selectionValues;
+    const setValues = editing ? setEditSelectionValues : setSelectionValues;
+
+    return (
+      <>
+        <div className="space-y-1">
+          <Label className="text-xs">Type</Label>
+          <Select
+            value={type}
+            onValueChange={(value) => {
+              const nextType = value as "variant-connected" | "general";
+              setType(nextType);
+              if (nextType === "general") setVariantIds([]);
+            }}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="variant-connected">Selection Master</SelectItem>
+              <SelectItem value="general">Normal Master</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {type === "variant-connected" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Mapped Variants *</Label>
+            <div className="grid grid-cols-2 gap-1 border border-border rounded-md p-2 max-h-28 overflow-y-auto">
+              {activeVariants.map((variant) => (
+                <label key={variant.id} className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={variantIds.includes(variant.id)}
+                    onChange={() => toggleSelectionVariant(variant.id, editing)}
+                  />
+                  {variant.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Manage Values / Options</Label>
+            <span className="text-[10px] text-muted-foreground">
+              {formatOptionCount(normalizeSelectionValues(values).length)}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {values.map((value, index) => (
+              <div key={`${value}-${index}`} className="flex gap-2">
+                <Input
+                  value={value}
+                  onChange={(e) => updateSelectionValueList(values, setValues, index, e.target.value)}
+                  placeholder={`Option ${index + 1}`}
+                  className="h-8 text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 px-2 text-xs"
+                  onClick={() => removeSelectionValue(values, setValues, index)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={() => addSelectionValue(setValues)}
+          >
+            + Add Value
+          </Button>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -885,6 +1107,7 @@ const Masters: React.FC = () => {
             <TabsTrigger value="categoryNo" className="text-xs">Category No</TabsTrigger>
             <TabsTrigger value="quotationType" className="text-xs">Type</TabsTrigger>
             <TabsTrigger value="variant" className="text-xs">Variant</TabsTrigger>
+            <TabsTrigger value="selection" className="text-xs">Selections</TabsTrigger>
             <TabsTrigger value="quotation" className="text-xs">Products</TabsTrigger>
           </TabsList>
         </div>
@@ -900,6 +1123,9 @@ const Masters: React.FC = () => {
         </TabsContent>
         <TabsContent value="variant">
           {renderTable(variants, "variant")}
+        </TabsContent>
+        <TabsContent value="selection">
+          {renderTable(selections, "selection")}
         </TabsContent>
         <TabsContent value="quotation">
           {renderQuotationsTable()}
@@ -918,7 +1144,7 @@ const Masters: React.FC = () => {
             </div>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Name</Label>
+                <Label className="text-xs">{activeTab === "selection" ? "Selection Name" : "Name"}</Label>
                 <Input
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
@@ -927,6 +1153,7 @@ const Masters: React.FC = () => {
                   onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
                 />
               </div>
+              {activeTab === "selection" && renderSelectionFormFields(false)}
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setShowAddModal(false)}
                   className="flex-1 h-7 text-xs" disabled={submitting}>Cancel</Button>
@@ -956,7 +1183,7 @@ const Masters: React.FC = () => {
             </div>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Name</Label>
+                <Label className="text-xs">{editingItem.type === "selection" ? "Selection Name" : "Name"}</Label>
                 <Input
                   value={editItemName}
                   onChange={(e) => setEditItemName(e.target.value)}
@@ -965,6 +1192,7 @@ const Masters: React.FC = () => {
                   onKeyDown={(e) => { if (e.key === "Enter") handleEditSave(); }}
                 />
               </div>
+              {editingItem.type === "selection" && renderSelectionFormFields(true)}
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setShowEditModal(false)}
                   className="flex-1 h-7 text-xs" disabled={submitting}>Cancel</Button>

@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getImageUrl } from "@/utils/reportHelpers";
+import { Selection } from "@/hooks/useSelections";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -48,6 +49,7 @@ interface QuotationCardProps {
   onDiscountChange: (itemId: string, newDiscount: number) => void;
   salesManager?: string;
   discountRange?: DiscountRange;
+  selections?: Selection[];
 }
 
 /* ── Debounced Discount Input ── */
@@ -151,6 +153,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
       onDiscountChange,
       salesManager,
       discountRange,
+      selections = [],
     },
     ref,
   ) => {
@@ -174,40 +177,210 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
       (item as any).quotationCode ||
       "ITEM-0000";
 
+    const DEFAULT_SELECTION_VALUE = "N.A.";
+
+    const normalizeSelectionValues = (
+      values?: Array<{ value?: string; label?: string; name?: string }> | null,
+    ) => {
+      const safeValues = Array.isArray(values) ? values : [];
+      const normalized = safeValues
+        .map((value) => ({
+          value:
+            (value?.value || value?.label || value?.name || "")
+              .toString()
+              .trim() || DEFAULT_SELECTION_VALUE,
+        }))
+        .filter((value) => value.value !== "");
+
+      while (normalized.length < 2) {
+        normalized.push({ value: DEFAULT_SELECTION_VALUE });
+      }
+
+      return normalized.slice(0, 2);
+    };
+
+    const normalizeSelectionKey = (value?: string) =>
+      (value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+    const findSavedSelection = (selection: Selection) => {
+      const savedSelections = Array.isArray(item.selections) ? item.selections : [];
+      return (
+        savedSelections.find(
+          (currentSelection) => currentSelection.selectionId === selection.id,
+        ) ||
+        savedSelections.find(
+          (currentSelection) =>
+            normalizeSelectionKey(currentSelection.selectionName) ===
+            normalizeSelectionKey(selection.name),
+        )
+      );
+    };
+
+    const getDisplaySelectionValues = (selection: Selection) => {
+      const savedSelection = findSavedSelection(selection);
+      if (savedSelection?.values?.length) {
+        return normalizeSelectionValues(savedSelection.values);
+      }
+
+      return normalizeSelectionValues(
+        (selection.values || []).map((value) => ({ value: value.name })),
+      );
+    };
+
+    const selectedVariantName = String(
+      item.selectedVariantName ||
+        selections
+          .flatMap((selection) => selection.variantMappings || [])
+          .find((mapping) => mapping.variantId === item.selectedVariantId)
+          ?.variant?.name ||
+        "",
+    )
+      .trim()
+      .toUpperCase();
+
+    const applicableSelections = selections.filter((selection) => {
+      if (selection.status !== "active") return false;
+      if (selection.type === "general") return true;
+      if (!item.selectedVariantId) return false;
+      if (selectedVariantName === "SX" && selection.category === "leather") {
+        return false;
+      }
+      return (selection.variantMappings || []).some(
+        (mapping) => mapping.variantId === item.selectedVariantId,
+      );
+    });
+
+    useEffect(() => {
+      const normalizedSelections = applicableSelections.map((selection) => ({
+        selectionId: selection.id,
+        selectionName: selection.name,
+        selectionCode: selection.name
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-"),
+        values: getDisplaySelectionValues(selection),
+      }));
+
+      const currentSelections = item.selections || [];
+      const currentHash = JSON.stringify(currentSelections);
+      const normalizedHash = JSON.stringify(normalizedSelections);
+
+      if (currentHash !== normalizedHash) {
+        onUpdateItem(item.id, "selections", normalizedSelections);
+      }
+    }, [
+      applicableSelections,
+      item.id,
+      item.selectedVariantId,
+      item.selectedVariantName,
+      item.selections,
+      onUpdateItem,
+    ]);
+
+    const getSelectionValue = (selection: Selection, index: number) => {
+      const values = getDisplaySelectionValues(selection);
+      return values[index]?.value || DEFAULT_SELECTION_VALUE;
+    };
+
+    const renderSelectionField = (selection: Selection) => {
+      const options = (selection.values || []).map((value) => value.name);
+      const slots = [0, 1];
+
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {slots.map((index) => (
+            <div key={`${selection.id}-${index}`} className="space-y-1">
+              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                {selection.name} {index + 1}
+              </Label>
+              <Select
+                value={getSelectionValue(selection, index)}
+                onValueChange={(value) =>
+                  onUpdateItem(item.id, `${selection.id}::${index}`, value)
+                }
+              >
+                <SelectTrigger className="h-8 text-xs rounded-none border-border">
+                  <SelectValue placeholder={`${selection.name} ${index + 1}`} />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  <SelectItem
+                    value={DEFAULT_SELECTION_VALUE}
+                    className="rounded-none"
+                  >
+                    {DEFAULT_SELECTION_VALUE}
+                  </SelectItem>
+                  {options.map((option) => (
+                    <SelectItem
+                      key={`${selection.id}-${index}-${option}`}
+                      value={option}
+                      className="rounded-none"
+                    >
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    const renderSelectionGroup = (selection: Selection) => {
+      return (
+        <div
+          key={selection.id}
+          className="space-y-1 pb-2 border-b border-border/60"
+        >
+          <div className="flex items-center justify-between gap-3 bg-muted/50 ">
+            {/* <p className="text-[11px] font-semibold tracking-wide text-foreground uppercase align-middle">
+              {selection.name}
+            </p> */}
+
+           
+          </div>
+
+          {renderSelectionField(selection)}
+        </div>
+      );
+    };
+
     return (
       <div
         ref={ref}
-        className={`border bg-card overflow-hidden transition-all duration-500 ${
+        className={`border bg-card overflow-hidden transition-all duration-500 rounded-none ${
           isHighlighted
             ? "border-primary ring-2 ring-primary/30 shadow-xl scale-[1.01]"
             : "border-border hover:shadow-md"
         }`}
       >
         {/* ═══════ TOP HEADER ROW ═══════ */}
-        <div className="grid grid-cols-12 border-b border-border bg-muted/50">
-          <div className="col-span-6 sm:col-span-4 md:col-span-3 border-r border-border px-2 sm:px-3 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0">
+        <div className="grid grid-cols-12 border-b border-border bg-muted/50 rounded-none">
+          <div className="col-span-6 sm:col-span-4 md:col-span-3 border-r border-border px-2 sm:px-3 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2 min-w-0 rounded-none">
+            <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0">
               {item.itemNumber || index + 1}
             </span>
             <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
               {item.quotationCode}
             </span>
           </div>
-          <div className="hidden sm:flex col-span-3 md:col-span-4 border-r border-border px-2 sm:px-3 py-2 sm:py-2.5 items-center justify-start">
-            <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-0.5 sm:py-1">
+          <div className="hidden sm:flex col-span-3 md:col-span-4 border-r border-border px-2 sm:px-3 py-2 sm:py-2.5 items-center justify-start rounded-none">
+            <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-0.5 sm:py-1 rounded-none">
               <Hash className="h-3 w-3" />
               <span className="text-[9px] sm:text-[10px] font-bold font-mono tracking-wide">
                 {uniqueNumber}
               </span>
             </div>
           </div>
-          <div className="col-span-6 sm:col-span-5 px-2 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between min-w-0">
-            <span className="text-xs sm:text-sm font-bold font-mono tracking-wide truncate">
-              {item.quotationName}
+          <div className="col-span-6 sm:col-span-5 px-2 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between min-w-0 rounded-none">
+            <span className="text-xs sm:text-sm font-bold tracking-wide truncate">
             </span>
             <button
               onClick={() => onRemoveItem(item.id)}
-              className="p-1 sm:p-1.5 hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0 ml-2"
+              className="p-1 sm:p-1.5 hover:bg-destructive/10 rounded-none transition-colors flex-shrink-0 ml-2"
               title="Remove quotation"
             >
               <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
@@ -216,8 +389,8 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
         </div>
 
         {/* Mobile unique number badge */}
-        <div className="sm:hidden border-b border-border bg-muted/30 px-3 py-1.5 flex items-center justify-center">
-          <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1">
+        <div className="sm:hidden border-b border-border bg-muted/30 px-3 py-1.5 flex items-center justify-center rounded-none">
+          <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-none">
             <Hash className="h-3 w-3" />
             <span className="text-[10px] font-bold font-mono tracking-wide">
               {uniqueNumber}
@@ -226,23 +399,50 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
         </div>
 
         {/* ═══════ IMAGE ROW ═══════ */}
-        <div className="grid grid-cols-12 border-b border-border">
-          <div className="col-span-12 sm:col-span-12 border-r-0 sm:border-r border-border bg-muted/5">
-            <div className="w-full aspect-[16/9] overflow-hidden bg-muted/5">
+        <div className="grid grid-cols-12 border-b border-border items-stretch rounded-none">
+          <div className="col-span-12 lg:col-span-8 border-r-0 lg:border-r border-border bg-muted/5 flex flex-col justify-stretch rounded-none">
+            <div className="w-full h-64 lg:h-[380px] overflow-hidden bg-muted/5 rounded-none flex items-stretch">
               {item.images?.[0] ? (
                 <img
                   src={getImageUrl(item.images[0])}
                   alt={item.quotationName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-none"
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20">
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 rounded-none">
                   <ImageIcon className="h-10 w-10 sm:h-14 sm:w-14 text-muted-foreground/30" />
                   <span className="text-[10px] text-muted-foreground/50 mt-2">
                     No image
                   </span>
                 </div>
               )}
+            </div>
+          </div>
+          <div className="col-span-12 lg:col-span-4 bg-background flex flex-col lg:h-[380px]">
+            <div className="flex flex-col h-full gap-1">
+              {/* Header */}
+              <div className="flex items-center justify-between px-2 py-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Selections
+                </p>
+
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {applicableSelections.length} group(s)
+                </span>
+              </div>
+
+              {/* Content */}
+              <div className="border border-border/60 bg-muted/5 flex flex-col flex-1 min-h-0 overflow-hidden">
+                {applicableSelections.length > 0 ? (
+                  <div className="overflow-y-auto px-2 py-2 space-y-1 flex-1 max-h-[300px] lg:max-h-none">
+                    {applicableSelections.map(renderSelectionGroup)}
+                  </div>
+                ) : (
+                  <div className="my-auto border border-dashed border-border/70 px-4 py-6 text-center text-xs text-muted-foreground">
+                    No selections available
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -258,7 +458,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                     Description
                   </td>
                   <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm leading-relaxed">
-                    {item.description || "—"}
+                    {item.quotationName || "—"}
                   </td>
                 </tr>
                 <tr className="border-b border-border/60">

@@ -31,6 +31,7 @@ import { useCategoryNos } from "@/hooks/useCategoryNos";
 import { useQuotationTypes } from "@/hooks/useQuotationTypes";
 import { useVariants } from "@/hooks/useVariants";
 import { useApi } from "@/hooks/useApi";
+import { Selection, useSelections } from "@/hooks/useSelections";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,19 @@ import { getImageUrl } from "@/utils/reportHelpers";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /* ── Interfaces ── */
+interface ProjectSelectionValue {
+  id?: string;
+  label?: string;
+  value: string;
+}
+
+interface ProjectSelection {
+  selectionId: string;
+  selectionName: string;
+  selectionCode: string;
+  values: ProjectSelectionValue[];
+}
+
 interface ProjectItemLocal {
   id: string;
   quotationId: string;
@@ -58,12 +72,15 @@ interface ProjectItemLocal {
   quotationName: string;
   description: string | null;
   images: string[];
+  selections: ProjectSelection[];
   woodId: string | null;
   woodName: string | null;
   polishId: string | null;
   polishName: string | null;
   fabricId: string | null;
   fabricName: string | null;
+  selectedVariantId: string | null;
+  selectedVariantName?: string | null;
   basePrice: number;
   discountPercent: number;
   discountAmount: number;
@@ -92,8 +109,31 @@ interface DeliveryAddressData {
 }
 
 /* ── Helpers ── */
+const DEFAULT_SELECTION_VALUE = "N.A.";
+
 const resolveSelectValue = (val: string): string | undefined =>
   val === "none" || val === "" ? undefined : val;
+
+const normalizeSelectionValues = (
+  values?: ProjectSelectionValue[],
+  slotCount = 2,
+): ProjectSelectionValue[] => {
+  const safeValues = Array.isArray(values) ? values : [];
+
+  const normalized = safeValues
+    .filter((value) => value && typeof value === "object")
+    .map((value) => ({
+      ...value,
+      value:
+        (value.value || value.label || "").toString().trim() || DEFAULT_SELECTION_VALUE,
+    }));
+
+  while (normalized.length < slotCount) {
+    normalized.push({ value: DEFAULT_SELECTION_VALUE });
+  }
+
+  return normalized.slice(0, slotCount);
+};
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -140,13 +180,67 @@ const states = [
   "Tripura",
 ];
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 const getQuotationImageUrl = (imagePath: string) => {
   if (!imagePath) return "";
   if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
     return imagePath;
   return `${API_BASE_URL}/${imagePath}`;
+};
+
+const normalizeSelectionCode = (name: string) =>
+  name.trim().toLowerCase().replace(/\s+/g, "-");
+
+const hasSavedSelectionValues = (selections?: ProjectSelection[]) =>
+  Array.isArray(selections) &&
+  selections.some((selection) =>
+    (selection.values || []).some((value) => {
+      const resolvedValue = (value?.value || value?.label || "").toString().trim();
+      return resolvedValue.length > 0 && resolvedValue !== DEFAULT_SELECTION_VALUE;
+    }),
+  );
+
+const buildItemSelections = (
+  item: Partial<ProjectItemLocal>,
+  allSelections: Selection[],
+): ProjectSelection[] => {
+  if (!allSelections.length && Array.isArray(item.selections)) {
+    return item.selections.map((selection) => ({
+      ...selection,
+      values: normalizeSelectionValues(selection.values),
+    }));
+  }
+
+  const selectedVariantName = (item.selectedVariantName || "").trim().toUpperCase();
+  const allowableSelections = allSelections.filter((selection) => {
+    if (selection.status !== "active") return false;
+    if (selection.type === "general") return true;
+    if (!item.selectedVariantId) return false;
+    const hasMapping = (selection.variantMappings || []).some(
+      (mapping) => mapping.variantId === item.selectedVariantId,
+    );
+    if (!hasMapping) return false;
+    if (selectedVariantName === "SX" && selection.category === "leather") {
+      return false;
+    }
+    return true;
+  });
+
+  return allowableSelections
+    .filter((selection) => (selection.values || []).length > 0)
+    .map((selection) => {
+      const currentSelection = (item.selections || []).find(
+        (current) => current.selectionId === selection.id,
+      );
+
+      return {
+        selectionId: selection.id,
+        selectionName: selection.name,
+        selectionCode: normalizeSelectionCode(selection.name || selection.category),
+        values: normalizeSelectionValues(currentSelection?.values),
+      };
+    });
 };
 
 /* ── Form Page Skeleton ── */
@@ -721,12 +815,14 @@ const ProjectForm: React.FC = () => {
   } = useQuotationTypes();
   const { variants: allVariants, fetchVariants: fetchAllVariants } =
     useVariants();
+  const { selections, fetchSelections } = useSelections();
 
   useEffect(() => {
     fetchAllCats({ limit: 1000 });
     fetchAllCatNos({ limit: 1000 });
     fetchAllTypes({ limit: 1000 });
     fetchAllVariants({ limit: 1000 });
+    fetchSelections({ limit: 1000, status: "active" });
     fetchCustomers({ limit: 20, sortBy: "updatedAt", sortOrder: "DESC" });
   }, []);
 
@@ -848,8 +944,8 @@ const ProjectForm: React.FC = () => {
             setDeliverySameAsBilling(true);
           }
           setItems(
-            (p.items || []).map((item: any, i: number) =>
-              recalculateItem({
+            (p.items || []).map((item: any, i: number) => {
+              const normalizedItem = recalculateItem({
                 ...item,
                 quotationId: item.quotationId,
                 quotationCode: item.quotationCode,
@@ -866,14 +962,34 @@ const ProjectForm: React.FC = () => {
                 sgst: Number(item.sgst) || 0,
                 totalWithGst: Number(item.totalWithGst) || 0,
                 images: item.images || [],
+                selections: item.selections || [],
+                selectedVariantId: item.selectedVariantId || item.quotation?.variantId || null,
+                selectedVariantName:
+                  item.selectedVariantName ||
+                  item.selectedVariant?.name ||
+                  allVariants.find(
+                    (variant) =>
+                      variant.id ===
+                      (item.selectedVariantId || item.quotation?.variantId),
+                  )?.name ||
+                  null,
                 notes: item.notes || [],
                 itemNumber: i + 1,
                 uniqueNumber: generateQuotationUniqueNumber(p.projectNo, i),
                 length: item.quotation?.length,
                 width: item.quotation?.width,
                 specialNote: item.specialNote || "",
-              }),
-            ),
+              });
+
+              const hydratedSelections = hasSavedSelectionValues(item.selections)
+                ? item.selections
+                : buildItemSelections(normalizedItem, selections);
+
+              return {
+                ...normalizedItem,
+                selections: hydratedSelections,
+              };
+            }),
           );
           setStep(2);
         }
@@ -960,9 +1076,86 @@ const ProjectForm: React.FC = () => {
       toast.error("No permission to edit quantity");
       return;
     }
+
+    const selectionFieldMatch = field.match(/^(.*)::(\d+)$/);
+    const selectionSlot = selectionFieldMatch
+      ? { selectionId: selectionFieldMatch[1], slotIndex: Number(selectionFieldMatch[2]) }
+      : null;
+    const matchingSelection = selectionSlot
+      ? selections.find((selection) => selection.id === selectionSlot.selectionId)
+      : selections.find((selection) => selection.id === field);
+
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== itemId) return item;
+
+        if (field === "selections") {
+          return recalculateItem({
+            ...item,
+            selections: value as ProjectSelection[],
+          });
+        }
+
+        if (selectionSlot) {
+          const selectionEntry = item.selections.find(
+            (selection) => selection.selectionId === selectionSlot.selectionId,
+          );
+          const nextValues = normalizeSelectionValues(selectionEntry?.values);
+          nextValues[selectionSlot.slotIndex] = { value };
+
+          return recalculateItem({
+            ...item,
+            selections: selectionEntry
+              ? item.selections.map((selection) =>
+                  selection.selectionId === selectionSlot.selectionId
+                    ? { ...selection, values: nextValues }
+                    : selection,
+                )
+              : [
+                  ...item.selections,
+                  {
+                    selectionId: matchingSelection!.id,
+                    selectionName: matchingSelection!.name,
+                    selectionCode: normalizeSelectionCode(
+                      matchingSelection!.name || matchingSelection!.category,
+                    ),
+                    values: nextValues,
+                  },
+                ],
+          });
+        }
+
+        const selectionEntry = item.selections.find(
+          (selection) => selection.selectionId === field,
+        );
+        if (selectionEntry) {
+          return recalculateItem({
+            ...item,
+            selections: item.selections.map((selection) =>
+              selection.selectionId === field
+                ? { ...selection, values: normalizeSelectionValues([{ value }]) }
+                : selection,
+            ),
+          });
+        }
+
+        if (matchingSelection) {
+          return recalculateItem({
+            ...item,
+            selections: [
+              ...item.selections,
+              {
+                selectionId: matchingSelection.id,
+                selectionName: matchingSelection.name,
+                selectionCode: normalizeSelectionCode(
+                  matchingSelection.name || matchingSelection.category,
+                ),
+                values: normalizeSelectionValues([{ value }]),
+              },
+            ],
+          });
+        }
+
         return recalculateItem({ ...item, [field]: value });
       }),
     );
@@ -1096,12 +1289,15 @@ const ProjectForm: React.FC = () => {
       quotationName: quotation.name,
       description: quotation.description,
       images: quotation.images || [],
+      selections: [],
       woodId: null,
       woodName: null,
       polishId: null,
       polishName: null,
       fabricId: null,
       fabricName: null,
+      selectedVariantId: (quotation as any).variantId || filterVariant || null,
+      selectedVariantName: activeVariants.find((variant) => variant.id === ((quotation as any).variantId || filterVariant))?.name || null,
       basePrice: quotation.basePrice,
       discountPercent,
       discountAmount,
@@ -1122,6 +1318,9 @@ const ProjectForm: React.FC = () => {
       width: quotation.width,
       specialNote: "",
     };
+
+    const normalizedSelections = buildItemSelections(newItem, selections);
+    newItem.selections = normalizedSelections;
 
     setItems((prev) => [...prev, newItem]);
     setNewlyAddedItemId(newItem.id);
@@ -1144,6 +1343,17 @@ const ProjectForm: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [newlyAddedItemId, items]);
+
+  useEffect(() => {
+    setItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        selections: hasSavedSelectionValues(item.selections)
+          ? item.selections
+          : buildItemSelections(item, selections),
+      })),
+    );
+  }, [selections]);
 
   const scrollToItem = useCallback((itemId: string) => {
     setHighlightedItemId(itemId);
@@ -1200,12 +1410,11 @@ const ProjectForm: React.FC = () => {
       quotationName: item.quotationName,
       description: item.description,
       images: item.images || [],
-      woodId: item.woodId || null,
-      woodName: item.woodName || null,
-      polishId: item.polishId || null,
-      polishName: item.polishName || null,
-      fabricId: item.fabricId || null,
-      fabricName: item.fabricName || null,
+      selections:
+        Array.isArray(item.selections) && item.selections.length > 0
+          ? item.selections
+          : buildItemSelections(item, selections),
+      selectedVariantId: item.selectedVariantId || null,
       basePrice: Number(item.basePrice) || 0,
       discountPercent: Number(item.discountPercent) || 0,
       discountAmount: Number(item.discountAmount) || 0,
@@ -1665,6 +1874,7 @@ const ProjectForm: React.FC = () => {
                     onDiscountChange={handleDiscountChange}
                     salesManager={selectedSalesPerson?.name}
                     discountRange={discountRange}
+                    selections={selections}
                   />
                 ))
               )}

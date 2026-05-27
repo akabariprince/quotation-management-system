@@ -9,12 +9,19 @@ export interface ProjectItem {
   quotationName: string;
   description: string | null;
   images: string[];
-  woodId: string | null;
-  woodName: string | null;
-  polishId: string | null;
-  polishName: string | null;
-  fabricId: string | null;
-  fabricName: string | null;
+  
+  selections?: Array<{
+    selectionId: string;
+    selectionName: string;
+    selectionCode: string;
+    values: Array<{
+      id?: string;
+      label?: string;
+      value: string;
+    }>;
+  }> | null;
+  
+  selectedVariantId?: string | null;
   basePrice: number;
   discountPercent: number;
   discountAmount: number;
@@ -27,6 +34,7 @@ export interface ProjectItem {
   sgst: number;
   totalWithGst: number;
   notes: string[];
+  specialNote?: string | null;
   sortOrder?: number;
   projectQuotationNo?: string;
 }
@@ -239,7 +247,7 @@ export const useProjects = () => {
       try {
         const token = localStorage.getItem("accessToken");
         const API_BASE_URL =
-          import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+          import.meta.env.VITE_API_URL || "http://localhost:5001/api";
         // ★ Use window.fetch directly — completely bypass useApi
         // ★ Do NOT use get() from useApi — it parses response as JSON
         const response = await window.fetch(

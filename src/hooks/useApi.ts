@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export const useApi = () => {
   const { accessToken, logout } = useAuth();
@@ -29,11 +29,11 @@ export const useApi = () => {
         headers,
       };
 
-      if (body) {
+      if (body !== undefined) {
         if (isFormData) {
           config.body = body;
         } else {
-          config.body = JSON.stringify(body);
+          config.body = JSON.stringify(body ?? {});
         }
       }
 
