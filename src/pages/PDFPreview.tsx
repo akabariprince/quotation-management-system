@@ -758,290 +758,212 @@ const PDFPreview: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Image + Selections */}
+                    {/* ═══ FIXED LAYOUT: Two Columns with Equal Width ═══ */}
                     <div style={{ display: "flex", borderBottom: border }}>
-                      {/* Image - 16:9 ratio */}
-                      <div
-                        style={{
-                          width: "60%",
-                          position: "relative",
-                          overflow: "hidden",
-                          borderRight: border,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "100%",
-                            paddingBottom: "56.25%",
-                            position: "relative",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {item.images?.[0] ? (
-                            <img
-                              src={getImageUrl(item.images[0])}
-                              alt={item.quotationName}
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                                display: "block",
-                              }}
-                              crossOrigin="anonymous"
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: "100%",
-                                color: "#999",
-                                fontSize: "17px",
-                                textAlign: "center",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              No Image Available
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Selections Table */}
-                      <div style={{ width: "40%", fontSize: "13px" }}>
-                        <table
-                          style={{ width: "100%", borderCollapse: "collapse" }}
-                        >
-                          <tbody>
-                            <tr>
-                              <td
-                                colSpan={2}
+                      {/* LEFT COLUMN (60%) - Contains Image + Description */}
+                      <div style={{ width: "60%", borderRight: border }}>
+                        {/* Image Section - 16:9 ratio */}
+                        <div style={{ borderBottom: border }}>
+                          <div
+                            style={{
+                              width: "100%",
+                              paddingBottom: "56.25%",
+                              position: "relative",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {item.images?.[0] ? (
+                              <img
+                                src={getImageUrl(item.images[0])}
+                                alt={item.quotationName}
                                 style={{
-                                  padding: "6px 13px",
-                                  fontWeight: 600,
-                                  fontSize: "13px",
-                                  backgroundColor: "#f9f9f9",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  display: "block",
+                                }}
+                                crossOrigin="anonymous"
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "100%",
+                                  height: "100%",
+                                  color: "#999",
+                                  fontSize: "17px",
+                                  textAlign: "center",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                                 }}
                               >
-                                Selections
-                              </td>
-                            </tr>
-                            {mergedSelections.length > 0 ? (
-                              mergedSelections.map((sel, selIdx) =>
-                                sel.values.map((value, idx) => {
-                                  if (idx === 0) {
-                                    return (
-                                      <tr key={`${selIdx}-${idx}`}>
-                                        <td
-                                          rowSpan={sel.values.length}
-                                          style={{
-                                            padding: "5px 13px",
-                                            borderBottom: borderThin,
-                                            borderRight: borderThin,
-                                            color: "#555",
-                                            width: "60px",
-                                            verticalAlign: "top",
-                                          }}
-                                        >
-                                          {sel.label}
-                                        </td>
-                                        <td
-                                          style={{
-                                            padding: "5px 13px",
-                                            borderBottom: borderThin,
-                                            borderRight: borderThin,
-                                          }}
-                                        >
-                                          {value}
-                                        </td>
-                                      </tr>
-                                    );
-                                  } else {
-                                    return (
-                                      <tr key={`${selIdx}-${idx}`}>
-                                        <td
-                                          style={{
-                                            padding: "5px 13px",
-                                            borderBottom: borderThin,
-                                            borderRight: borderThin,
-                                          }}
-                                        >
-                                          {value}
-                                        </td>
-                                      </tr>
-                                    );
-                                  }
-                                }),
-                              )
-                            ) : (
+                                No Image Available
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description Table */}
+                        <div style={{ fontSize: "13px" }}>
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                            }}
+                          >
+                            <tbody>
+                              {item.woodName && (
+                                <tr>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                      color: "#555",
+                                      width: "110px",
+                                    }}
+                                  >
+                                    Wood
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                    }}
+                                  >
+                                    : {item.woodName}
+                                  </td>
+                                </tr>
+                              )}
+                              {item.polishName && (
+                                <tr>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                      color: "#555",
+                                    }}
+                                  >
+                                    Polish
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                    }}
+                                  >
+                                    : {item.polishName}
+                                  </td>
+                                </tr>
+                              )}
+                              {item.fabricName && (
+                                <tr>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                      color: "#555",
+                                    }}
+                                  >
+                                    Fabric
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                    }}
+                                  >
+                                    : {item.fabricName}
+                                  </td>
+                                </tr>
+                              )}
+                              {(item as any).quotation?.length && (
+                                <tr>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                      color: "#555",
+                                    }}
+                                  >
+                                    Length
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                    }}
+                                  >
+                                    : {(item as any).quotation.length} (mm)
+                                  </td>
+                                </tr>
+                              )}
+                              {(item as any).quotation?.width && (
+                                <tr>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                      color: "#555",
+                                    }}
+                                  >
+                                    Width
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 13px",
+                                      borderBottom: borderThin,
+                                      borderRight: borderThin,
+                                    }}
+                                  >
+                                    : {(item as any).quotation.width} (mm)
+                                  </td>
+                                </tr>
+                              )}
                               <tr>
                                 <td
                                   colSpan={2}
                                   style={{
-                                    padding: "5px 13px",
-                                    color: "#777",
-                                    fontSize: "12px",
+                                    padding: "9px 13px",
+                                    verticalAlign: "bottom",
                                     borderRight: borderThin,
                                   }}
                                 >
-                                  No selections selected
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Description + Pricing */}
-                    <div style={{ display: "flex", borderBottom: border }}>
-                      {/* LEFT - Description */}
-                      <div
-                        style={{
-                          width: "50%",
-                          borderRight: border,
-                          fontSize: "13px",
-                        }}
-                      >
-                        <table
-                          style={{ width: "100%", borderCollapse: "collapse" }}
-                        >
-                          <tbody>
-                            {item.woodName && (
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    color: "#555",
-                                    width: "110px",
-                                  }}
-                                >
-                                  Wood
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  : {item.woodName}
-                                </td>
-                              </tr>
-                            )}
-                            {item.polishName && (
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Polish
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  : {item.polishName}
-                                </td>
-                              </tr>
-                            )}
-                            {item.fabricName && (
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Fabric
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  : {item.fabricName}
-                                </td>
-                              </tr>
-                            )}
-                            {(item as any).quotation?.length && (
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Length
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  {(item as any).quotation.length} (mm)
-                                </td>
-                              </tr>
-                            )}
-                            {(item as any).quotation?.width && (
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    color: "#555",
-                                  }}
-                                >
-                                  Width
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "5px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  {(item as any).quotation.width} (mm)
-                                </td>
-                              </tr>
-                            )}
-                            <tr>
-                              <td
-                                colSpan={2}
-                                style={{
-                                  padding: "9px 13px",
-                                  verticalAlign: "bottom",
-                                  borderRight: borderThin,
-                                }}
-                              >
-                                {item.specialNote && (
+                                  {item.specialNote && (
+                                    <div
+                                      style={{
+                                        fontSize: "12px",
+                                        color: "#666",
+                                        marginTop: "5px",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          fontWeight: 600,
+                                          fontSize: "13px",
+                                        }}
+                                      >
+                                        Special Note:{" "}
+                                      </span>
+                                      <span style={{ color: "#333" }}>
+                                        {item.specialNote}
+                                      </span>
+                                    </div>
+                                  )}
                                   <div
                                     style={{
                                       fontSize: "12px",
@@ -1049,185 +971,265 @@ const PDFPreview: React.FC = () => {
                                       marginTop: "5px",
                                     }}
                                   >
-                                    <span
-                                      style={{
-                                        fontWeight: 600,
-                                        fontSize: "13px",
-                                      }}
-                                    >
-                                      Special Note:{" "}
-                                    </span>
-                                    <span style={{ color: "#333" }}>
-                                      {item.specialNote}
-                                    </span>
+                                    Sales Manager
                                   </div>
-                                )}
-                                <div
-                                  style={{
-                                    fontSize: "12px",
-                                    color: "#666",
-                                    marginTop: "5px",
-                                  }}
-                                >
-                                  Sales Manager
-                                </div>
-                                <div
-                                  style={{ fontWeight: 600, fontSize: "13px" }}
-                                >
-                                  {salesPersonName}
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                                  <div
+                                    style={{
+                                      fontWeight: 600,
+                                      fontSize: "13px",
+                                    }}
+                                  >
+                                    {salesPersonName}
+                                  </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
 
-                      {/* RIGHT - Pricing */}
-                      <div style={{ width: "50%", fontSize: "13px" }}>
-                        <table
-                          style={{ width: "100%", borderCollapse: "collapse" }}
-                        >
-                          <tbody>
-                            <tr>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Price{" "}
-                                <span
+                      {/* RIGHT COLUMN (40%) - Contains Selections + Pricing */}
+                      <div style={{ width: "40%" }}>
+                        {/* Selections Table */}
+                        <div style={{ borderBottom: border, fontSize: "13px" }}>
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                            }}
+                          >
+                            <tbody>
+                              <tr>
+                                <td
+                                  colSpan={2}
                                   style={{
-                                    fontSize: "11px",
-                                    color: "#666",
-                                    fontWeight: 400,
+                                    padding: "6px 13px",
+                                    fontWeight: 600,
+                                    fontSize: "13px",
+                                    backgroundColor: "#f9f9f9",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
                                   }}
                                 >
-                                  (inc. of gst)
-                                </span>
-                              </td>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                  textAlign: "right",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {formatCurrency(getPriceInclGst(item))}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                }}
-                              >
-                                Discount{" "}
-                                <span
-                                  style={{ fontSize: "12px", color: "#666" }}
-                                >
-                                  ({Number(item.discountPercent)}%)
-                                </span>
-                              </td>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                  textAlign: "right",
-                                  color: "#c00",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                -{formatCurrency(getDiscountAmount(item))}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                }}
-                              >
-                                Units
-                              </td>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                  textAlign: "right",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {item.quantity}
-                              </td>
-                            </tr>
-                            <tr style={{ backgroundColor: "#f9f9f9" }}>
-                              <td
-                                style={{
-                                  padding: "9px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                  fontWeight: 600,
-                                  fontSize: "14px",
-                                }}
-                              >
-                                Final Price{" "}
-                                <span
+                                  Selections
+                                </td>
+                              </tr>
+                              {mergedSelections.length > 0 ? (
+                                mergedSelections.map((sel, selIdx) =>
+                                  sel.values.map((value, idx) => {
+                                    if (idx === 0) {
+                                      return (
+                                        <tr key={`${selIdx}-${idx}`}>
+                                          <td
+                                            rowSpan={sel.values.length}
+                                            style={{
+                                              padding: "5px 13px",
+                                              borderBottom: borderThin,
+                                              borderRight: borderThin,
+                                              color: "#555",
+                                              width: "60px",
+                                              verticalAlign: "top",
+                                            }}
+                                          >
+                                            {sel.label}
+                                          </td>
+                                          <td
+                                            style={{
+                                              padding: "5px 13px",
+                                              borderBottom: borderThin,
+                                              borderRight: borderThin,
+                                            }}
+                                          >
+                                            : {value}
+                                          </td>
+                                        </tr>
+                                      );
+                                    } else {
+                                      return (
+                                        <tr key={`${selIdx}-${idx}`}>
+                                          <td
+                                            style={{
+                                              padding: "5px 13px",
+                                              borderBottom: borderThin,
+                                              borderRight: borderThin,
+                                            }}
+                                          >
+                                            : {value}
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+                                  }),
+                                )
+                              ) : (
+                                <tr>
+                                  <td
+                                    colSpan={2}
+                                    style={{
+                                      padding: "5px 13px",
+                                      color: "#777",
+                                      fontSize: "12px",
+                                      borderRight: borderThin,
+                                    }}
+                                  >
+                                    No selections selected
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Pricing Table */}
+                        <div style={{ fontSize: "13px" }}>
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                            }}
+                          >
+                            <tbody>
+                              <tr>
+                                <td
                                   style={{
-                                    fontSize: "11px",
-                                    color: "#555",
+                                    padding: "7px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
                                     fontWeight: 500,
                                   }}
                                 >
-                                  (incl. of gst)
-                                </span>
-                              </td>
-                              <td
-                                style={{
-                                  padding: "9px 13px",
-                                  borderBottom: borderThin,
-                                  borderRight: borderThin,
-                                  textAlign: "right",
-                                  fontWeight: 600,
-                                  fontSize: "14px",
-                                }}
-                              >
-                                {formatCurrency(getTotalInclGst(item))}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderRight: borderThin,
-                                  textAlign: "left",
-                                }}
-                              >
-                                Quotation No
-                              </td>
-                              <td
-                                style={{
-                                  padding: "7px 13px",
-                                  borderRight: borderThin,
-                                  textAlign: "right",
-                                  fontWeight: 600,
-                                  fontSize: "14px",
-                                }}
-                              >
-                                {item.projectQuotationNo || index + 1}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                                  Price{" "}
+                                  <span
+                                    style={{
+                                      fontSize: "11px",
+                                      color: "#666",
+                                      fontWeight: 400,
+                                    }}
+                                  >
+                                    (inc. of gst)
+                                  </span>
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    textAlign: "right",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {formatCurrency(getPriceInclGst(item))}
+                                </td>
+                              </tr>
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                  }}
+                                >
+                                  Discount{" "}
+                                  <span
+                                    style={{ fontSize: "12px", color: "#666" }}
+                                  >
+                                    ({Number(item.discountPercent)}%)
+                                  </span>
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    textAlign: "right",
+                                    color: "#c00",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  -{formatCurrency(getDiscountAmount(item))}
+                                </td>
+                              </tr>
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                  }}
+                                >
+                                  Units
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    textAlign: "right",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {item.quantity}
+                                </td>
+                              </tr>
+                              <tr style={{ backgroundColor: "#f9f9f9" }}>
+                                <td
+                                  style={{
+                                    padding: "9px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    fontWeight: 600,
+                                    fontSize: "14px",
+                                  }}
+                                >
+                                  Final Price{" "}
+                                  <span
+                                    style={{
+                                      fontSize: "11px",
+                                      color: "#555",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    (incl. of gst)
+                                  </span>
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "9px 13px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    textAlign: "right",
+                                    fontWeight: 600,
+                                    fontSize: "14px",
+                                  }}
+                                >
+                                  {formatCurrency(getTotalInclGst(item))}
+                                </td>
+                              </tr>
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderRight: borderThin,
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  Quotation No
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 13px",
+                                    borderRight: borderThin,
+                                    textAlign: "right",
+                                    fontWeight: 600,
+                                    fontSize: "14px",
+                                  }}
+                                >
+                                  {item.projectQuotationNo || index + 1}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
 
