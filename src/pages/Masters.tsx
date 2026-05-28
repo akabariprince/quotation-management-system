@@ -335,13 +335,28 @@ const Masters: React.FC = () => {
     quotation: updateQuotation,
   });
 
+  const determineSelectionType = (variantIds: string[]): "variant-connected" | "general" => {
+    const selectedCount = variantIds.length;
+    const totalVariants = activeVariants.length;
+    // Auto-determine type: general if none or all selected, variant-connected if some selected
+    if (selectedCount === 0 || selectedCount === totalVariants) {
+      return "general";
+    }
+    return "variant-connected";
+  };
+
   const toggleSelectionVariant = (variantId: string, editing = false) => {
-    const setter = editing ? setEditSelectionVariantIds : setSelectionVariantIds;
-    setter((prev) =>
-      prev.includes(variantId)
-        ? prev.filter((id) => id !== variantId)
-        : [...prev, variantId],
-    );
+    const currentIds = editing ? editSelectionVariantIds : selectionVariantIds;
+    const setIds = editing ? setEditSelectionVariantIds : setSelectionVariantIds;
+    const setType = editing ? setEditSelectionType : setSelectionType;
+
+    const newIds = currentIds.includes(variantId)
+      ? currentIds.filter((id) => id !== variantId)
+      : [...currentIds, variantId];
+
+    setIds(newIds);
+    // Auto-set type based on variant selection
+    setType(determineSelectionType(newIds));
   };
 
   const updateSelectionValueList = (
@@ -385,10 +400,6 @@ const Masters: React.FC = () => {
 
   const handleAdd = async () => {
     if (!newItemName.trim()) { toast.error("Please enter a name"); return; }
-    if (activeTab === "selection" && selectionType === "variant-connected" && selectionVariantIds.length === 0) {
-      toast.error("Selection Master requires at least one mapped variant");
-      return;
-    }
     setSubmitting(true);
     try {
       const itemStatus = isAdmin ? "active" : "pending";
@@ -405,11 +416,12 @@ const Masters: React.FC = () => {
         case "variant":
           newItem = await createVariant({ name: newItemName, status: itemStatus }); break;
         case "selection":
+          const newSelectionType = determineSelectionType(selectionVariantIds);
           newItem = await createSelection({
             name: newItemName,
             category: getSelectionCategoryFromName(newItemName),
-            type: selectionType,
-            variantIds: selectionType === "variant-connected" ? selectionVariantIds : [],
+            type: newSelectionType,
+            variantIds: newSelectionType === "variant-connected" ? selectionVariantIds : [],
             values: normalizeSelectionValues(selectionValues).map((name, index) => ({
               name,
               sortOrder: index,
@@ -459,17 +471,14 @@ const Masters: React.FC = () => {
 
   const handleEditSave = async () => {
     if (!editItemName.trim()) { toast.error("Please enter a name"); return; }
-    if (editingItem.type === "selection" && editSelectionType === "variant-connected" && editSelectionVariantIds.length === 0) {
-      toast.error("Selection Master requires at least one mapped variant");
-      return;
-    }
     setSubmitting(true);
     try {
       const updateData: any = { name: editItemName };
       if (editingItem.type === "selection") {
+        const updatedSelectionType = determineSelectionType(editSelectionVariantIds);
         updateData.category = getSelectionCategoryFromName(editItemName);
-        updateData.type = editSelectionType;
-        updateData.variantIds = editSelectionType === "variant-connected" ? editSelectionVariantIds : [];
+        updateData.type = updatedSelectionType;
+        updateData.variantIds = updatedSelectionType === "variant-connected" ? editSelectionVariantIds : [];
         updateData.values = normalizeSelectionValues(editSelectionValues).map((name, index) => ({
           name,
           sortOrder: index,
@@ -992,49 +1001,38 @@ const Masters: React.FC = () => {
   const renderSelectionFormFields = (editing = false) => {
     const type = editing ? editSelectionType : selectionType;
     const variantIds = editing ? editSelectionVariantIds : selectionVariantIds;
-    const setType = editing ? setEditSelectionType : setSelectionType;
-    const setVariantIds = editing ? setEditSelectionVariantIds : setSelectionVariantIds;
     const values = editing ? editSelectionValues : selectionValues;
     const setValues = editing ? setEditSelectionValues : setSelectionValues;
 
+    const currentType = determineSelectionType(variantIds);
+    const selectedCount = variantIds.length;
+    const totalVariants = activeVariants.length;
+
     return (
       <>
-        <div className="space-y-1">
-          <Label className="text-xs">Type</Label>
-          <Select
-            value={type}
-            onValueChange={(value) => {
-              const nextType = value as "variant-connected" | "general";
-              setType(nextType);
-              if (nextType === "general") setVariantIds([]);
-            }}
-          >
-            <SelectTrigger className="h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="variant-connected">Selection Master</SelectItem>
-              <SelectItem value="general">Normal Master</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {type === "variant-connected" && (
-          <div className="space-y-1">
-            <Label className="text-xs">Mapped Variants *</Label>
-            <div className="grid grid-cols-2 gap-1 border border-border rounded-md p-2 max-h-28 overflow-y-auto">
-              {activeVariants.map((variant) => (
-                <label key={variant.id} className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={variantIds.includes(variant.id)}
-                    onChange={() => toggleSelectionVariant(variant.id, editing)}
-                  />
-                  {variant.name}
-                </label>
-              ))}
-            </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Mapped Variants</Label>
+          <div className="grid grid-cols-2 gap-1 border border-border rounded-md p-2 max-h-28 overflow-y-auto">
+            {activeVariants.map((variant) => (
+              <label key={variant.id} className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={variantIds.includes(variant.id)}
+                  onChange={() => toggleSelectionVariant(variant.id, editing)}
+                />
+                {variant.name}
+              </label>
+            ))}
           </div>
-        )}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Selected: {selectedCount} / {totalVariants}
+            </p>
+            <p className="text-xs font-medium text-accent">
+              Type: {currentType === "variant-connected" ? "Selection Master" : "Normal Master"}
+            </p>
+          </div>
+        </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-xs">Manage Values / Options</Label>
