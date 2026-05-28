@@ -498,7 +498,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                         onUpdateItem(item.id, "specialNote", e.target.value)
                       }
                       placeholder="Add any special instructions or notes..."
-                      className="min-h-[100px] sm:min-h-[100px] text-xs sm:text-sm resize-none"
+                      className="min-h-[190px] sm:min-h-[190px] text-xs sm:text-sm resize-none"
                     />
                   </td>
                 </tr>
