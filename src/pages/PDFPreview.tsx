@@ -187,6 +187,38 @@ const PDFPreview: React.FC = () => {
     }));
   };
 
+  const getSelectionBoxes = (item: any): string[] => {
+    const mergedSelections = getMergedSelections(item);
+    const boxes: string[] = [];
+
+    const multiValueItems: { label: string; values: string[] }[] = [];
+    const singleValueItems: { label: string; values: string[] }[] = [];
+
+    mergedSelections.forEach((sel) => {
+      if (sel.values.length >= 2) {
+        multiValueItems.push(sel);
+      } else if (sel.values.length === 1) {
+        singleValueItems.push(sel);
+      }
+    });
+
+    multiValueItems.forEach((sel) => {
+      sel.values.slice(0, 2).forEach((value) => {
+        boxes.push(`${sel.label}: ${value}`);
+      });
+    });
+
+    singleValueItems.forEach((sel) => {
+      boxes.push(`${sel.label}: ${sel.values[0]}`);
+    });
+
+    while (boxes.length < 20) {
+      boxes.push("");
+    }
+
+    return boxes.slice(0, 20);
+  };
+
   const scaledHeight = A4_HEIGHT_PX * scale;
 
   // ─── Company Header ──────────────────────────────────────────────────
@@ -195,15 +227,15 @@ const PDFPreview: React.FC = () => {
     <div style={{ borderBottom: border }}>
       <div
         style={{
-          padding: "13px 20px",
+          padding: "12px 17px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          gap: "20px",
+          gap: "17px",
         }}
       >
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "12px", color: "#333", lineHeight: 1.5 }}>
+          <div style={{ fontSize: "13px", color: "#333", lineHeight: 1.5 }}>
             <div style={{ fontWeight: 600 }}>
               Ecstatics Spaces India Pvt. Ltd.
             </div>
@@ -216,7 +248,7 @@ const PDFPreview: React.FC = () => {
           <img
             src="/logo.png"
             alt="Ecstatics Logo"
-            style={{ height: "70px", width: "auto", objectFit: "contain" }}
+            style={{ height: "75px", width: "auto", objectFit: "contain" }}
             crossOrigin="anonymous"
           />
         </div>
@@ -231,25 +263,25 @@ const PDFPreview: React.FC = () => {
       <div
         style={{
           flex: 1,
-          padding: "11px 20px",
+          padding: "11px 17px",
           borderRight: border,
-          fontSize: "13px",
+          fontSize: "14px",
         }}
       >
         <div style={{ display: "flex", gap: "8px", marginBottom: "5px" }}>
-          <span style={{ color: "#666", minWidth: "95px" }}>Client name</span>
-          <span style={{ fontWeight: 600 }}>{customer.name}</span>
+          <span style={{ color: "#666", minWidth: "100px" }}>Client name</span>
+          <span style={{ fontWeight: 600 }}>{customer.name || ""}</span>
         </div>
         <div style={{ display: "flex", gap: "8px", marginBottom: "5px" }}>
-          <span style={{ color: "#666", minWidth: "95px" }}>Contact No</span>
-          <span>{customer.mobile}</span>
+          <span style={{ color: "#666", minWidth: "100px" }}>Contact No</span>
+          <span>{customer.mobile || ""}</span>
         </div>
         <div style={{ display: "flex", gap: "8px", marginBottom: "5px" }}>
-          <span style={{ color: "#666", minWidth: "95px" }}>Project Name</span>
+          <span style={{ color: "#666", minWidth: "100px" }}>Project Name</span>
           <span style={{ fontWeight: 600 }}>{project.projectName || "—"}</span>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <span style={{ color: "#666", minWidth: "95px" }}>Project No</span>
+          <span style={{ color: "#666", minWidth: "100px" }}>Project No</span>
           <span style={{ fontWeight: 600 }}>{project.projectNo || "—"}</span>
         </div>
       </div>
@@ -257,8 +289,8 @@ const PDFPreview: React.FC = () => {
         style={{
           width: "170px",
           minWidth: "170px",
-          padding: "11px 20px",
-          fontSize: "14px",
+          padding: "11px 17px",
+          fontSize: "15px",
           textAlign: "left",
         }}
       >
@@ -278,10 +310,10 @@ const PDFPreview: React.FC = () => {
     <div
       style={{
         borderTop: border,
-        padding: "9px 20px",
+        padding: "9px 17px",
         display: "flex",
         justifyContent: "space-between",
-        fontSize: "12px",
+        fontSize: "13px",
         color: "#555",
         backgroundColor: "#fafafa",
       }}
@@ -319,7 +351,7 @@ const PDFPreview: React.FC = () => {
         @import url("https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700,800,900&display=swap");
         
         @media print {
-          @page { size: A4; margin: 12mm; }
+          @page { size: A4; margin: 0; }
           html, body {
             margin: 0 !important; padding: 0 !important;
             -webkit-print-color-adjust: exact !important;
@@ -339,7 +371,7 @@ const PDFPreview: React.FC = () => {
           .pdf-page {
             width: 210mm !important; height: 297mm !important;
             min-height: 297mm !important; max-height: 297mm !important;
-            padding: 12mm !important; margin: 0 !important;
+            padding: 10mm !important; margin: 0 !important;
             box-shadow: none !important;
             page-break-after: always !important;
             page-break-inside: avoid !important;
@@ -376,7 +408,7 @@ const PDFPreview: React.FC = () => {
             min-height: 297mm;
             background: #fff;
             box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-            padding: 12mm;
+            padding: 10mm;
             transform-origin: top center;
             transform: scale(${scale});
           }
@@ -454,10 +486,10 @@ const PDFPreview: React.FC = () => {
                 <div
                   style={{
                     borderBottom: border,
-                    padding: "9px 20px",
+                    padding: "10px 17px",
                     textAlign: "center",
                     fontWeight: 600,
-                    fontSize: "16px",
+                    fontSize: "17px",
                     backgroundColor: "#f9f9f9",
                   }}
                 >
@@ -469,7 +501,6 @@ const PDFPreview: React.FC = () => {
                     style={{
                       width: "100%",
                       borderCollapse: "collapse",
-                      fontSize: "13px",
                     }}
                   >
                     <thead>
@@ -478,11 +509,11 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: border,
                             borderRight: borderThin,
-                            padding: "9px 12px",
+                            padding: "10px 12px",
                             textAlign: "center",
                             fontWeight: 600,
-                            width: "55px",
-                            fontSize: "12.5px",
+                            width: "60px",
+                            fontSize: "13.5px",
                           }}
                         >
                           Sr no
@@ -491,10 +522,10 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: border,
                             borderRight: borderThin,
-                            padding: "9px 12px",
+                            padding: "10px 12px",
                             textAlign: "left",
                             fontWeight: 600,
-                            fontSize: "12.5px",
+                            fontSize: "13.5px",
                           }}
                         >
                           Code
@@ -503,17 +534,17 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: border,
                             borderRight: borderThin,
-                            padding: "9px 12px",
+                            padding: "10px 12px",
                             textAlign: "right",
                             fontWeight: 600,
-                            fontSize: "12.5px",
+                            fontSize: "13.5px",
                           }}
                         >
                           Price{" "}
                           <span
                             style={{
                               fontWeight: 400,
-                              fontSize: "11px",
+                              fontSize: "12px",
                               color: "#666",
                             }}
                           >
@@ -524,11 +555,11 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderBottom: border,
                             borderRight: borderThin,
-                            padding: "9px 12px",
+                            padding: "10px 12px",
                             textAlign: "center",
                             fontWeight: 600,
-                            width: "65px",
-                            fontSize: "12.5px",
+                            width: "70px",
+                            fontSize: "13.5px",
                           }}
                         >
                           Units
@@ -536,18 +567,17 @@ const PDFPreview: React.FC = () => {
                         <th
                           style={{
                             borderBottom: border,
-                            borderRight: borderThin,
-                            padding: "9px 12px",
+                            padding: "10px 12px",
                             textAlign: "right",
                             fontWeight: 600,
-                            fontSize: "12.5px",
+                            fontSize: "13.5px",
                           }}
                         >
                           Total{" "}
                           <span
                             style={{
                               fontWeight: 400,
-                              fontSize: "11px",
+                              fontSize: "12px",
                               color: "#666",
                             }}
                           >
@@ -563,8 +593,9 @@ const PDFPreview: React.FC = () => {
                             style={{
                               borderBottom: borderThin,
                               borderRight: borderThin,
-                              padding: "9px 12px",
+                              padding: "10px 12px",
                               textAlign: "center",
+                              fontSize: "14px",
                             }}
                           >
                             {index + 1}
@@ -573,8 +604,9 @@ const PDFPreview: React.FC = () => {
                             style={{
                               borderBottom: borderThin,
                               borderRight: borderThin,
-                              padding: "9px 12px",
+                              padding: "10px 12px",
                               fontWeight: 500,
+                              fontSize: "14px",
                             }}
                           >
                             {item.quotationCode}
@@ -583,8 +615,9 @@ const PDFPreview: React.FC = () => {
                             style={{
                               borderBottom: borderThin,
                               borderRight: borderThin,
-                              padding: "9px 12px",
+                              padding: "10px 12px",
                               textAlign: "right",
+                              fontSize: "14px",
                             }}
                           >
                             {formatCurrency(getPriceInclGst(item))}
@@ -593,8 +626,9 @@ const PDFPreview: React.FC = () => {
                             style={{
                               borderBottom: borderThin,
                               borderRight: borderThin,
-                              padding: "9px 12px",
+                              padding: "10px 12px",
                               textAlign: "center",
+                              fontSize: "14px",
                             }}
                           >
                             {item.quantity}
@@ -602,10 +636,10 @@ const PDFPreview: React.FC = () => {
                           <td
                             style={{
                               borderBottom: borderThin,
-                              borderRight: borderThin,
-                              padding: "9px 12px",
+                              padding: "10px 12px",
                               textAlign: "right",
                               fontWeight: 500,
+                              fontSize: "14px",
                             }}
                           >
                             {formatCurrency(item.totalWithGst)}
@@ -619,17 +653,17 @@ const PDFPreview: React.FC = () => {
                             borderTop: border,
                             borderBottom: border,
                             borderRight: borderThin,
-                            padding: "11px 12px",
+                            padding: "12px",
                             textAlign: "center",
                             fontWeight: 600,
-                            fontSize: "14px",
+                            fontSize: "15px",
                           }}
                         >
                           Grand Total{" "}
                           <span
                             style={{
                               fontWeight: 500,
-                              fontSize: "12px",
+                              fontSize: "13px",
                               color: "#555",
                             }}
                           >
@@ -640,11 +674,10 @@ const PDFPreview: React.FC = () => {
                           style={{
                             borderTop: border,
                             borderBottom: border,
-                            borderRight: borderThin,
-                            padding: "11px 12px",
+                            padding: "12px",
                             textAlign: "right",
                             fontWeight: 600,
-                            fontSize: "14px",
+                            fontSize: "15px",
                           }}
                         >
                           {formatCurrency(project.grandTotalWithGst)}
@@ -658,18 +691,18 @@ const PDFPreview: React.FC = () => {
                   <div
                     style={{
                       flex: 1,
-                      padding: "13px 20px",
+                      padding: "13px 17px",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "flex-end",
                     }}
                   >
-                    <div style={{ fontSize: "12px", color: "#666" }}>
+                    <div style={{ fontSize: "13px", color: "#666" }}>
                       Sales Manager
                     </div>
                     <div
                       style={{
-                        fontSize: "14px",
+                        fontSize: "15px",
                         fontWeight: 600,
                         marginTop: "3px",
                       }}
@@ -687,7 +720,7 @@ const PDFPreview: React.FC = () => {
 
         {/* PRODUCT DETAIL PAGES */}
         {items.map((item: any, index: number) => {
-          const mergedSelections = getMergedSelections(item);
+          const selectionBoxes = getSelectionBoxes(item);
 
           return (
             <div key={item.id} className="pdf-page-wrapper">
@@ -702,7 +735,7 @@ const PDFPreview: React.FC = () => {
                   <div
                     style={{
                       border,
-                      flex: 1,
+                      height: "100%",
                       display: "flex",
                       flexDirection: "column",
                     }}
@@ -715,10 +748,10 @@ const PDFPreview: React.FC = () => {
                       <div
                         style={{
                           flex: 1,
-                          padding: "7px 13px",
+                          padding: "7px 14px",
                           borderRight: border,
                           fontWeight: 600,
-                          fontSize: "13px",
+                          fontSize: "14px",
                           backgroundColor: "#f9f9f9",
                         }}
                       >
@@ -737,7 +770,7 @@ const PDFPreview: React.FC = () => {
                             padding: "7px 2px",
                             borderRight: border,
                             fontWeight: 600,
-                            fontSize: "13px",
+                            fontSize: "14px",
                             backgroundColor: "#f9f9f9",
                             textAlign: "center",
                           }}
@@ -747,7 +780,7 @@ const PDFPreview: React.FC = () => {
                         <div
                           style={{
                             flex: 1,
-                            padding: "7px 7px",
+                            padding: "7px 9px",
                             fontWeight: 600,
                             fontSize: "13px",
                             wordBreak: "break-word",
@@ -758,494 +791,587 @@ const PDFPreview: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* ═══ FIXED LAYOUT: Two Columns with Equal Width ═══ */}
+                    {/* Selection Details - 4x5 Grid */}
+                    <div style={{ borderBottom: border }}>
+                      <table
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            <th
+                              colSpan={5}
+                              style={{
+                                padding: "7px 14px",
+                                fontWeight: 600,
+                                fontSize: "14px",
+                                backgroundColor: "#f9f9f9",
+                                borderBottom: border,
+                                textAlign: "left",
+                              }}
+                            >
+                              Selection Details
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[0, 1, 2, 3].map((row) => (
+                            <tr key={row}>
+                              {[0, 1, 2, 3, 4].map((col) => {
+                                const boxIndex = col * 4 + row;
+                                const boxContent = selectionBoxes[boxIndex] || "";
+
+                                return (
+                                  <td
+                                    key={col}
+                                    style={{
+                                      padding: "10px 11px",
+                                      fontSize: "13px",
+                                      width: "20%",
+                                      height: "54px",
+                                      overflow: "hidden",
+                                      wordWrap: "break-word",
+                                      verticalAlign: "top",
+                                      textAlign: "left",
+                                      lineHeight: 1.2,
+                                      borderRight: col < 4 ? borderThin : "none",
+                                      borderBottom: row < 3 ? borderThin : "none",
+                                    }}
+                                  >
+                                    {boxContent}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Image + Pricing Section */}
                     <div style={{ display: "flex", borderBottom: border }}>
-                      {/* LEFT COLUMN (60%) - Contains Image + Description */}
-                      <div style={{ width: "60%", borderRight: border }}>
-                        {/* Image Section - 16:9 ratio */}
-                        <div style={{ borderBottom: border }}>
-                          <div
-                            style={{
-                              width: "100%",
-                              paddingBottom: "56.25%",
-                              position: "relative",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {item.images?.[0] ? (
-                              <img
-                                src={getImageUrl(item.images[0])}
-                                alt={item.quotationName}
+                      <div style={{ width: "65%", borderRight: border }}>
+                        <div
+                          style={{
+                            width: "100%",
+                            paddingBottom: "56.25%",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {item.images?.[0] ? (
+                            <img
+                              src={getImageUrl(item.images[0])}
+                              alt={item.quotationName}
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                              crossOrigin="anonymous"
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: "100%",
+                                color: "#999",
+                                fontSize: "18px",
+                                textAlign: "center",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              No Image Available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Pricing Table */}
+                      <div style={{ width: "35%" }}>
+                        <table
+                          style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            height: "100%",
+                          }}
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                colSpan={2}
                                 style={{
-                                  position: "absolute",
-                                  top: 0,
-                                  left: 0,
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                  display: "block",
-                                }}
-                                crossOrigin="anonymous"
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 0,
-                                  left: 0,
-                                  width: "100%",
-                                  height: "100%",
-                                  color: "#999",
-                                  fontSize: "17px",
-                                  textAlign: "center",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
+                                  padding: "7px 14px",
+                                  fontWeight: 600,
+                                  fontSize: "14px",
+                                  backgroundColor: "#f9f9f9",
+                                  borderBottom: border,
                                 }}
                               >
-                                No Image Available
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Description Table */}
-                        <div style={{ fontSize: "13px" }}>
-                          <table
-                            style={{
-                              width: "100%",
-                              borderCollapse: "collapse",
-                            }}
-                          >
-                            <tbody>
-                              {item.woodName && (
-                                <tr>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                      color: "#555",
-                                      width: "110px",
-                                    }}
-                                  >
-                                    Wood
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                    }}
-                                  >
-                                    : {item.woodName}
-                                  </td>
-                                </tr>
-                              )}
-                              {item.polishName && (
-                                <tr>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                      color: "#555",
-                                    }}
-                                  >
-                                    Polish
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                    }}
-                                  >
-                                    : {item.polishName}
-                                  </td>
-                                </tr>
-                              )}
-                              {item.fabricName && (
-                                <tr>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                      color: "#555",
-                                    }}
-                                  >
-                                    Fabric
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                    }}
-                                  >
-                                    : {item.fabricName}
-                                  </td>
-                                </tr>
-                              )}
-                              {(item as any).quotation?.length && (
-                                <tr>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                      color: "#555",
-                                    }}
-                                  >
-                                    Length
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                    }}
-                                  >
-                                    : {(item as any).quotation.length} (mm)
-                                  </td>
-                                </tr>
-                              )}
-                              {(item as any).quotation?.width && (
-                                <tr>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                      color: "#555",
-                                    }}
-                                  >
-                                    Width
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "5px 13px",
-                                      borderBottom: borderThin,
-                                      borderRight: borderThin,
-                                    }}
-                                  >
-                                    : {(item as any).quotation.width} (mm)
-                                  </td>
-                                </tr>
-                              )}
-                              <tr>
-                                <td
-                                  colSpan={2}
+                                Cost & GST Details
+                              </td>
+                            </tr>
+                            <tr>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  borderRight: borderThin,
+                                  fontWeight: 500,
+                                  fontSize: "13px",
+                                  width: "45%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                Price
+                                <br />
+                                <span
                                   style={{
-                                    padding: "9px 13px",
-                                    verticalAlign: "bottom",
-                                    borderRight: borderThin,
+                                    fontSize: "10px",
+                                    color: "#666",
+                                    fontWeight: 400,
                                   }}
                                 >
-                                  {item.specialNote && (
-                                    <div
-                                      style={{
-                                        fontSize: "12px",
-                                        color: "#666",
-                                        marginTop: "5px",
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          fontWeight: 600,
-                                          fontSize: "13px",
-                                        }}
-                                      >
-                                        Special Note:{" "}
-                                      </span>
-                                      <span style={{ color: "#333" }}>
-                                        {item.specialNote}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div
-                                    style={{
-                                      fontSize: "12px",
-                                      color: "#666",
-                                      marginTop: "5px",
-                                    }}
-                                  >
-                                    Sales Manager
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontWeight: 600,
-                                      fontSize: "13px",
-                                    }}
-                                  >
-                                    {salesPersonName}
-                                  </div>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {/* RIGHT COLUMN (40%) - Contains Selections + Pricing */}
-                      <div style={{ width: "40%" }}>
-                        {/* Selections Table */}
-                        <div style={{ borderBottom: border, fontSize: "13px" }}>
-                          <table
-                            style={{
-                              width: "100%",
-                              borderCollapse: "collapse",
-                            }}
-                          >
-                            <tbody>
-                              <tr>
-                                <td
-                                  colSpan={2}
+                                  (inc. of gst)
+                                </span>
+                              </td>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  textAlign: "right",
+                                  fontWeight: 600,
+                                  fontSize: "13px",
+                                  width: "55%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                {formatCurrency(getPriceInclGst(item))}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  borderRight: borderThin,
+                                  fontSize: "13px",
+                                  width: "45%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                Discount{" "}
+                                <span style={{ fontSize: "11px", color: "#666" }}>
+                                  ({Number(item.discountPercent)}%)
+                                </span>
+                              </td>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  textAlign: "right",
+                                  color: "#c00",
+                                  fontWeight: 500,
+                                  fontSize: "13px",
+                                  width: "55%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                -{formatCurrency(getDiscountAmount(item))}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  borderRight: borderThin,
+                                  fontSize: "13px",
+                                  width: "45%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                Units
+                              </td>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  textAlign: "right",
+                                  fontWeight: 500,
+                                  fontSize: "13px",
+                                  width: "55%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                {item.quantity}
+                              </td>
+                            </tr>
+                            <tr style={{ backgroundColor: "#f9f9f9" }}>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  borderRight: borderThin,
+                                  fontWeight: 600,
+                                  fontSize: "13px",
+                                  width: "45%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                Final Price
+                                <br />
+                                <span
                                   style={{
-                                    padding: "6px 13px",
-                                    fontWeight: 600,
-                                    fontSize: "13px",
-                                    backgroundColor: "#f9f9f9",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  Selections
-                                </td>
-                              </tr>
-                              {mergedSelections.length > 0 ? (
-                                mergedSelections.map((sel, selIdx) =>
-                                  sel.values.map((value, idx) => {
-                                    if (idx === 0) {
-                                      return (
-                                        <tr key={`${selIdx}-${idx}`}>
-                                          <td
-                                            rowSpan={sel.values.length}
-                                            style={{
-                                              padding: "5px 13px",
-                                              borderBottom: borderThin,
-                                              borderRight: borderThin,
-                                              color: "#555",
-                                              width: "60px",
-                                              verticalAlign: "top",
-                                            }}
-                                          >
-                                            {sel.label}
-                                          </td>
-                                          <td
-                                            style={{
-                                              padding: "5px 13px",
-                                              borderBottom: borderThin,
-                                              borderRight: borderThin,
-                                            }}
-                                          >
-                                            : {value}
-                                          </td>
-                                        </tr>
-                                      );
-                                    } else {
-                                      return (
-                                        <tr key={`${selIdx}-${idx}`}>
-                                          <td
-                                            style={{
-                                              padding: "5px 13px",
-                                              borderBottom: borderThin,
-                                              borderRight: borderThin,
-                                            }}
-                                          >
-                                            : {value}
-                                          </td>
-                                        </tr>
-                                      );
-                                    }
-                                  }),
-                                )
-                              ) : (
-                                <tr>
-                                  <td
-                                    colSpan={2}
-                                    style={{
-                                      padding: "5px 13px",
-                                      color: "#777",
-                                      fontSize: "12px",
-                                      borderRight: borderThin,
-                                    }}
-                                  >
-                                    No selections selected
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Pricing Table */}
-                        <div style={{ fontSize: "13px" }}>
-                          <table
-                            style={{
-                              width: "100%",
-                              borderCollapse: "collapse",
-                            }}
-                          >
-                            <tbody>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
+                                    fontSize: "10px",
+                                    color: "#555",
                                     fontWeight: 500,
                                   }}
                                 >
-                                  Price{" "}
-                                  <span
-                                    style={{
-                                      fontSize: "11px",
-                                      color: "#666",
-                                      fontWeight: 400,
-                                    }}
-                                  >
-                                    (inc. of gst)
-                                  </span>
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    textAlign: "right",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {formatCurrency(getPriceInclGst(item))}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  Discount{" "}
-                                  <span
-                                    style={{ fontSize: "12px", color: "#666" }}
-                                  >
-                                    ({Number(item.discountPercent)}%)
-                                  </span>
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    textAlign: "right",
-                                    color: "#c00",
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  -{formatCurrency(getDiscountAmount(item))}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                  }}
-                                >
-                                  Units
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    textAlign: "right",
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  {item.quantity}
-                                </td>
-                              </tr>
-                              <tr style={{ backgroundColor: "#f9f9f9" }}>
-                                <td
-                                  style={{
-                                    padding: "9px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    fontWeight: 600,
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Final Price{" "}
-                                  <span
-                                    style={{
-                                      fontSize: "11px",
-                                      color: "#555",
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    (incl. of gst)
-                                  </span>
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "9px 13px",
-                                    borderBottom: borderThin,
-                                    borderRight: borderThin,
-                                    textAlign: "right",
-                                    fontWeight: 600,
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  {formatCurrency(getTotalInclGst(item))}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderRight: borderThin,
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  Quotation No
-                                </td>
-                                <td
-                                  style={{
-                                    padding: "7px 13px",
-                                    borderRight: borderThin,
-                                    textAlign: "right",
-                                    fontWeight: 600,
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  {item.projectQuotationNo || index + 1}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
+                                  (incl. of gst)
+                                </span>
+                              </td>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderBottom: borderThin,
+                                  textAlign: "right",
+                                  fontWeight: 600,
+                                  fontSize: "14px",
+                                  width: "55%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                {formatCurrency(getTotalInclGst(item))}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  borderRight: borderThin,
+                                  fontSize: "13px",
+                                  width: "45%",
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                Quotation No
+                              </td>
+                              <td
+                                style={{
+                                  padding: "7px 14px",
+                                  textAlign: "right",
+                                  fontWeight: 600,
+                                  fontSize: "11px",
+                                  width: "55%",
+                                  lineHeight: 1.3,
+                                  wordWrap: "break-word",
+                                  overflowWrap: "break-word",
+                                }}
+                              >
+                                {item.projectQuotationNo || index + 1}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
+                    {/* Dimensions & Notes Section */}
                     <div
                       style={{
-                        padding: "9px 20px",
                         display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "12px",
-                        color: "#555",
-                        backgroundColor: "#fafafa",
+                        borderBottom: border,
+                        flex: 1,
                       }}
                     >
-                      <span>(+91) 7066 46 6060</span>
-                      <span>info@esipl.in</span>
+                      {/* Dimensions Table */}
+                      <div
+                        style={{
+                          width: "50%",
+                          borderRight: border,
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <table
+                          style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            height: "100%",
+                          }}
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                colSpan={2}
+                                style={{
+                                  padding: "7px 14px",
+                                  fontWeight: 600,
+                                  fontSize: "14px",
+                                  backgroundColor: "#f9f9f9",
+                                  borderBottom: border,
+                                }}
+                              >
+                                Dimensions
+                              </td>
+                            </tr>
+                            {item.quotation?.length && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: "7px 14px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    color: "#555",
+                                    width: "40%",
+                                    fontWeight: 500,
+                                    fontSize: "13px",
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  Length (L)
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 14px",
+                                    borderBottom: borderThin,
+                                    fontWeight: 600,
+                                    fontSize: "13px",
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  {item.quotation.length} mm
+                                </td>
+                              </tr>
+                            )}
+                            {item.quotation?.width && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: "7px 14px",
+                                    borderBottom: borderThin,
+                                    borderRight: borderThin,
+                                    color: "#555",
+                                    width: "40%",
+                                    fontWeight: 500,
+                                    fontSize: "13px",
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  Width (W)
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 14px",
+                                    borderBottom: borderThin,
+                                    fontWeight: 600,
+                                    fontSize: "13px",
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  {item.quotation.width} mm
+                                </td>
+                              </tr>
+                            )}
+                            {item.quotation?.height && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: "7px 14px",
+                                    borderRight: borderThin,
+                                    color: "#555",
+                                    width: "40%",
+                                    fontWeight: 500,
+                                    fontSize: "13px",
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  Height (H)
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "7px 14px",
+                                    fontWeight: 600,
+                                    fontSize: "13px",
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  {item.quotation.height} mm
+                                </td>
+                              </tr>
+                            )}
+                            {/* Fill empty rows */}
+                            {[
+                              ...Array(
+                                Math.max(
+                                  0,
+                                  3 -
+                                    [
+                                      item.quotation?.length,
+                                      item.quotation?.width,
+                                      item.quotation?.height,
+                                    ].filter(Boolean).length,
+                                ),
+                              ),
+                            ].map((_, i) => (
+                              <tr key={i}>
+                                <td
+                                  colSpan={2}
+                                  style={{ padding: "7px 14px", height: "32px" }}
+                                >
+                                  &nbsp;
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* General Notes */}
+                      <div
+                        style={{
+                          width: "50%",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: "12px 14px",
+                            fontWeight: 600,
+                            fontSize: "14px",
+                            backgroundColor: "#f9f9f9",
+                            borderBottom: border,
+                          }}
+                        >
+                          General Notes
+                        </div>
+                        <div style={{ flex: 1, padding: "10px 14px" }}>
+                          {item.woodName && (
+                            <div style={{ marginBottom: "6px", fontSize: "13px" }}>
+                              <span style={{ fontWeight: 500, color: "#555" }}>
+                                Wood:
+                              </span>{" "}
+                              <span>{item.woodName}</span>
+                            </div>
+                          )}
+                          {item.polishName && (
+                            <div style={{ marginBottom: "6px", fontSize: "13px" }}>
+                              <span style={{ fontWeight: 500, color: "#555" }}>
+                                Polish:
+                              </span>{" "}
+                              <span>{item.polishName}</span>
+                            </div>
+                          )}
+                          {item.fabricName && (
+                            <div style={{ marginBottom: "6px", fontSize: "13px" }}>
+                              <span style={{ fontWeight: 500, color: "#555" }}>
+                                Fabric:
+                              </span>{" "}
+                              <span>{item.fabricName}</span>
+                            </div>
+                          )}
+                          {item.specialNote && (
+                            <div style={{ marginTop: "10px" }}>
+                              <div
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: "13px",
+                                  color: "#333",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                Special Note:
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#333",
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                {item.specialNote}
+                              </div>
+                            </div>
+                          )}
+                          <div style={{ marginTop: "10px" }}>
+                            <div style={{ fontSize: "12px", color: "#666" }}>
+                              Sales Manager
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                marginTop: "2px",
+                              }}
+                            >
+                              {salesPersonName}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Signatures */}
+                    <div style={{ borderBottom: border, display: "flex" }}>
+                      <div
+                        style={{
+                          flex: 1,
+                          padding: "11px 17px",
+                          borderRight: border,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            color: "#666",
+                            marginBottom: "3px",
+                          }}
+                        >
+                          Customer Signature
+                        </div>
+                        <div
+                          style={{
+                            height: "8px",
+                            borderBottom: "1px solid #ddd",
+                            marginTop: "6px",
+                          }}
+                        />
+                      </div>
+                      <div style={{ flex: 1, padding: "11px 17px" }}>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            color: "#666",
+                            marginBottom: "3px",
+                          }}
+                        >
+                          Company Signature
+                        </div>
+                        <div
+                          style={{
+                            height: "8px",
+                            borderBottom: "1px solid #ddd",
+                            marginTop: "6px",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <PageFooter />
                   </div>
                 </div>
               </div>
@@ -1276,10 +1402,10 @@ const PDFPreview: React.FC = () => {
                 <div
                   style={{
                     borderBottom: border,
-                    padding: "9px 20px",
+                    padding: "10px 17px",
                     textAlign: "center",
                     fontWeight: 600,
-                    fontSize: "16px",
+                    fontSize: "17px",
                     backgroundColor: "#f9f9f9",
                   }}
                 >
@@ -1289,9 +1415,9 @@ const PDFPreview: React.FC = () => {
                 <div
                   style={{
                     flex: 1,
-                    padding: "18px 22px",
-                    fontSize: "12px",
-                    lineHeight: 1.7,
+                    padding: "18px 20px",
+                    fontSize: "13px",
+                    lineHeight: 1.65,
                     color: "#222",
                   }}
                 >
@@ -1301,7 +1427,7 @@ const PDFPreview: React.FC = () => {
                         key={i}
                         style={{ marginBottom: "7px", paddingLeft: "4px" }}
                       >
-                        {term}
+                       {i + 1}. {term}
                       </li>
                     ))}
                   </ol>
