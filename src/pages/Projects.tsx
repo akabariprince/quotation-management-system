@@ -236,7 +236,7 @@ const Projects: React.FC = () => {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="approved">PO</SelectItem>
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
@@ -332,8 +332,9 @@ const Projects: React.FC = () => {
                       </td>
                       <td className="hidden sm:table-cell px-3 py-1">
                         <span className={getStatusBadge(project.status)}>
-                          {project.status.charAt(0).toUpperCase() +
-                            project.status.slice(1)}
+                          {project.status === "approved"
+                            ? "PO"
+                            : project.status.toUpperCase()}
                         </span>
                       </td>
                       <td className="px-3 py-1">
@@ -363,7 +364,7 @@ const Projects: React.FC = () => {
                               <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
-                          {hasPermission("project:edit") && (
+                          {hasPermission("project:edit") && project.status !== "approved" && (
                             <button
                               onClick={() =>
                                 navigate(`/projects/edit/${project.id}`)
@@ -374,7 +375,7 @@ const Projects: React.FC = () => {
                               <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
-                          {hasPermission("project:delete") && (
+                          {hasPermission("project:delete") && project.status !== "approved" && (
                             <button
                               onClick={() =>
                                 handleDelete(project.id, project.projectNo)

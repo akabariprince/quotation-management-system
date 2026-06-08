@@ -8,6 +8,7 @@ interface CustomerSearchSelectProps {
   onChange: (customerId: string) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
@@ -15,6 +16,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
   onChange,
   placeholder = "Search customer by name or mobile...",
   className = "",
+  disabled = false,
 }) => {
   const { get } = useApi();
   const [isOpen, setIsOpen] = useState(false);
@@ -103,6 +105,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
   };
 
   const handleOpen = () => {
+    if (disabled) return;
     setIsOpen(true);
     loadInitialCustomers();
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -154,8 +157,8 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
       {/* ── Trigger ── */}
       {!isOpen && (
         <div
-          onClick={handleOpen}
-          className="flex items-center justify-between h-8 w-full border border-input bg-background px-3 cursor-pointer"
+          onClick={disabled ? undefined : handleOpen}
+          className={`flex items-center justify-between h-8 w-full border border-input bg-background px-3 ${disabled ? "cursor-not-allowed opacity-60 bg-muted/30" : "cursor-pointer"}`}
           style={txtStyle}
         >
           {selectedCustomer ? (
@@ -171,7 +174,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
             </span>
           )}
           <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-            {selectedCustomer && (
+            {selectedCustomer && !disabled && (
               <button
                 type="button"
                 onClick={(e) => {

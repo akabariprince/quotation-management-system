@@ -50,6 +50,7 @@ interface QuotationCardProps {
   salesManager?: string;
   discountRange?: DiscountRange;
   selections?: Selection[];
+  disabled?: boolean;
 }
 
 /* ── Debounced Discount Input ── */
@@ -154,6 +155,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
       salesManager,
       discountRange,
       selections = [],
+      disabled = false,
     },
     ref,
   ) => {
@@ -225,9 +227,10 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
         return normalizeSelectionValues(savedSelection.values);
       }
 
-      return normalizeSelectionValues(
-        (selection.values || []).map((value) => ({ value: value.name })),
-      );
+      return [
+        { value: DEFAULT_SELECTION_VALUE },
+        { value: DEFAULT_SELECTION_VALUE },
+      ];
     };
 
     const selectedVariantName = String(
@@ -254,6 +257,8 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
     });
 
     useEffect(() => {
+      if (!selections || selections.length === 0) return;
+
       const normalizedSelections = applicableSelections.map((selection) => ({
         selectionId: selection.id,
         selectionName: selection.name,
@@ -272,6 +277,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
         onUpdateItem(item.id, "selections", normalizedSelections);
       }
     }, [
+      selections,
       applicableSelections,
       item.id,
       item.selectedVariantId,
@@ -286,45 +292,54 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
     };
 
     const renderSelectionField = (selection: Selection) => {
-      const options = (selection.values || []).map((value) => value.name);
+      const options = (selection.values || []).map((value) => (value.name || "").trim());
       const slots = [0, 1];
 
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {slots.map((index) => (
-            <div key={`${selection.id}-${index}`} className="space-y-1">
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                {selection.name} {index + 1}
-              </Label>
-              <Select
-                value={getSelectionValue(selection, index)}
-                onValueChange={(value) =>
-                  onUpdateItem(item.id, `${selection.id}::${index}`, value)
-                }
-              >
-                <SelectTrigger className="h-8 text-xs rounded-none border-border">
-                  <SelectValue placeholder={`${selection.name} ${index + 1}`} />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  <SelectItem
-                    value={DEFAULT_SELECTION_VALUE}
-                    className="rounded-none"
-                  >
-                    {DEFAULT_SELECTION_VALUE}
-                  </SelectItem>
-                  {options.map((option) => (
+          {slots.map((index) => {
+            const currentValue = getSelectionValue(selection, index);
+            let fieldOptions = [...options];
+            if (currentValue && currentValue !== DEFAULT_SELECTION_VALUE && !fieldOptions.includes(currentValue)) {
+              fieldOptions.push(currentValue);
+            }
+
+            return (
+              <div key={`${selection.id}-${index}`} className="space-y-1">
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {selection.name} {index + 1}
+                </Label>
+                <Select
+                  value={currentValue}
+                  onValueChange={(value) =>
+                    onUpdateItem(item.id, `${selection.id}::${index}`, value)
+                  }
+                  disabled={disabled}
+                >
+                  <SelectTrigger className="h-8 text-xs rounded-none border-border">
+                    <SelectValue placeholder={`${selection.name} ${index + 1}`} />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none">
                     <SelectItem
-                      key={`${selection.id}-${index}-${option}`}
-                      value={option}
+                      value={DEFAULT_SELECTION_VALUE}
                       className="rounded-none"
                     >
-                      {option}
+                      {DEFAULT_SELECTION_VALUE}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
+                    {fieldOptions.map((option) => (
+                      <SelectItem
+                        key={`${selection.id}-${index}-${option}`}
+                        value={option}
+                        className="rounded-none"
+                      >
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
         </div>
       );
     };
@@ -378,13 +393,15 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
           <div className="col-span-6 sm:col-span-5 px-2 sm:px-3 py-2 sm:py-2.5 flex items-center justify-between min-w-0 rounded-none">
             <span className="text-xs sm:text-sm font-bold tracking-wide truncate">
             </span>
-            <button
-              onClick={() => onRemoveItem(item.id)}
-              className="p-1 sm:p-1.5 hover:bg-destructive/10 rounded-none transition-colors flex-shrink-0 ml-2"
-              title="Remove quotation"
-            >
-              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
-            </button>
+            {!disabled && (
+              <button
+                onClick={() => onRemoveItem(item.id)}
+                className="p-1 sm:p-1.5 hover:bg-destructive/10 rounded-none transition-colors flex-shrink-0 ml-2"
+                title="Remove quotation"
+              >
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -499,6 +516,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                       }
                       placeholder="Add any special instructions or notes..."
                       className="min-h-[190px] sm:min-h-[190px] text-xs sm:text-sm resize-none"
+                      disabled={disabled}
                     />
                   </td>
                 </tr>
@@ -536,7 +554,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                     )}
                   </td>
                   <td className="px-2 sm:px-3 py-1 sm:py-1.5">
-                    {canEditDiscount ? (
+                    {canEditDiscount && !disabled ? (
                       <div className="flex items-center gap-1 bg-white dark:bg-muted/50 rounded-lg px-1.5 sm:px-2 py-0.5 border border-border shadow-sm">
                         {/* ─── CHANGED: Pass 0–100 as min/max (absolute bounds)
                              and the role's authorized range separately.
@@ -610,7 +628,7 @@ const QuotationCard = React.forwardRef<HTMLDivElement, QuotationCardProps>(
                   </td>
                   <td className="px-2 sm:px-3 py-1 sm:py-1.5">
                     <div className="flex items-center justify-end">
-                      {canEditQuantity ? (
+                      {canEditQuantity && !disabled ? (
                         <Input
                           type="number"
                           value={item.quantity}

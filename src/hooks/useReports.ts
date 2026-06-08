@@ -217,6 +217,36 @@ export interface DetailedReport {
   otpLogs: any[];
 }
 
+export interface PdfPrintReportItem {
+  id: string;
+  projectId: string;
+  projectNo: string;
+  projectName: string | null;
+  fileName: string;
+  filePath: string;
+  uniqueNo: string;
+  createdAt: string;
+  generator?: {
+    id: string;
+    name: string;
+    email?: string;
+  } | null;
+  project?: {
+    id: string;
+    projectNo: string;
+    projectName: string | null;
+    status: string;
+    date: string;
+  } | null;
+}
+
+export interface PdfPrintReport {
+  items: PdfPrintReportItem[];
+  summary: {
+    totalDocuments: number;
+  };
+}
+
 export interface ReportFilters {
   startDate?: string;
   endDate?: string;
@@ -251,6 +281,8 @@ export const useReports = () => {
     useState<DiscountReport | null>(null);
   const [detailedReport, setDetailedReport] =
     useState<DetailedReport | null>(null);
+  const [pdfPrintReport, setPdfPrintReport] =
+    useState<PdfPrintReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -545,6 +577,70 @@ export const useReports = () => {
     [get]
   );
 
+  const fetchPdfPrintReport = useCallback(
+    async (filters?: ReportFilters) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const resolved = resolveFilters(filters);
+        const qs = buildQueryString(resolved);
+        const res = await get(`/reports/pdf-prints${qs}`);
+        const data: PdfPrintReport = res.data;
+        setPdfPrintReport(data);
+        return data;
+      } catch (err: any) {
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to fetch PDF print report";
+        setError(msg);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [get]
+  );
+
+  const downloadPdfPrintLog = useCallback(async (logId: string) => {
+    const token = localStorage.getItem("accessToken");
+    const API_BASE_URL =
+      import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+
+    const response = await window.fetch(
+      `${API_BASE_URL}/projects/pdf-logs/${logId}/download`,
+      {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Download failed (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition");
+    let filename = `stored-project-pdf-${logId}.pdf`;
+    if (disposition) {
+      const match = disposition.match(/filename=\"?([^\"]+)\"?/);
+      if (match?.[1]) filename = match[1];
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 150);
+  }, []);
+
   return {
     masterReport,
     quotationSummary,
@@ -555,6 +651,7 @@ export const useReports = () => {
     productReport,
     discountReport,
     detailedReport,
+    pdfPrintReport,
     loading,
     error,
     fetchMasterReport,
@@ -566,6 +663,8 @@ export const useReports = () => {
     fetchProductReport,
     fetchDiscountReport,
     fetchDetailedReport,
+    fetchPdfPrintReport,
+    downloadPdfPrintLog,
     getDateRangeFromPreset,
   };
 };

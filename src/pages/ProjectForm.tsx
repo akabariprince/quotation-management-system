@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Plus,
@@ -291,12 +291,14 @@ interface InlineProjectNameProps {
   value: string;
   onChange: (value: string) => void;
   projectNo: string;
+  disabled?: boolean;
 }
 
 const InlineProjectName: React.FC<InlineProjectNameProps> = ({
   value,
   onChange,
   projectNo,
+  disabled = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -376,13 +378,15 @@ const InlineProjectName: React.FC<InlineProjectNameProps> = ({
               No project name
             </span>
           )}
-          <button
-            onClick={() => setIsEditing(true)}
-            className="p-1.5 hover:bg-muted rounded-md transition-colors flex-shrink-0 group"
-            title="Edit project name"
-          >
-            <Pencil className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors" />
-          </button>
+          {!disabled && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-1.5 hover:bg-muted rounded-md transition-colors flex-shrink-0 group"
+              title="Edit project name"
+            >
+              <Pencil className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors" />
+            </button>
+          )}
         </div>
       )}
       <div className="h-4 w-px bg-border flex-shrink-0 hidden sm:block" />
@@ -540,48 +544,50 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </p>
             </div>
 
-            <div
-              className={`rounded-md border p-2 transition-colors ${
-                sendToCustomer
-                  ? "border-accent bg-accent/5"
-                  : "border-border bg-card"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="sendToCustomer"
-                    checked={sendToCustomer}
-                    onCheckedChange={(checked) =>
-                      setSendToCustomer(checked as boolean)
-                    }
-                    disabled={sending || !customer?.email}
-                  />
-                  <label
-                    htmlFor="sendToCustomer"
-                    className="cursor-pointer select-none"
-                  >
-                    <p className="text-xs font-semibold text-foreground">
-                      Also send to Customer
-                    </p>
-                    {customer?.email ? (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {customer.email}
+            {user?.role?.name === "admin" && (
+              <div
+                className={`rounded-md border p-2 transition-colors ${
+                  sendToCustomer
+                    ? "border-accent bg-accent/5"
+                    : "border-border bg-card"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="sendToCustomer"
+                      checked={sendToCustomer}
+                      onCheckedChange={(checked) =>
+                        setSendToCustomer(checked as boolean)
+                      }
+                      disabled={sending || !customer?.email}
+                    />
+                    <label
+                      htmlFor="sendToCustomer"
+                      className="cursor-pointer select-none"
+                    >
+                      <p className="text-xs font-semibold text-foreground">
+                        Also send to Customer
                       </p>
-                    ) : (
-                      <p className="text-[11px] text-destructive mt-0.5">
-                        No email address on file for this customer
-                      </p>
-                    )}
-                  </label>
+                      {customer?.email ? (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {customer.email}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-destructive mt-0.5">
+                          No email address on file for this customer
+                        </p>
+                      )}
+                    </label>
+                  </div>
+                  {sendToCustomer && customer?.email && (
+                    <span className="text-[10px] font-medium text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                      Will receive
+                    </span>
+                  )}
                 </div>
-                {sendToCustomer && customer?.email && (
-                  <span className="text-[10px] font-medium text-accent bg-accent/10 px-1.5 py-0.5 rounded">
-                    Will receive
-                  </span>
-                )}
               </div>
-            </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="emailSubject" className="text-xs">
@@ -784,15 +790,23 @@ const DeliveryAddressEditor: React.FC<DeliveryAddressEditorProps> = ({
 const ProjectForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { pathname } = useLocation();
   const { user, hasPermission } = useAuth();
-  const requiredPermission = id ? "project:edit" : "project:create";
+
+  const [existingProject, setExistingProject] = useState<ProjectDetail | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
+
+  const isViewMode = id ? (!pathname.includes("/edit/") || existingProject?.status === "approved") : false;
+  const requiredPermission = isViewMode ? "project:view" : (id ? "project:edit" : "project:create");
 
   useEffect(() => {
+    // Only verify permission after existingProject is potentially loaded to get correct status
+    if (pageLoading) return;
     if (!hasPermission(requiredPermission)) {
       toast.error("You don't have permission to perform this action");
       navigate("/projects");
     }
-  }, [requiredPermission]);
+  }, [requiredPermission, pageLoading]);
 
   const {
     fetchProjectById,
@@ -827,9 +841,6 @@ const ProjectForm: React.FC = () => {
   }, []);
 
   /* ── State ── */
-  const [existingProject, setExistingProject] = useState<ProjectDetail | null>(
-    null,
-  );
   const [projectNo, setProjectNo] = useState("");
   const [projectName, setProjectName] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
@@ -872,7 +883,6 @@ const ProjectForm: React.FC = () => {
   const [matchLoading, setMatchLoading] = useState(false);
   const [newlyAddedItemId, setNewlyAddedItemId] = useState<string | null>(null);
 
-  const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -1491,10 +1501,10 @@ const ProjectForm: React.FC = () => {
           </button>
           <div>
             <h1 className="text-sm font-semibold leading-none">
-              {existingProject ? `Edit ${existingProject.projectNo}` : "Create Project"}
+              {existingProject ? (isViewMode ? `View Project ${existingProject.projectNo}` : `Edit ${existingProject.projectNo}`) : "Create Project"}
             </h1>
             <p className="text-muted-foreground text-xs">
-              {existingProject ? "Update project details" : `New Project: ${projectNo}`}
+              {existingProject ? (isViewMode ? "View project details" : "Update project details") : `New Project: ${projectNo}`}
             </p>
           </div>
         </div>
@@ -1543,6 +1553,7 @@ const ProjectForm: React.FC = () => {
                 onChange={(e) => setProjectName(e.target.value)}
                 placeholder="Enter project name (e.g., Living Room Furniture, Office Setup)"
                 className="h-8 text-sm"
+                disabled={isViewMode}
               />
             </div>
           </div>
@@ -1550,14 +1561,16 @@ const ProjectForm: React.FC = () => {
           <div className="enterprise-card overflow-visible p-3">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xs font-semibold">Customer Information</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 h-6 text-[11px] px-2"
-                onClick={() => navigate("/customers/new")}
-              >
-                <Plus className="h-3 w-3" /> Add New Customer
-              </Button>
+              {!isViewMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 h-6 text-[11px] px-2"
+                  onClick={() => navigate("/customers/new")}
+                >
+                  <Plus className="h-3 w-3" /> Add New Customer
+                </Button>
+              )}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               <div className="space-y-1 lg:col-span-2">
@@ -1566,6 +1579,7 @@ const ProjectForm: React.FC = () => {
                   value={customerId}
                   onChange={setCustomerId}
                   placeholder="Search customer by name or mobile..."
+                  disabled={isViewMode}
                 />
               </div>
               <div className="space-y-1">
@@ -1598,10 +1612,12 @@ const ProjectForm: React.FC = () => {
                 <div className="bg-muted/50 rounded-md p-3 text-sm">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Customer Details</span>
-                    <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
-                      onClick={() => navigate(`/customers/edit/${selectedCustomer.id}`)}>
-                      <Edit className="h-2.5 w-2.5" /> Edit Customer
-                    </Button>
+                    {!isViewMode && (
+                      <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
+                        onClick={() => navigate(`/customers/edit/${selectedCustomer.id}`)}>
+                        <Edit className="h-2.5 w-2.5" /> Edit Customer
+                      </Button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1633,11 +1649,13 @@ const ProjectForm: React.FC = () => {
                       <Truck className="h-3.5 w-3.5 text-green-600" />
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Delivery Address</span>
                     </div>
-                    <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
-                      onClick={() => setShowDeliveryEditor(!showDeliveryEditor)}>
-                      <Edit className="h-2.5 w-2.5" />
-                      {showDeliveryEditor ? "Close" : deliverySameAsBilling ? "Add Different Address" : "Edit"}
-                    </Button>
+                    {!isViewMode && (
+                      <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
+                        onClick={() => setShowDeliveryEditor(!showDeliveryEditor)}>
+                        <Edit className="h-2.5 w-2.5" />
+                        {showDeliveryEditor ? "Close" : deliverySameAsBilling ? "Add Different Address" : "Edit"}
+                      </Button>
+                    )}
                   </div>
                   {!showDeliveryEditor && (
                     <p className="font-medium text-sm">
@@ -1706,6 +1724,7 @@ const ProjectForm: React.FC = () => {
             value={projectName}
             onChange={setProjectName}
             projectNo={projectNo}
+            disabled={isViewMode}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -1713,138 +1732,140 @@ const ProjectForm: React.FC = () => {
               {/* ═══════════════════════════════════════════════════════ */}
               {/* CHANGED: All 4 selects are independent — no disabled  */}
               {/* ═══════════════════════════════════════════════════════ */}
-              <div className="sticky top-[60px] z-20 bg-card border border-border shadow-sm mb-6">
-                <div className="px-4 py-3 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-accent" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Add Product by Code
-                    </span>
-                  </div>
+              {!isViewMode && (
+                <div className="sticky top-[60px] z-20 bg-card border border-border shadow-sm mb-6">
+                  <div className="px-4 py-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-accent" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Add Product by Code
+                      </span>
+                    </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {/* Category — independent */}
-                    <Select
-                      value={filterCategory}
-                      onValueChange={setFilterCategory}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeCats.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {/* Category — independent */}
+                      <Select
+                        value={filterCategory}
+                        onValueChange={setFilterCategory}
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeCats.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                    {/* Category No — independent, shows ALL active */}
-                    <Select
-                      value={filterCategoryNo}
-                      onValueChange={setFilterCategoryNo}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="No" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeCatNos.map((cn) => (
-                          <SelectItem key={cn.id} value={cn.id}>
-                            {cn.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {/* Category No — independent, shows ALL active */}
+                      <Select
+                        value={filterCategoryNo}
+                        onValueChange={setFilterCategoryNo}
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="No" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeCatNos.map((cn) => (
+                            <SelectItem key={cn.id} value={cn.id}>
+                              {cn.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                    {/* Type — independent, shows ALL active */}
-                    <Select
-                      value={filterType}
-                      onValueChange={setFilterType}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeTypes.map((qt) => (
-                          <SelectItem key={qt.id} value={qt.id}>
-                            {qt.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {/* Type — independent, shows ALL active */}
+                      <Select
+                        value={filterType}
+                        onValueChange={setFilterType}
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeTypes.map((qt) => (
+                            <SelectItem key={qt.id} value={qt.id}>
+                              {qt.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                    {/* Variant — independent, shows ALL active */}
-                    <Select
-                      value={filterVariant}
-                      onValueChange={setFilterVariant}
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Variant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeVariants.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      {/* Variant — independent, shows ALL active */}
+                      <Select
+                        value={filterVariant}
+                        onValueChange={setFilterVariant}
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Variant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeVariants.map((v) => (
+                            <SelectItem key={v.id} value={v.id}>
+                              {v.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  {filterCategory &&
-                    filterCategoryNo &&
-                    filterType &&
-                    filterVariant && (
-                      <div className="flex items-center gap-3 pt-1">
-                        {matchLoading ? (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-1">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            Searching...
-                          </div>
-                        ) : matchedQuotation ? (
-                          <>
-                            <div className="flex items-center gap-3 flex-1 min-w-0 bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
-                              {matchedQuotation.images?.[0] && (
-                                <div className="w-12 aspect-[16/9] rounded overflow-hidden border bg-muted flex-shrink-0">
-                                  <img
-                                    src={getQuotationImageUrl(
-                                      matchedQuotation.images[0],
-                                    )}
-                                    alt={matchedQuotation.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold font-mono text-accent truncate">
-                                  {matchedQuotation.partCode}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  {matchedQuotation.name}
-                                </p>
-                              </div>
-                              <span className="text-xs font-semibold text-accent flex-shrink-0">
-                                {formatCurrency(matchedQuotation.basePrice)}
-                              </span>
+                    {filterCategory &&
+                      filterCategoryNo &&
+                      filterType &&
+                      filterVariant && (
+                        <div className="flex items-center gap-3 pt-1">
+                          {matchLoading ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-1">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Searching...
                             </div>
-                            <Button
-                              onClick={handleAddMatchedQuotation}
-                              className="btn-accent gap-2 flex-shrink-0 h-10"
-                            >
-                              <Plus className="h-4 w-4" />
-                              <span className="hidden sm:inline text-white">Add Cart</span>
-                            </Button>
-                          </>
-                        ) : (
-                          <div className="flex-1 text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2 text-center">
-                            No matching product found for this combination
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          ) : matchedQuotation ? (
+                            <>
+                              <div className="flex items-center gap-3 flex-1 min-w-0 bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
+                                {matchedQuotation.images?.[0] && (
+                                  <div className="w-12 aspect-[16/9] rounded overflow-hidden border bg-muted flex-shrink-0">
+                                    <img
+                                      src={getQuotationImageUrl(
+                                        matchedQuotation.images[0],
+                                      )}
+                                      alt={matchedQuotation.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold font-mono text-accent truncate">
+                                    {matchedQuotation.partCode}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {matchedQuotation.name}
+                                  </p>
+                                </div>
+                                <span className="text-xs font-semibold text-accent flex-shrink-0">
+                                  {formatCurrency(matchedQuotation.basePrice)}
+                                </span>
+                              </div>
+                              <Button
+                                onClick={handleAddMatchedQuotation}
+                                className="btn-accent gap-2 flex-shrink-0 h-10"
+                              >
+                                <Plus className="h-4 w-4" />
+                                <span className="hidden sm:inline text-white">Add Cart</span>
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="flex-1 text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2 text-center">
+                              No matching product found for this combination
+                            </div>
+                          )}
+                        </div>
+                      )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {items.length === 0 ? (
                 <div className="border border-dashed border-border p-14 text-center">
@@ -1875,6 +1896,7 @@ const ProjectForm: React.FC = () => {
                     salesManager={selectedSalesPerson?.name}
                     discountRange={discountRange}
                     selections={selections}
+                    disabled={isViewMode}
                   />
                 ))
               )}
@@ -1984,37 +2006,59 @@ const ProjectForm: React.FC = () => {
                 )}
 
                 <div className="space-y-2 mt-5 pt-4 border-t border-border">
-                  <Button
-                    onClick={() => handleSave(false)}
-                    variant="outline"
-                    className="w-full text-xs h-9"
-                    disabled={items.length === 0 || saving}
-                  >
-                    {saving ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="h-3.5 w-3.5 mr-2" />
-                    )}
-                    {saving ? "Saving..." : "Save as Draft"}
-                  </Button>
-                  {hasPermission("project:send") && (
-                    <Button
-                      onClick={() => handleSave(true)}
-                      className="w-full btn-accent text-xs h-9"
-                      disabled={items.length === 0 || !customerId || saving}
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />{" "}
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-3.5 w-3.5 mr-2" /> Save & Send
-                          Email
-                        </>
+                  {isViewMode ? (
+                    <>
+                      <Button
+                        onClick={() => navigate(`/projects/${id}/pdf`)}
+                        className="w-full btn-accent text-xs h-9"
+                      >
+                        <Eye className="h-3.5 w-3.5 mr-2" />
+                        Preview / Reprint PDF
+                      </Button>
+                      <Button
+                        onClick={() => navigate("/projects")}
+                        variant="outline"
+                        className="w-full text-xs h-9"
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5 mr-2" />
+                        Back to Projects
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={() => handleSave(false)}
+                        variant="outline"
+                        className="w-full text-xs h-9"
+                        disabled={items.length === 0 || saving}
+                      >
+                        {saving ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-3.5 w-3.5 mr-2" />
+                        )}
+                        {saving ? "Saving..." : "Save as Draft"}
+                      </Button>
+                      {hasPermission("project:send") && (
+                        <Button
+                          onClick={() => handleSave(true)}
+                          className="w-full btn-accent text-xs h-9"
+                          disabled={items.length === 0 || !customerId || saving}
+                        >
+                          {saving ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />{" "}
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-3.5 w-3.5 mr-2" /> Save & Send
+                              Email
+                            </>
+                          )}
+                        </Button>
                       )}
-                    </Button>
+                    </>
                   )}
                 </div>
               </div>

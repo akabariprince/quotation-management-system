@@ -45,6 +45,7 @@ const OTPModal: React.FC<OTPModalProps> = ({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpLogId, setOtpLogId] = useState<string | null>(null);
   const [sentToEmail, setSentToEmail] = useState("");
+  const [checkingApproval, setCheckingApproval] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -215,6 +216,27 @@ const OTPModal: React.FC<OTPModalProps> = ({
     }
   };
 
+  const checkAdminApproval = async () => {
+    if (!otpLogId) return;
+    setCheckingApproval(true);
+    setError("");
+    try {
+      const res = await api.get(`/otp-logs/${otpLogId}/status`);
+      if (res.success && res.data?.status === "approved") {
+        setSuccess(true);
+        setTimeout(() => {
+          onVerify("DIRECT_APPROVED", otpLogId);
+        }, 800);
+      } else {
+        setError("Approval pending. Please ask your administrator to approve the request.");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to check approval status.");
+    } finally {
+      setCheckingApproval(false);
+    }
+  };
+
   // ─── Input Handlers ───────────────────────────────────────────────────
 
   const handleChange = (index: number, value: string) => {
@@ -371,6 +393,27 @@ const OTPModal: React.FC<OTPModalProps> = ({
                   Please contact your administrator.
                 </span>
               </p>
+              <div className="mt-3 flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs h-9 gap-1 border-accent text-accent hover:bg-accent/10"
+                  onClick={checkAdminApproval}
+                  disabled={checkingApproval}
+                >
+                  {checkingApproval ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Checking status...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Check Admin Approval Status
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
 
             {/* OTP Inputs */}
