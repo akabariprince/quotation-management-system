@@ -2019,7 +2019,7 @@ const Reports: React.FC = () => {
 
           <div id="report-pending" className="space-y-2">
             <h2 className="text-sm font-semibold">
-              Pending Quotation Pipeline{" "}
+              Pending Purchase Orders
               {loading && (
                 <Loader2 className="inline h-3.5 w-3.5 animate-spin ml-1 no-pdf" />
               )}
