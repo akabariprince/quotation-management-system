@@ -52,7 +52,7 @@ export interface ProjectDetail {
   sgst: number;
   grandTotal: number;
   grandTotalWithGst: number;
-  status: "draft" | "sent" | "approved" | "expired";
+  status: "draft" | "sent" | "approved" | "expired" | "rejected" | "po";
   customer?: {
     id: string;
     name: string;
@@ -88,7 +88,7 @@ export interface Project {
   sgst: number;
   grandTotal: number;
   grandTotalWithGst: number;
-  status: "draft" | "sent" | "approved" | "expired";
+  status: "draft" | "sent" | "approved" | "expired" | "rejected" | "po";
   customer?: {
     id: string;
     name: string;

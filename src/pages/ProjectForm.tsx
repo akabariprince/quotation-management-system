@@ -411,6 +411,8 @@ interface EmailSendModalProps {
   salesPerson: any;
   grandTotal: number;
   items: ProjectItemLocal[];
+  onSend: (sendToCustomer: boolean, subject: string, message: string) => Promise<boolean>;
+  onPreview: () => Promise<void>;
 }
 
 const EmailSendModal: React.FC<EmailSendModalProps> = ({
@@ -421,9 +423,11 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   salesPerson,
   grandTotal,
   items,
+  onSend,
+  onPreview,
 }) => {
   const api = useApi();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [sendToCustomer, setSendToCustomer] = useState(false);
   const [subject, setSubject] = useState("");
@@ -452,17 +456,10 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
     }
     setSending(true);
     try {
-      const res = await api.post(`/projects/${project.id}/send-email`, {
-        sendToCustomer,
-        subject: subject.trim(),
-        message: message.trim(),
-        type: "sent",
-        userId: user?.id,
-      });
-      if (res.success) {
+      const success = await onSend(sendToCustomer, subject, message);
+      if (success) {
         setSent(true);
-        toast.success("Email sent successfully!");
-      } else toast.error(res.message || "Failed to send email");
+      }
     } catch (err: any) {
       toast.error(err?.message || "Failed to send email.");
     } finally {
@@ -544,7 +541,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </p>
             </div>
 
-            {user?.role?.name === "admin" && (
+            {hasPermission("project:send_customer") && (
               <div
                 className={`rounded-md border p-2 transition-colors ${
                   sendToCustomer
@@ -651,7 +648,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 Cancel
               </Button>
               <Button
-                onClick={() => navigate(`/projects/${project.id}/pdf`)}
+                onClick={onPreview}
                 variant="outline"
                 className="gap-1 h-7 text-xs px-3"
                 disabled={sending}
@@ -792,11 +789,12 @@ const ProjectForm: React.FC = () => {
   const { id } = useParams();
   const { pathname } = useLocation();
   const { user, hasPermission } = useAuth();
+  const api = useApi();
 
   const [existingProject, setExistingProject] = useState<ProjectDetail | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
 
-  const isViewMode = id ? (!pathname.includes("/edit/") || existingProject?.status === "approved") : false;
+  const isViewMode = id ? (!pathname.includes("/edit/") || ["approved", "po", "rejected"].includes(existingProject?.status as any)) : false;
   const requiredPermission = isViewMode ? "project:view" : (id ? "project:edit" : "project:create");
 
   useEffect(() => {
@@ -1442,19 +1440,18 @@ const ProjectForm: React.FC = () => {
   });
 
   /* ── Save ── */
-  const handleSave = async (sendEmail: boolean = false) => {
+  const handleSaveProjectWithStatus = async (status: "draft" | "sent") => {
     if (!customerId) {
       toast.error("Please select a customer");
-      return;
+      return null;
     }
     if (items.length === 0) {
       toast.error("Please add at least one quotation");
-      return;
+      return null;
     }
     setSaving(true);
     try {
-      const status = sendEmail ? "sent" : "draft";
-      const payload = buildPayload(status as "draft" | "sent");
+      const payload = buildPayload(status);
       let saved;
       if (existingProject) {
         saved = await updateProject(existingProject.id, payload);
@@ -1463,17 +1460,74 @@ const ProjectForm: React.FC = () => {
         saved = await createProject(payload);
         toast.success("Project created");
       }
-      if (sendEmail) {
-        setSavedProject(saved);
-        setShowEmailModal(true);
-      } else {
-        navigate("/projects");
-      }
+      setSavedProject(saved);
+      return saved;
     } catch (err: any) {
       toast.error(err.message || "Failed to save project");
+      return null;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async (sendEmail: boolean = false) => {
+    if (sendEmail) {
+      handleSaveAndSendClick();
+    } else {
+      const saved = await handleSaveProjectWithStatus("draft");
+      if (saved) {
+        navigate("/projects");
+      }
+    }
+  };
+
+  const handleSaveAndSendClick = () => {
+    if (!customerId) {
+      toast.error("Please select a customer");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("Please add at least one quotation");
+      return;
+    }
+    setSavedProject({
+      id: existingProject?.id || null,
+      projectNo: projectNo,
+      quotationNo: projectNo,
+    });
+    setShowEmailModal(true);
+  };
+
+  const handleSendEmailFromModal = async (sendToCustomer: boolean, subject: string, message: string) => {
+    const saved = await handleSaveProjectWithStatus("sent");
+    if (!saved) return false;
+
+    try {
+      const res = await api.post(`/projects/${saved.id}/send-email`, {
+        sendToCustomer,
+        subject: subject.trim(),
+        message: message.trim(),
+        type: "sent",
+        userId: user?.id,
+      });
+      if (res.success) {
+        toast.success("Email sent successfully!");
+        setSavedProject(saved);
+        return true;
+      } else {
+        toast.error(res.message || "Failed to send email");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to send email.");
+      return false;
+    }
+  };
+
+  const handlePreviewPDFFromModal = async () => {
+    const saved = await handleSaveProjectWithStatus("draft");
+    if (!saved) return;
+    navigate(`/projects/${saved.id}/pdf`);
   };
 
   const handleNextStep = () => {
@@ -2041,7 +2095,7 @@ const ProjectForm: React.FC = () => {
                       </Button>
                       {hasPermission("project:send") && (
                         <Button
-                          onClick={() => handleSave(true)}
+                          onClick={handleSaveAndSendClick}
                           className="w-full btn-accent text-xs h-9"
                           disabled={items.length === 0 || !customerId || saving}
                         >
@@ -2100,6 +2154,8 @@ const ProjectForm: React.FC = () => {
         salesPerson={selectedSalesPerson}
         grandTotal={grandTotal}
         items={items}
+        onSend={handleSendEmailFromModal}
+        onPreview={handlePreviewPDFFromModal}
       />
     </div>
   );

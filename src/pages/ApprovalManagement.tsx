@@ -184,6 +184,16 @@ const ApprovalManagement: React.FC = () => {
   const [pendingPage, setPendingPage] = useState(1);
   const [allPage, setAllPage] = useState(1);
 
+  // New state variables for Sent Projects
+  const [sentProjects, setSentProjects] = useState<any[]>([]);
+  const [projectsPage, setProjectsPage] = useState(1);
+  const [projectsMeta, setProjectsMeta] = useState<PaginationMeta | null>(null);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  // Tab selection state: default to 'projects' if has project:approve permission, otherwise 'pending'
+  const hasProjectApprove = hasPermission("project:approve");
+  const [activeTab, setActiveTab] = useState(hasProjectApprove ? "projects" : "pending");
+
   const searchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const [otpModal, setOtpModal] = useState<{ open: boolean; item: OTPLog | null }>({ open: false, item: null });
@@ -222,13 +232,29 @@ const ApprovalManagement: React.FC = () => {
     } catch (err) { console.error("Failed to fetch all logs:", err); }
   }, [allPage, searchTerm, filterType, filterStatus]);
 
+  const fetchSentProjects = useCallback(async () => {
+    setProjectsLoading(true);
+    try {
+      const res = await api.get(`/projects?status=sent&page=${projectsPage}&limit=10&sortBy=createdAt&sortOrder=DESC`);
+      if (res.success) {
+        setSentProjects(res.data || []);
+        setProjectsMeta(res.meta || null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sent projects:", err);
+    } finally {
+      setProjectsLoading(false);
+    }
+  }, [projectsPage]);
+
   const refreshAll = useCallback(async () => {
-    await Promise.all([fetchPending(), fetchAll(), fetchStats()]);
-  }, [fetchPending, fetchAll, fetchStats]);
+    await Promise.all([fetchSentProjects(), fetchPending(), fetchAll(), fetchStats()]);
+  }, [fetchSentProjects, fetchPending, fetchAll, fetchStats]);
 
   useEffect(() => { const loadAll = async () => { setLoading(true); await refreshAll(); setLoading(false); }; loadAll(); }, []);
   useEffect(() => { if (!loading) fetchPending(); }, [pendingPage]);
   useEffect(() => { if (!loading) fetchAll(); }, [allPage, filterType, filterStatus]);
+  useEffect(() => { if (!loading) fetchSentProjects(); }, [projectsPage]);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -309,6 +335,60 @@ const ApprovalManagement: React.FC = () => {
 
   const handleRefresh = async () => { setLoading(true); await refreshAll(); setLoading(false); toast.success("Data refreshed"); };
 
+  const handleApproveProject = (project: any) => {
+    setConfirmDialog({
+      open: true,
+      title: "Approve Project",
+      description: `Are you sure you want to approve Project ${project.projectNo} for customer "${project.customer?.name || 'Customer'}"? This will move it to Pending Purchase Orders.`,
+      variant: "info",
+      loading: false,
+      confirmText: "Approve",
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, loading: true }));
+        try {
+          const res = await api.patch(`/projects/${project.id}/status`, { status: "approved" });
+          if (res.success) {
+            toast.success(`Project ${project.projectNo} approved successfully`);
+            await refreshAll();
+          } else {
+            toast.error(res.message || "Failed to approve project");
+          }
+        } catch (err: any) {
+          toast.error(err?.message || "Failed to approve project");
+        } finally {
+          setConfirmDialog((prev) => ({ ...prev, open: false, loading: false }));
+        }
+      },
+    });
+  };
+
+  const handleRejectProject = (project: any) => {
+    setConfirmDialog({
+      open: true,
+      title: "Reject Project",
+      description: `Are you sure you want to reject Project ${project.projectNo}? This will change its status to Rejected and hide it from reports.`,
+      variant: "danger",
+      loading: false,
+      confirmText: "Reject",
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, loading: true }));
+        try {
+          const res = await api.patch(`/projects/${project.id}/status`, { status: "rejected" });
+          if (res.success) {
+            toast.success(`Project ${project.projectNo} rejected successfully`);
+            await refreshAll();
+          } else {
+            toast.error(res.message || "Failed to reject project");
+          }
+        } catch (err: any) {
+          toast.error(err?.message || "Failed to reject project");
+        } finally {
+          setConfirmDialog((prev) => ({ ...prev, open: false, loading: false }));
+        }
+      },
+    });
+  };
+
   // ─── Helpers ───
   const formatDate = (date: string) => new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const getTypeBadge = (type: string) => { switch (type) { case "login": return "badge-default"; case "discount": return "badge-warning"; case "master_activation": return "badge-success"; default: return "badge-default"; } };
@@ -364,7 +444,7 @@ const ApprovalManagement: React.FC = () => {
       </div>
 
       {/* Summary Cards — icon right, label+value left */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-1">
+      <div className={`grid grid-cols-2 ${hasPermission("project:approve") ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3 mt-1`}>
         <div className="enterprise-card p-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground">Pending Approvals</p>
@@ -401,12 +481,26 @@ const ApprovalManagement: React.FC = () => {
             <Shield className="h-4 w-4 text-primary" />
           </div>
         </div>
+        {hasPermission("project:approve") && (
+          <div className="enterprise-card p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Pending Projects</p>
+              <p className="text-lg font-bold text-foreground">{projectsMeta?.totalCount ?? sentProjects.length}</p>
+            </div>
+            <div className="h-8 w-8 rounded-lg bg-info/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-info" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="pending" className="space-y-2 mt-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 mt-2">
         <div className="overflow-x-auto display flex items-center gap-2">
           <TabsList>
+            {hasPermission("project:approve") && (
+              <TabsTrigger value="projects">Project Approvals</TabsTrigger>
+            )}
             <TabsTrigger value="pending">
               Pending Queue
               {pendingCount > 0 && (<span className="ml-1 bg-warning/20 text-warning px-1.5 py-px rounded-full text-xs">{pendingCount}</span>)}
@@ -417,6 +511,120 @@ const ApprovalManagement: React.FC = () => {
             <RefreshCw className="h-3 w-3" />Refresh
           </Button>
         </div>
+
+        {/* ─── Project Approvals Tab ─── */}
+        {hasPermission("project:approve") && (
+          <TabsContent value="projects" className="space-y-1">
+            <div className="enterprise-card overflow-hidden">
+              <div className="table-container">
+                <table className="enterprise-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-1.5 text-xs">Project No</th>
+                      <th className="px-3 py-1.5 text-xs">Project Name</th>
+                      <th className="px-3 py-1.5 text-xs">Customer</th>
+                      <th className="hidden sm:table-cell px-3 py-1.5 text-xs">Salesperson</th>
+                      <th className="hidden md:table-cell px-3 py-1.5 text-xs">Date</th>
+                      <th className="hidden lg:table-cell px-3 py-1.5 text-xs">Total Value</th>
+                      <th className="px-3 py-1.5 text-xs">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projectsLoading ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-4 text-xs text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-1" />
+                          Loading projects...
+                        </td>
+                      </tr>
+                    ) : sentProjects.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted-foreground py-8 text-sm">
+                          <Check className="h-6 w-6 mx-auto mb-1 text-success opacity-50" />
+                          <p>No projects pending approval.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      sentProjects.map((project) => (
+                        <tr key={project.id}>
+                          <td className="px-3 py-1 font-mono text-sm font-semibold text-primary">
+                            {project.projectNo}
+                          </td>
+                          <td className="px-3 py-1 text-sm font-medium">
+                            {project.projectName || <span className="text-muted-foreground italic">No Name</span>}
+                          </td>
+                          <td className="px-3 py-1 text-sm">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{project.customer?.name || "—"}</span>
+                              {project.customer?.email && (
+                                <span className="text-[10px] text-muted-foreground">{project.customer.email}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="hidden sm:table-cell px-3 py-1 text-sm text-muted-foreground">
+                            {project.salesPerson?.name || "—"}
+                          </td>
+                          <td className="hidden md:table-cell px-3 py-1 text-sm text-muted-foreground">
+                            {project.date}
+                          </td>
+                          <td className="hidden lg:table-cell px-3 py-1 text-sm font-semibold">
+                            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(project.grandTotalWithGst) || 0)}
+                          </td>
+                          <td className="px-3 py-1">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                className="h-6 text-xs px-2 bg-green-600 hover:bg-green-700 text-white gap-1"
+                                onClick={() => handleApproveProject(project)}
+                              >
+                                <Check className="h-3 w-3" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 text-xs px-2 text-destructive border-destructive/50 hover:bg-destructive/10 gap-1"
+                                onClick={() => handleRejectProject(project)}
+                              >
+                                <X className="h-3 w-3" /> Reject
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {projectsMeta && projectsMeta.totalPages > 1 && (
+                <div className="flex items-center justify-between px-3 py-1.5 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    Page {projectsMeta.currentPage} of {projectsMeta.totalPages}
+                  </p>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-xs px-2"
+                      disabled={projectsPage <= 1}
+                      onClick={() => setProjectsPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-xs px-2"
+                      disabled={projectsPage >= projectsMeta.totalPages}
+                      onClick={() => setProjectsPage((p) => p + 1)}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         {/* ─── Pending Tab ─── */}
         <TabsContent value="pending" className="space-y-1">

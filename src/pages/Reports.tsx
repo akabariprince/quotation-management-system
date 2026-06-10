@@ -1240,7 +1240,7 @@ const Reports: React.FC = () => {
     async (projectId: string) => {
       try {
         const res = await api.patch(`/projects/${projectId}/status`, {
-          status: "approved",
+          status: "po",
         });
         if (res.success) {
           toast.success("Successfully converted to PO!");
@@ -1443,11 +1443,11 @@ const Reports: React.FC = () => {
             <TabsTrigger value="quotation-summary" className="text-xs">
               Quotation Summary
             </TabsTrigger>
-            <TabsTrigger value="conversion" className="text-xs">
-              Conversion
-            </TabsTrigger>
             <TabsTrigger value="pending" className="text-xs">
               Pending Purchase Orders
+            </TabsTrigger>
+            <TabsTrigger value="conversion" className="text-xs">
+              Conversion
             </TabsTrigger>
             <TabsTrigger value="sales-performance" className="text-xs">
               Sales Performance
@@ -1483,7 +1483,7 @@ const Reports: React.FC = () => {
                     >
                       <p className="text-xl font-bold">{sc.count}</p>
                       <p className="text-xs text-muted-foreground capitalize">
-                        {sc.status}
+                        {sc.status === "po" ? "Purchase Order" : sc.status}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {formatCurrency(Number(sc.value) || 0)}
@@ -1502,7 +1502,7 @@ const Reports: React.FC = () => {
                       name: "Quotation Summary Report",
                       tab: "quotation-summary",
                     },
-                    { name: "Pending Quotation Pipeline", tab: "pending" },
+                    { name: "Pending Purchase Orders", tab: "pending" },
                     { name: "Conversion Report", tab: "conversion" },
 
                     {
@@ -1593,7 +1593,9 @@ const Reports: React.FC = () => {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="sent">Sent</SelectItem>
-                    <SelectItem value="approved">PO</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="po">Purchase Order</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
                     <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1728,8 +1730,8 @@ const Reports: React.FC = () => {
                           </td>
                           <td className="px-3 py-1">
                             <span className={getStatusBadgeClass(p.status)}>
-                              {p.status === "approved"
-                                ? "PO"
+                              {p.status === "po"
+                                ? ("Purchase Order").toUpperCase()
                                 : p.status.toUpperCase()}
                             </span>
                           </td>
@@ -1823,7 +1825,7 @@ const Reports: React.FC = () => {
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          background: "hsl(var(--card))",
+                          // background: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
                           borderRadius: "8px",
                           fontSize: "12px",
@@ -1960,8 +1962,8 @@ const Reports: React.FC = () => {
                           </td>
                           <td className="px-3 py-1">
                             <span className={getStatusBadgeClass(r.status)}>
-                              {r.status === "approved"
-                                ? "PO"
+                              {r.status === "po"
+                                ? ("Purchase Order").toUpperCase()
                                 : r.status.toUpperCase()}
                             </span>
                           </td>
@@ -2537,9 +2539,9 @@ const Reports: React.FC = () => {
                                   <span
                                     className={getStatusBadgeClass(q.status)}
                                   >
-                                    {q.status === "approved"
-                                      ? "PO"
-                                      : q.status.toUpperCase()}
+                                    {q.status === "po"
+                                       ? ("Purchase Order").toUpperCase()
+                                       : q.status.toUpperCase()}
                                   </span>
                                 </td>
                                 <td className="hidden md:table-cell px-3 py-1 text-muted-foreground">
@@ -2715,7 +2717,9 @@ const Reports: React.FC = () => {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="sent">Sent</SelectItem>
-                    <SelectItem value="approved">PO</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="po">Purchase Order</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
                     <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>

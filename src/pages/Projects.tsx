@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  CheckCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/hooks/useProjects";
@@ -42,6 +43,7 @@ const Projects: React.FC = () => {
     fetchProjects,
     deleteProject,
     duplicateProject,
+    updateProjectStatus,
   } = useProjects();
   const navigate = useNavigate();
 
@@ -54,12 +56,16 @@ const Projects: React.FC = () => {
     description: string;
     onConfirm: () => void;
     loading: boolean;
+    variant?: "danger" | "info" | "default";
+    confirmText?: string;
   }>({
     open: false,
     title: "",
     description: "",
     onConfirm: () => {},
     loading: false,
+    variant: "danger",
+    confirmText: "Delete",
   });
 
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
@@ -140,6 +146,33 @@ const Projects: React.FC = () => {
       },
     });
   };
+  
+  const handleConvertToPO = (id: string, projectNo: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Convert to Purchase Order",
+      description: `Are you sure you want to convert project "${projectNo}" to a Purchase Order? This will finalize the project status to PO.`,
+      loading: false,
+      variant: "info",
+      confirmText: "Convert",
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, loading: true }));
+        try {
+          await updateProjectStatus(id, "po");
+          toast.success(`Project ${projectNo} converted to PO successfully`);
+          loadProjects();
+        } catch (err: any) {
+          toast.error(err?.message || "Failed to convert project to PO");
+        } finally {
+          setConfirmDialog((prev) => ({
+            ...prev,
+            open: false,
+            loading: false,
+          }));
+        }
+      },
+    });
+  };
 
   const handleDuplicate = async (projectId: string) => {
     try {
@@ -155,6 +188,10 @@ const Projects: React.FC = () => {
     switch (status) {
       case "approved":
         return "badge-success";
+      case "po":
+        return "badge-success";
+      case "rejected":
+        return "badge-error";
       case "sent":
         return "badge-warning";
       case "expired":
@@ -236,7 +273,9 @@ const Projects: React.FC = () => {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="approved">PO</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="po">Purchase Order</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
@@ -332,8 +371,8 @@ const Projects: React.FC = () => {
                       </td>
                       <td className="hidden sm:table-cell px-3 py-1">
                         <span className={getStatusBadge(project.status)}>
-                          {project.status === "approved"
-                            ? "PO"
+                          {project.status === "po"
+                            ? ("Purchase Order").toUpperCase()
                             : project.status.toUpperCase()}
                         </span>
                       </td>
@@ -364,7 +403,7 @@ const Projects: React.FC = () => {
                               <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
-                          {hasPermission("project:edit") && project.status !== "approved" && (
+                          {hasPermission("project:edit") && !["approved", "po", "rejected"].includes(project.status) && (
                             <button
                               onClick={() =>
                                 navigate(`/projects/edit/${project.id}`)
@@ -375,7 +414,16 @@ const Projects: React.FC = () => {
                               <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
-                          {hasPermission("project:delete") && project.status !== "approved" && (
+                          {hasPermission("project:approve") && project.status === "approved" && (
+                            <button
+                              onClick={() => handleConvertToPO(project.id, project.projectNo)}
+                              className="action-btn p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
+                              title="Convert to PO"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 text-success" />
+                            </button>
+                          )}
+                          {hasPermission("project:delete") && !["approved", "po", "rejected"].includes(project.status) && (
                             <button
                               onClick={() =>
                                 handleDelete(project.id, project.projectNo)
@@ -483,9 +531,9 @@ const Projects: React.FC = () => {
         onConfirm={confirmDialog.onConfirm}
         title={confirmDialog.title}
         description={confirmDialog.description}
-        variant="danger"
+        variant={confirmDialog.variant || "danger"}
         loading={confirmDialog.loading}
-        confirmText="Delete"
+        confirmText={confirmDialog.confirmText || "Delete"}
         cancelText="Cancel"
       />
     </div>

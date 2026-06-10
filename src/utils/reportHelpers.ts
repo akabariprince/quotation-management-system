@@ -40,6 +40,8 @@ export const aggregateByStatus = (
     sent: '#A16207',
     approved: '#166534',
     expired: '#DC2626',
+    po: '#0EA5E9',
+    rejected: '#DC2626',
     completed: '#0891B2',
     cancelled: '#7C3AED',
     pending: '#92400E',
@@ -56,7 +58,7 @@ export const aggregateByStatus = (
   });
 
   return Object.entries(statusMap).map(([status, data]) => ({
-    name: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+    name: status === "po" ? ("Purchase Order").toUpperCase(): (status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')),
     value: data.count,
     totalAmount: data.totalAmount,
     color: statusColors[status] || '#6B7280',
@@ -149,7 +151,11 @@ export const getStatusBadgeClass = (status: string): string => {
       "px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700",
     sent: "px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800",
     approved:
+      "px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800",
+    po:
       "px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800",
+    rejected:
+      "px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800",
     expired:
       "px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700",
     Converted:
