@@ -1462,7 +1462,7 @@ const Reports: React.FC = () => {
               Discounts
             </TabsTrigger>
             <TabsTrigger value="pdf-prints" className="text-xs">
-              PDF Activity
+              PDF Email Log report
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2913,7 +2913,7 @@ const Reports: React.FC = () => {
 
           <div id="report-pdf-prints" className="space-y-2">
             <h2 className="text-sm font-semibold">
-              PDF Print Log & Reprint{" "}
+              PDF Email Log Report{" "}
               {loading && (
                 <Loader2 className="inline h-3.5 w-3.5 animate-spin ml-1 no-pdf" />
               )}
