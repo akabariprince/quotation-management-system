@@ -1462,7 +1462,7 @@ const Reports: React.FC = () => {
               Discounts
             </TabsTrigger>
             <TabsTrigger value="pdf-prints" className="text-xs">
-              PDF Email Log report
+              PDF Email Log
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1516,7 +1516,7 @@ const Reports: React.FC = () => {
                     { name: "Product Report", tab: "product" },
 
                     { name: "Discount Approval Report", tab: "discounts" },
-                    { name: "PDF Activity Report", tab: "pdf-prints" },
+                    { name: "PDF Email Log Report", tab: "pdf-prints" },
                   ].map((r) => (
                     <button
                       key={r.tab}
