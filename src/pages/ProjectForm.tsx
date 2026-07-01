@@ -47,6 +47,7 @@ import {
 import OTPModal from "@/components/common/OTPModal";
 import QuotationCard from "@/components/project/QuotationCard";
 import CustomerSearchSelect from "@/components/common/CustomerSearchSelect";
+import { getSetting } from "@/lib/api/settings";
 import { toast } from "sonner";
 import { getImageUrl } from "@/utils/reportHelpers";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -411,7 +412,14 @@ interface EmailSendModalProps {
   salesPerson: any;
   grandTotal: number;
   items: ProjectItemLocal[];
-  onSend: (sendToCustomer: boolean, subject: string, message: string) => Promise<boolean>;
+  emailEnabled: boolean;
+  whatsappEnabled: boolean;
+  onSend: (
+    sendToCustomerEmail: boolean,
+    sendToCustomerWhatsApp: boolean,
+    subject: string,
+    message: string,
+  ) => Promise<boolean>;
   onPreview: () => Promise<void>;
 }
 
@@ -423,13 +431,15 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   salesPerson,
   grandTotal,
   items,
+  emailEnabled,
+  whatsappEnabled,
   onSend,
   onPreview,
 }) => {
-  const api = useApi();
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const navigate = useNavigate();
-  const [sendToCustomer, setSendToCustomer] = useState(false);
+  const [sendToCustomerEmail, setSendToCustomerEmail] = useState(false);
+  const [sendToCustomerWhatsApp, setSendToCustomerWhatsApp] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -437,7 +447,8 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
 
   useEffect(() => {
     if (isOpen && project) {
-      setSendToCustomer(false);
+      setSendToCustomerEmail(emailEnabled && Boolean(customer?.email));
+      setSendToCustomerWhatsApp(false);
       setSubject(
         `Quotation ${project.projectNo || project.quotationNo || ""} - Ecstatics Spaces India`,
       );
@@ -447,16 +458,25 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
       setSending(false);
       setSent(false);
     }
-  }, [isOpen, project]);
+  }, [customer?.email, emailEnabled, grandTotal, isOpen, project, salesPerson?.name]);
 
   const handleSendEmail = async () => {
-    if (sendToCustomer && !customer?.email) {
+    if (emailEnabled && sendToCustomerEmail && !customer?.email) {
       toast.error("Customer does not have an email address");
+      return;
+    }
+    if (whatsappEnabled && sendToCustomerWhatsApp && !customer?.mobile) {
+      toast.error("Customer does not have a mobile number");
       return;
     }
     setSending(true);
     try {
-      const success = await onSend(sendToCustomer, subject, message);
+      const success = await onSend(
+        sendToCustomerEmail,
+        sendToCustomerWhatsApp,
+        subject,
+        message,
+      );
       if (success) {
         setSent(true);
       }
@@ -485,7 +505,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
           <div className="flex items-center gap-2">
             <div>
               <h2 className="text-sm font-semibold leading-none">
-                {sent ? "Email Sent!" : "Send Project Email"}
+                {sent ? "Notification Sent!" : "Send Project Notification"}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {project.projectNo || project.quotationNo}
@@ -503,14 +523,19 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
         {sent ? (
           <div className="text-center py-6">
             <p className="text-sm font-semibold text-success mb-1">
-              Email Sent Successfully!
+              Notification Sent Successfully!
             </p>
             <p className="text-xs text-muted-foreground">
-              Quotation sent to <strong>Admin(s)</strong>
+              Notification processed for enabled channel(s).
             </p>
-            {sendToCustomer && customer?.email && (
+            {emailEnabled && sendToCustomerEmail && customer?.email && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                and to customer <strong>{customer.email}</strong>
+                and to customer email <strong>{customer.email}</strong>
+              </p>
+            )}
+            {whatsappEnabled && sendToCustomerWhatsApp && customer?.mobile && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                and to customer WhatsApp <strong>{customer.mobile}</strong>
               </p>
             )}
             <div className="flex gap-2 justify-center mt-4">
@@ -532,60 +557,86 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="bg-muted/50 rounded-md p-2 border border-border">
-              <p className="text-xs font-semibold text-foreground">
-                Admin Notification
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                This email will automatically be sent to all admin users.
-              </p>
-            </div>
+            {(emailEnabled || whatsappEnabled) && (
+              <div className="bg-muted/50 rounded-md p-2 border border-border">
+                <p className="text-xs font-semibold text-foreground">
+                  Admin Notification
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Enabled channels will automatically notify admin users.
+                </p>
+              </div>
+            )}
 
-            {hasPermission("project:send_customer") && (
-              <div
-                className={`rounded-md border p-2 transition-colors ${
-                  sendToCustomer
-                    ? "border-accent bg-accent/5"
-                    : "border-border bg-card"
-                }`}
-              >
+            {hasPermission("project:send_customer") && (emailEnabled || whatsappEnabled) && (
+              <div className="rounded-md border border-border p-2 space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="sendToCustomer"
-                      checked={sendToCustomer}
-                      onCheckedChange={(checked) =>
-                        setSendToCustomer(checked as boolean)
-                      }
-                      disabled={sending || !customer?.email}
-                    />
-                    <label
-                      htmlFor="sendToCustomer"
-                      className="cursor-pointer select-none"
-                    >
-                      <p className="text-xs font-semibold text-foreground">
-                        Also send to Customer
-                      </p>
-                      {customer?.email ? (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {customer.email}
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-destructive mt-0.5">
-                          No email address on file for this customer
-                        </p>
-                      )}
-                    </label>
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">
+                      Customer Delivery Options
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Choose the enabled channels for the customer.
+                    </p>
                   </div>
-                  {sendToCustomer && customer?.email && (
-                    <span className="text-[10px] font-medium text-accent bg-accent/10 px-1.5 py-0.5 rounded">
-                      Will receive
-                    </span>
+                  <span
+                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                      customer?.whatsappVerified
+                        ? "text-green-700 bg-green-100"
+                        : "text-amber-700 bg-amber-100"
+                    }`}
+                  >
+                    {customer?.whatsappVerified
+                      ? "WhatsApp Verified"
+                      : "WhatsApp Not Verified"}
+                  </span>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {emailEnabled && (
+                    <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                      <Checkbox
+                        id="sendToCustomerEmail"
+                        checked={sendToCustomerEmail}
+                        onCheckedChange={(checked) =>
+                          setSendToCustomerEmail(checked as boolean)
+                        }
+                        disabled={sending || !customer?.email}
+                      />
+                      <span>
+                        <p className="text-xs font-semibold">Email</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {customer?.email || "No email address on file"}
+                        </p>
+                      </span>
+                    </label>
+                  )}
+                  {whatsappEnabled && (
+                    <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                      <Checkbox
+                        id="sendToCustomerWhatsApp"
+                        checked={sendToCustomerWhatsApp}
+                        onCheckedChange={(checked) =>
+                          setSendToCustomerWhatsApp(checked as boolean)
+                        }
+                        disabled={
+                          sending ||
+                          !customer?.mobile ||
+                          !customer?.whatsappVerified
+                        }
+                      />
+                      <span>
+                        <p className="text-xs font-semibold">WhatsApp</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {customer?.mobile || "No mobile number on file"}
+                        </p>
+                      </span>
+                    </label>
                   )}
                 </div>
               </div>
             )}
 
+            {emailEnabled && (
             <div className="space-y-1">
               <Label htmlFor="emailSubject" className="text-xs">
                 Subject
@@ -598,6 +649,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
+            )}
 
             <div className="enterprise-card p-2 space-y-1.5">
               <h3 className="text-xs font-semibold mb-1.5">Project Summary</h3>
@@ -625,6 +677,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             </div>
 
+            {emailEnabled && (
             <div className="space-y-1">
               <Label htmlFor="emailMessage" className="text-xs">
                 Message
@@ -637,6 +690,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
+            )}
 
             <div className="flex gap-2 pt-1 border-t border-border">
               <Button
@@ -667,7 +721,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Send className="h-3 w-3" /> Send Email
+                    <Send className="h-3 w-3" /> Send
                   </>
                 )}
               </Button>
@@ -870,6 +924,10 @@ const ProjectForm: React.FC = () => {
 
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [savedProject, setSavedProject] = useState<any>(null);
+  const [projectNotificationPrefs, setProjectNotificationPrefs] = useState({
+    email: true,
+    whatsapp: false,
+  });
 
   const [filterCategory, setFilterCategory] = useState("");
   const [filterCategoryNo, setFilterCategoryNo] = useState("");
@@ -902,6 +960,25 @@ const ProjectForm: React.FC = () => {
   useEffect(() => {
     setMatchedQuotation(null);
   }, [filterCategory, filterCategoryNo, filterType, filterVariant]);
+
+  useEffect(() => {
+    const loadNotificationPrefs = async () => {
+      try {
+        const response = await getSetting("notification_preferences");
+        const prefs = response?.data?.project_quotation;
+        if (prefs) {
+          setProjectNotificationPrefs({
+            email: prefs.email !== false,
+            whatsapp: Boolean(prefs.whatsapp),
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load notification preferences", error);
+      }
+    };
+
+    loadNotificationPrefs();
+  }, []);
 
   // Auto-search when all 4 filters are selected
   useEffect(() => {
@@ -1498,13 +1575,19 @@ const ProjectForm: React.FC = () => {
     setShowEmailModal(true);
   };
 
-  const handleSendEmailFromModal = async (sendToCustomer: boolean, subject: string, message: string) => {
+  const handleSendEmailFromModal = async (
+    sendToCustomerEmail: boolean,
+    sendToCustomerWhatsApp: boolean,
+    subject: string,
+    message: string,
+  ) => {
     const saved = await handleSaveProjectWithStatus("sent");
     if (!saved) return false;
 
     try {
       const res = await api.post(`/projects/${saved.id}/send-email`, {
-        sendToCustomer,
+        sendToCustomerEmail,
+        sendToCustomerWhatsApp,
         subject: subject.trim(),
         message: message.trim(),
         type: "sent",
@@ -2143,6 +2226,13 @@ const ProjectForm: React.FC = () => {
             ? `${pendingItem.quotationName} - ${pendingDiscountEdit?.newDiscount}%`
             : undefined
         }
+        metadata={{
+          projectNo: projectNo || "",
+          customerName: selectedCustomer?.name || "",
+          productName: pendingItem?.quotationName || "",
+          requestedDiscount: pendingDiscountEdit?.newDiscount || "",
+          requestedByName: user?.name || "",
+        }}
       />
 
       {/* Email Send Modal */}
@@ -2154,6 +2244,8 @@ const ProjectForm: React.FC = () => {
         salesPerson={selectedSalesPerson}
         grandTotal={grandTotal}
         items={items}
+        emailEnabled={projectNotificationPrefs.email}
+        whatsappEnabled={projectNotificationPrefs.whatsapp}
         onSend={handleSendEmailFromModal}
         onPreview={handlePreviewPDFFromModal}
       />

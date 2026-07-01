@@ -1,7 +1,17 @@
 // src/pages/CustomerForm.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, MapPin, Truck, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  MapPin,
+  Truck,
+  Check,
+  MessageSquare,
+  ShieldCheck,
+  ShieldX,
+  Loader2,
+} from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,11 +97,32 @@ const states = [
 
 const regions = ["North", "South", "East", "West", "Central", "North-East"];
 
+const normalizeMobile = (mobile: string) => {
+  const cleaned = mobile.trim().replace(/\s+/g, "");
+  if (cleaned.startsWith("+")) return cleaned;
+  const digits = cleaned.replace(/\D/g, "");
+  return digits.length === 10 ? `+91${digits}` : `+${digits}`;
+};
+
+const getLocalMobile = (mobile: string) => {
+  const digits = mobile.replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length >= 12) {
+    return digits.slice(2, 12);
+  }
+  return digits.slice(0, 10);
+};
+
 const CustomerForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { hasPermission } = useAuth();
-  const { fetchCustomerById, createCustomer, updateCustomer } = useCustomers();
+  const {
+    fetchCustomerById,
+    createCustomer,
+    updateCustomer,
+    requestCustomerMobileOTP,
+    verifyCustomerMobileOTP,
+  } = useCustomers();
 
   const requiredPermission = id ? "customer:edit" : "customer:create";
 
@@ -104,6 +135,12 @@ const CustomerForm: React.FC = () => {
 
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [mobileOtp, setMobileOtp] = useState("");
+  const [mobileOtpLogId, setMobileOtpLogId] = useState<string | null>(null);
+  const [verifiedMobile, setVerifiedMobile] = useState<string | null>(null);
+  const [whatsAppVerified, setWhatsAppVerified] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -133,7 +170,7 @@ const CustomerForm: React.FC = () => {
           if (customer) {
             setFormData({
               name: customer.name || "",
-              mobile: customer.mobile || "",
+              mobile: getLocalMobile(customer.mobile || ""),
               email: customer.email || "",
               contactPerson: customer.contactPerson || "",
               gstin: customer.gstin || "",
@@ -150,6 +187,8 @@ const CustomerForm: React.FC = () => {
               deliveryState: (customer as any).deliveryState || "",
               deliveryPincode: (customer as any).deliveryPincode || "",
             });
+            setWhatsAppVerified(Boolean(customer.whatsappVerified));
+            setVerifiedMobile(customer.whatsappVerifiedMobile || null);
           } else {
             toast.error("Customer not found");
             navigate("/customers");
@@ -165,6 +204,15 @@ const CustomerForm: React.FC = () => {
   }, [id]);
 
   const handleChange = (field: string, value: any) => {
+    if (field === "mobile") {
+      const digitsOnly = String(value || "").replace(/\D/g, "").slice(0, 10);
+      const nextMobile = normalizeMobile(digitsOnly);
+      if (verifiedMobile && nextMobile !== verifiedMobile) {
+        setWhatsAppVerified(false);
+      }
+      setFormData((prev) => ({ ...prev, [field]: digitsOnly }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -178,6 +226,51 @@ const CustomerForm: React.FC = () => {
     }));
   };
 
+  const handleSendMobileOTP = async () => {
+    if (formData.mobile.length !== 10) {
+      toast.error("Please enter a valid mobile number first");
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      const response = await requestCustomerMobileOTP(normalizeMobile(formData.mobile));
+      setMobileOtpLogId(response.otpLogId);
+      setWhatsAppVerified(false);
+      setMobileOtp("");
+      toast.success(`WhatsApp OTP sent to ${response.mobile}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send WhatsApp OTP");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyMobileOTP = async () => {
+    if (!mobileOtpLogId) {
+      toast.error("Request OTP first");
+      return;
+    }
+    if (mobileOtp.trim().length !== 6) {
+      toast.error("Enter the 6-digit OTP");
+      return;
+    }
+    setVerifyingOtp(true);
+    try {
+      const response = await verifyCustomerMobileOTP(
+        normalizeMobile(formData.mobile),
+        mobileOtp,
+        mobileOtpLogId,
+      );
+      setVerifiedMobile(response.verifiedMobile);
+      setWhatsAppVerified(true);
+      toast.success("WhatsApp mobile verified");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify OTP");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -185,7 +278,7 @@ const CustomerForm: React.FC = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-    if (formData.mobile.replace(/\D/g, "").length < 10) {
+    if (formData.mobile.length !== 10) {
       toast.error("Please enter a valid mobile number");
       return;
     }
@@ -200,9 +293,16 @@ const CustomerForm: React.FC = () => {
 
     setSaving(true);
     try {
+      const normalizedFormMobile = normalizeMobile(formData.mobile);
       const payload: any = {
         name: formData.name,
-        mobile: formData.mobile,
+        mobile: normalizedFormMobile,
+        verificationOtpLogId:
+          whatsAppVerified &&
+          verifiedMobile === normalizedFormMobile &&
+          mobileOtpLogId
+            ? mobileOtpLogId
+            : null,
         email: formData.email || null,
         contactPerson: formData.contactPerson || null,
         gstin: formData.gstin || null,
@@ -310,14 +410,81 @@ const CustomerForm: React.FC = () => {
             </div>
             <div className="space-y-1">
               <Label htmlFor="mobile" className="text-xs">Mobile Number *</Label>
-              <Input
-                id="mobile"
-                value={formData.mobile}
-                onChange={(e) => handleChange("mobile", e.target.value)}
-                placeholder="+91 XXXXXXXXXX"
-                required
-                className="h-8 text-sm"
-              />
+              <div className="flex h-8 overflow-hidden rounded-md border border-input bg-background">
+                <div className="flex items-center border-r border-input bg-muted px-2 text-xs font-medium text-muted-foreground">
+                  +91
+                </div>
+                <Input
+                  id="mobile"
+                  value={formData.mobile}
+                  onChange={(e) => handleChange("mobile", e.target.value)}
+                  placeholder="XXXXXXXXXX"
+                  required
+                  maxLength={10}
+                  inputMode="numeric"
+                  className="h-full border-0 text-sm focus-visible:ring-0"
+                />
+              </div>
+              <div className="pt-1 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex h-7 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      whatsAppVerified
+                        ? "bg-green-100 text-green-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {whatsAppVerified ? (
+                      <ShieldCheck className="h-3 w-3" />
+                    ) : (
+                      <ShieldX className="h-3 w-3" />
+                    )}
+                    {whatsAppVerified
+                      ? "WhatsApp Verified"
+                      : "WhatsApp Not Verified"}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={handleSendMobileOTP}
+                    disabled={sendingOtp}
+                  >
+                    {sendingOtp ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <MessageSquare className="h-3 w-3" />
+                    )}
+                    Send OTP
+                  </Button>
+                </div>
+                {mobileOtpLogId && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={mobileOtp}
+                      onChange={(e) => setMobileOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="Enter OTP"
+                      className="h-8 text-sm max-w-[120px]"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 text-xs"
+                      onClick={handleVerifyMobileOTP}
+                      disabled={verifyingOtp}
+                    >
+                      {verifyingOtp ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      Verify OTP
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="email" className="text-xs">Email Address</Label>

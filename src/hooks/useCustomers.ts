@@ -5,6 +5,10 @@ export interface Customer {
   id: string;
   name: string;
   mobile: string;
+  whatsappVerified?: boolean;
+  whatsappVerifiedAt?: string | null;
+  whatsappVerifiedMobile?: string | null;
+  verificationOtpLogId?: string | null;
   email: string | null;
   address: string | null;
   gstin: string | null;
@@ -144,6 +148,26 @@ export const useCustomers = () => {
     [get],
   );
 
+  const requestCustomerMobileOTP = useCallback(
+    async (mobile: string) => {
+      const res = await post("/customers/mobile-otp/request", { mobile });
+      return res.data;
+    },
+    [post],
+  );
+
+  const verifyCustomerMobileOTP = useCallback(
+    async (mobile: string, otp: string, otpLogId: string) => {
+      const res = await post("/customers/mobile-otp/verify", {
+        mobile,
+        otp,
+        otpLogId,
+      });
+      return res.data;
+    },
+    [post],
+  );
+
   return {
     customers,
     meta,
@@ -155,5 +179,7 @@ export const useCustomers = () => {
     deleteCustomer,
     fetchAllCustomers,
     searchCustomers,
+    requestCustomerMobileOTP,
+    verifyCustomerMobileOTP,
   };
 };

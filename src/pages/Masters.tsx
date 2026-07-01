@@ -1496,6 +1496,12 @@ const Masters: React.FC = () => {
         entityId={pendingItem?.id}
         entityType={pendingItem?.type}
         entityName={pendingItem?.name}
+        metadata={{
+          recordType: pendingItem?.type || "",
+          recordName: pendingItem?.name || "",
+          action: "Activate",
+          requestedByName: user?.name || "",
+        }}
       />
 
       {/* Confirm Dialog */}

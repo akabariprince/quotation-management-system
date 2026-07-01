@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus, Edit, Trash2, Shield, ShieldCheck, ShieldAlert, ShieldOff,
-  Search, Users, KeyRound, Percent, ArrowLeft,
+  Search, Users, KeyRound, Percent, ArrowLeft, MessageSquare, Check, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,25 @@ import { Link } from "react-router-dom";
 
 const PAGE_LIMIT = 10;
 
+const normalizeMobile = (mobile: string) => {
+  const digits = mobile.replace(/\D/g, "").slice(0, 10);
+  return digits ? `+91${digits}` : "";
+};
+
+const getLocalMobile = (mobile?: string | null) => {
+  const digits = String(mobile || "").replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length >= 12) {
+    return digits.slice(2, 12);
+  }
+  return digits.slice(0, 10);
+};
+
 const UserManagement: React.FC = () => {
   const { user, hasPermission } = useAuth();
 
   const {
     users, meta: usersMeta, loading: usersLoading,
-    fetchUsers, createUser, updateUser, deleteUser,
+    fetchUsers, createUser, updateUser, requestUserMobileOTP, verifyUserMobileOTP, deleteUser,
   } = useUsers();
 
   const {
@@ -54,7 +67,20 @@ const UserManagement: React.FC = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
   const [userFormLoading, setUserFormLoading] = useState(false);
-  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", roleId: "", isActive: true });
+  const [sendingUserOtp, setSendingUserOtp] = useState(false);
+  const [verifyingUserOtp, setVerifyingUserOtp] = useState(false);
+  const [userOtpCode, setUserOtpCode] = useState("");
+  const [userOtpLogId, setUserOtpLogId] = useState<string | null>(null);
+  const [verifiedUserMobile, setVerifiedUserMobile] = useState<string | null>(null);
+  const [userForm, setUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    mobile: "",
+    roleId: "",
+    isActive: true,
+    whatsappVerified: false,
+  });
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -119,8 +145,33 @@ const UserManagement: React.FC = () => {
 
   // ── USER CRUD ──
   const handleOpenUserModal = (u?: SystemUser) => {
-    if (u) { setEditingUser(u); setUserForm({ name: u.name, email: u.email, password: "", roleId: u.roleId, isActive: u.isActive }); }
-    else { setEditingUser(null); setUserForm({ name: "", email: "", password: "", roleId: "", isActive: true }); }
+    setUserOtpCode("");
+    setUserOtpLogId(null);
+    if (u) {
+      setEditingUser(u);
+      setVerifiedUserMobile(u.whatsappVerifiedMobile || null);
+      setUserForm({
+        name: u.name,
+        email: u.email,
+        password: "",
+        mobile: getLocalMobile(u.mobile),
+        roleId: u.roleId,
+        isActive: u.isActive,
+        whatsappVerified: Boolean(u.whatsappVerified),
+      });
+    } else {
+      setEditingUser(null);
+      setVerifiedUserMobile(null);
+      setUserForm({
+        name: "",
+        email: "",
+        password: "",
+        mobile: "",
+        roleId: "",
+        isActive: true,
+        whatsappVerified: false,
+      });
+    }
     setShowUserModal(true);
   };
 
@@ -129,15 +180,84 @@ const UserManagement: React.FC = () => {
     setUserFormLoading(true);
     try {
       if (editingUser) {
-        const body: any = { ...userForm }; if (!body.password) delete body.password;
+        const body: any = {
+          name: userForm.name,
+          email: userForm.email,
+          password: userForm.password,
+          mobile: userForm.mobile ? normalizeMobile(userForm.mobile) : null,
+          roleId: userForm.roleId,
+          isActive: userForm.isActive,
+        };
+        if (!body.password) delete body.password;
+        body.verificationOtpLogId =
+          userForm.whatsappVerified &&
+          userForm.mobile &&
+          verifiedUserMobile === normalizeMobile(userForm.mobile)
+            ? userOtpLogId
+            : null;
         await updateUser(editingUser.id, body); toast.success("User updated successfully");
       } else {
         if (!userForm.password) { toast.error("Password is required for new user"); setUserFormLoading(false); return; }
-        await createUser(userForm); toast.success("User created successfully");
+        const body: any = {
+          name: userForm.name,
+          email: userForm.email,
+          password: userForm.password,
+          mobile: userForm.mobile ? normalizeMobile(userForm.mobile) : null,
+          roleId: userForm.roleId,
+          isActive: userForm.isActive,
+          verificationOtpLogId:
+            userForm.whatsappVerified &&
+            userForm.mobile &&
+            verifiedUserMobile === normalizeMobile(userForm.mobile)
+              ? userOtpLogId
+              : null,
+        };
+        await createUser(body); toast.success("User created successfully");
       }
       setShowUserModal(false); loadUsers();
     } catch (err: any) { toast.error(err.message || "Failed to save user"); }
     finally { setUserFormLoading(false); }
+  };
+
+  const handleSendUserOtp = async () => {
+    if (!userForm.mobile || userForm.mobile.length !== 10) {
+      toast.error("Enter a valid mobile number first");
+      return;
+    }
+    setSendingUserOtp(true);
+    try {
+      const result = await requestUserMobileOTP(normalizeMobile(userForm.mobile));
+      setUserOtpLogId(result.otpLogId);
+      setUserOtpCode("");
+      setUserForm((prev) => ({ ...prev, whatsappVerified: false }));
+      toast.success(`WhatsApp OTP sent to ${result.mobile}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send WhatsApp OTP");
+    } finally {
+      setSendingUserOtp(false);
+    }
+  };
+
+  const handleVerifyUserOtp = async () => {
+    if (!userOtpLogId) {
+      toast.error("Request OTP first");
+      return;
+    }
+    if (userOtpCode.length !== 6) {
+      toast.error("Enter the 6-digit OTP");
+      return;
+    }
+    setVerifyingUserOtp(true);
+    try {
+      const result = await verifyUserMobileOTP(normalizeMobile(userForm.mobile), userOtpCode, userOtpLogId);
+      setVerifiedUserMobile(result.verifiedMobile);
+      setUserForm((prev) => ({ ...prev, whatsappVerified: true }));
+      toast.success("User mobile verified");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify WhatsApp OTP");
+    } finally {
+      setVerifyingUserOtp(false);
+    }
   };
 
   const handleDeleteUser = (userId: string, userName: string) => {
@@ -332,7 +452,7 @@ const UserManagement: React.FC = () => {
                   <thead>
                     <tr>
                       <th className="px-3 py-1.5 text-xs">User</th>
-                      <th className="hidden sm:table-cell px-3 py-1.5 text-xs">Email</th>
+                      <th className="hidden sm:table-cell px-3 py-1.5 text-xs">Contact</th>
                       <th className="px-3 py-1.5 text-xs">Role</th>
                       <th className="hidden md:table-cell px-3 py-1.5 text-xs">Status</th>
                       <th className="hidden lg:table-cell px-3 py-1.5 text-xs">Last Login</th>
@@ -352,10 +472,21 @@ const UserManagement: React.FC = () => {
                               <div className="w-6 h-6 bg-accent/10 rounded-full flex items-center justify-center">
                                 <span className="text-accent font-semibold text-xs">{u.name.charAt(0).toUpperCase()}</span>
                               </div>
-                              <span className="font-medium text-sm">{u.name}</span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-medium text-sm">{u.name}</span>
+                                <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${u.whatsappVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                                  {u.whatsappVerified ? <ShieldCheck className="h-2.5 w-2.5" /> : <ShieldOff className="h-2.5 w-2.5" />}
+                                  {u.whatsappVerified ? "WA Verified" : "WA Not Verified"}
+                                </span>
+                              </div>
                             </div>
                           </td>
-                          <td className="hidden sm:table-cell px-3 py-1 text-muted-foreground text-sm">{u.email}</td>
+                          <td className="hidden sm:table-cell px-3 py-1 text-sm">
+                            <div className="flex flex-col">
+                              <span className="text-muted-foreground">{u.email}</span>
+                              <span className="text-xs text-muted-foreground">{u.mobile || "No mobile"}</span>
+                            </div>
+                          </td>
                           <td className="px-3 py-1">
                             <div className="flex items-center gap-1">{getRoleIcon(u.role?.name)}<span className="text-sm">{u.role?.displayName}</span></div>
                           </td>
@@ -559,6 +690,56 @@ const UserManagement: React.FC = () => {
           <div className="space-y-3 py-2">
             <div className="space-y-1"><Label className="text-xs">Name *</Label><Input value={userForm.name} onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))} placeholder="Full name" className="h-8 text-sm" /></div>
             <div className="space-y-1"><Label className="text-xs">Email *</Label><Input type="email" value={userForm.email} onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))} placeholder="user@company.com" className="h-8 text-sm" /></div>
+            <div className="space-y-1">
+              <Label className="text-xs">Mobile Number</Label>
+              <div className="flex h-8 overflow-hidden rounded-md border border-input bg-background">
+                <div className="flex items-center border-r border-input bg-muted px-2 text-xs font-medium text-muted-foreground">
+                  +91
+                </div>
+                <Input
+                  value={userForm.mobile}
+                  onChange={(e) => {
+                    const mobile = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setUserForm((p) => ({
+                      ...p,
+                      mobile,
+                      whatsappVerified:
+                        verifiedUserMobile && verifiedUserMobile === normalizeMobile(mobile)
+                          ? p.whatsappVerified
+                          : false,
+                    }));
+                  }}
+                  placeholder="XXXXXXXXXX"
+                  maxLength={10}
+                  inputMode="numeric"
+                  className="h-full border-0 text-sm focus-visible:ring-0"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${userForm.whatsappVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                  {userForm.whatsappVerified ? <ShieldCheck className="h-3 w-3" /> : <ShieldOff className="h-3 w-3" />}
+                  {userForm.whatsappVerified ? "WhatsApp Verified" : "WhatsApp Not Verified"}
+                </span>
+                <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handleSendUserOtp} disabled={sendingUserOtp}>
+                  {sendingUserOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageSquare className="h-3 w-3" />}
+                  Send OTP
+                </Button>
+              </div>
+              {userOtpLogId && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    value={userOtpCode}
+                    onChange={(e) => setUserOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Enter OTP"
+                    className="h-8 text-sm max-w-[120px]"
+                  />
+                  <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={handleVerifyUserOtp} disabled={verifyingUserOtp}>
+                    {verifyingUserOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Verify OTP
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="space-y-1"><Label className="text-xs">{editingUser ? "New Password (leave blank to keep)" : "Password *"}</Label><Input type="password" value={userForm.password} onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))} placeholder="Min 6 characters" className="h-8 text-sm" /></div>
             <div className="space-y-1"><Label className="text-xs">Role *</Label>
               <Select value={userForm.roleId} onValueChange={(v) => setUserForm((p) => ({ ...p, roleId: v }))}>

@@ -74,10 +74,10 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     path: '/email-logs',
-    label: 'Email Logs',
+    label: 'Notifications',
     icon: Plus,
     permission: 'email_log:view',
-    description: 'Email history & logs',
+    description: 'Email and WhatsApp logs',
   },
   {
     path: '/reports',

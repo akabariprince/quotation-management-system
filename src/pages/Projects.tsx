@@ -16,6 +16,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CheckCircle,
+  MessageSquare,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/hooks/useProjects";
@@ -354,14 +356,16 @@ const Projects: React.FC = () => {
                         )}
                       </td>
                       <td className="hidden sm:table-cell px-3 py-1">
-                        <span className="font-medium text-sm">
-                          {project.customer?.name || "Unknown"}
-                        </span>
-                        {project.customer?.mobile && (
-                          <span className="text-xs text-muted-foreground ml-1.5">
-                            · {project.customer.mobile}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-sm">
+                            {project.customer?.name || "Unknown"}
                           </span>
-                        )}
+                          {project.customer?.mobile && (
+                            <span className="text-xs text-muted-foreground">
+                              {project.customer.mobile}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="hidden md:table-cell px-3 py-1 text-muted-foreground text-sm">
                         {formatDate(project.date)}
@@ -370,11 +374,23 @@ const Projects: React.FC = () => {
                         {formatCurrency(project.grandTotalWithGst)}
                       </td>
                       <td className="hidden sm:table-cell px-3 py-1">
-                        <span className={getStatusBadge(project.status)}>
-                          {project.status === "po"
-                            ? ("Purchase Order").toUpperCase()
-                            : project.status.toUpperCase()}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={getStatusBadge(project.status)}>
+                            {project.status === "po"
+                              ? ("Purchase Order").toUpperCase()
+                              : project.status.toUpperCase()}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
+                              project.whatsappSent
+                                ? "bg-green-100 text-green-700"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            <MessageCircle className="h-2.5 w-2.5" />
+                            {project.whatsappSent ? "WA Project Sent" : "WA Not Sent"}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-3 py-1">
                         <div className="flex items-center gap-0.5">

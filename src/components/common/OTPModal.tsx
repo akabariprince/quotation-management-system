@@ -23,6 +23,7 @@ interface OTPModalProps {
   entityId?: string;
   entityType?: string;
   entityName?: string;
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 const OTPModal: React.FC<OTPModalProps> = ({
@@ -35,6 +36,7 @@ const OTPModal: React.FC<OTPModalProps> = ({
   entityId,
   entityType,
   entityName,
+  metadata,
 }) => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
@@ -107,6 +109,7 @@ const OTPModal: React.FC<OTPModalProps> = ({
         entityType: entityType || undefined,
         entityName: entityName || undefined,
         requestedBy: user?.id || undefined,
+        metadata: metadata || undefined,
       });
 
       if (res.success) {

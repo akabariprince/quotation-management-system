@@ -1,10 +1,14 @@
-import { useState, useCallback } from 'react';
-import { useApi } from '@/hooks/useApi';
+import { useState, useCallback } from "react";
+import { useApi } from "@/hooks/useApi";
 
 export interface SystemUser {
   id: string;
   name: string;
   email: string;
+  mobile: string | null;
+  whatsappVerified: boolean;
+  whatsappVerifiedAt: string | null;
+  whatsappVerifiedMobile: string | null;
   roleId: string;
   isActive: boolean;
   lastLogin: string | null;
@@ -50,7 +54,7 @@ export const useUsers = () => {
         if (params?.roleId) queryParts.push(`roleId=${params.roleId}`);
         if (params?.isActive !== undefined) queryParts.push(`isActive=${params.isActive}`);
 
-        const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '?limit=10';
+        const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "?limit=10";
         const res = await get(`/users${queryString}`);
         setUsers(res.data || []);
         if (res.meta) setMeta(res.meta);
@@ -62,7 +66,7 @@ export const useUsers = () => {
         setLoading(false);
       }
     },
-    [get]
+    [get],
   );
 
   const fetchUserById = useCallback(
@@ -74,7 +78,7 @@ export const useUsers = () => {
         return null;
       }
     },
-    [get]
+    [get],
   );
 
   const createUser = useCallback(
@@ -82,13 +86,15 @@ export const useUsers = () => {
       name: string;
       email: string;
       password: string;
+      mobile?: string | null;
+      verificationOtpLogId?: string | null;
       roleId: string;
       isActive?: boolean;
     }) => {
-      const res = await post('/users', data);
+      const res = await post("/users", data);
       return res.data;
     },
-    [post]
+    [post],
   );
 
   const updateUser = useCallback(
@@ -98,21 +104,43 @@ export const useUsers = () => {
         name?: string;
         email?: string;
         password?: string;
+        mobile?: string | null;
+        verificationOtpLogId?: string | null;
         roleId?: string;
         isActive?: boolean;
-      }
+      },
     ) => {
       const res = await put(`/users/${id}`, data);
       return res.data;
     },
-    [put]
+    [put],
+  );
+
+  const requestUserMobileOTP = useCallback(
+    async (mobile: string) => {
+      const res = await post("/users/mobile-otp/request", { mobile });
+      return res.data;
+    },
+    [post],
+  );
+
+  const verifyUserMobileOTP = useCallback(
+    async (mobile: string, otp: string, otpLogId: string) => {
+      const res = await post("/users/mobile-otp/verify", {
+        mobile,
+        otp,
+        otpLogId,
+      });
+      return res.data;
+    },
+    [post],
   );
 
   const deleteUser = useCallback(
     async (id: string) => {
       await del(`/users/${id}`);
     },
-    [del]
+    [del],
   );
 
   return {
@@ -123,6 +151,8 @@ export const useUsers = () => {
     fetchUserById,
     createUser,
     updateUser,
+    requestUserMobileOTP,
+    verifyUserMobileOTP,
     deleteUser,
   };
 };

@@ -32,3 +32,28 @@ export const updateSetting = async (key: string, value: any) => {
   }
   return response.json();
 };
+
+export const getWhatsAppTemplates = async () => {
+  const response = await fetch(`${API_BASE}/settings/whatsapp/templates`, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.message || "Failed to fetch WhatsApp templates");
+  }
+  return response.json();
+};
+
+export const syncWhatsAppConfig = async (apiKey: string) => {
+  const response = await fetch(`${API_BASE}/settings/whatsapp/sync`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ apiKey }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.message || "Failed to sync WhatsApp settings");
+  }
+  return response.json();
+};

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Search, X, Check } from "lucide-react";
+import { Search, X, Check, ShieldCheck, ShieldX } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { Customer } from "@/hooks/useCustomers";
 
@@ -162,9 +162,25 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
           style={txtStyle}
         >
           {selectedCustomer ? (
-            <span className="truncate flex-1" style={txtStyle}>
-              {customerLabel(selectedCustomer)}
-            </span>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="truncate" style={txtStyle}>
+                {customerLabel(selectedCustomer)}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
+                  selectedCustomer.whatsappVerified
+                    ? "bg-green-100 text-green-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {selectedCustomer.whatsappVerified ? (
+                  <ShieldCheck className="h-2.5 w-2.5" />
+                ) : (
+                  <ShieldX className="h-2.5 w-2.5" />
+                )}
+                {selectedCustomer.whatsappVerified ? "WA Verified" : "WA Not Verified"}
+              </span>
+            </div>
           ) : (
             <span
               className="truncate flex-1"
@@ -245,9 +261,25 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
                 className="w-full text-left px-3 py-2 flex items-center gap-2 bg-white"
                 style={txtStyle}
               >
-                <span className="truncate flex-1" style={txtStyle}>
-                  {customerLabel(customer)}
-                </span>
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="truncate" style={txtStyle}>
+                    {customerLabel(customer)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
+                      customer.whatsappVerified
+                        ? "bg-green-100 text-green-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {customer.whatsappVerified ? (
+                      <ShieldCheck className="h-2.5 w-2.5" />
+                    ) : (
+                      <ShieldX className="h-2.5 w-2.5" />
+                    )}
+                    {customer.whatsappVerified ? "WA Verified" : "WA Not Verified"}
+                  </span>
+                </div>
                 {value === customer.id && (
                   <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />
                 )}

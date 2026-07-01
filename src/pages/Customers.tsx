@@ -17,6 +17,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Truck,
+  ShieldCheck,
+  ShieldX,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
@@ -320,7 +322,7 @@ const Customers: React.FC = () => {
             <table className="enterprise-table w-full">
               <thead>
                 <tr>
-                  <th className="px-3 py-1.5 text-xs">Customer</th>
+                  <th className="px-3 py-1.5 text-xs">Customer Information</th>
                   <th className="hidden md:table-cell px-3 py-1.5 text-xs">
                     Contact
                   </th>
@@ -360,6 +362,20 @@ const Customers: React.FC = () => {
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-foreground text-sm">
                               {customer.name}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
+                                customer.whatsappVerified
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {customer.whatsappVerified ? (
+                                <ShieldCheck className="h-2.5 w-2.5" />
+                              ) : (
+                                <ShieldX className="h-2.5 w-2.5" />
+                              )}
+                              {customer.whatsappVerified ? "WA Verified" : "WA Not Verified"}
                             </span>
                             {/* Small badge so salesperson knows which are theirs */}
                             {!canManageAll && customer.createdBy === user?.id && (
@@ -630,6 +646,22 @@ const Customers: React.FC = () => {
                       <Phone className="h-3 w-3 text-muted-foreground" />
                       {selectedCustomer.mobile}
                     </p>
+                    <span
+                      className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        selectedCustomer.whatsappVerified
+                          ? "bg-green-100 text-green-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {selectedCustomer.whatsappVerified ? (
+                        <ShieldCheck className="h-3 w-3" />
+                      ) : (
+                        <ShieldX className="h-3 w-3" />
+                      )}
+                      {selectedCustomer.whatsappVerified
+                        ? "WhatsApp Verified"
+                        : "WhatsApp Not Verified"}
+                    </span>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Email</p>
