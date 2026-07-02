@@ -677,7 +677,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             </div>
 
-            {emailEnabled && (
+            {/* {emailEnabled && (
             <div className="space-y-1">
               <Label htmlFor="emailMessage" className="text-xs">
                 Message
@@ -690,7 +690,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 disabled={sending}
               />
             </div>
-            )}
+            )} */}
 
             <div className="flex gap-2 pt-1 border-t border-border">
               <Button

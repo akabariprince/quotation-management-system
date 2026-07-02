@@ -15,6 +15,7 @@ import {
 import { Link } from "react-router-dom";
 import { useApi } from "@/hooks/useApi";
 import { Button } from "@/components/ui/button";
+import { formatISTDateTimeWithLabel } from "@/utils/time";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -75,14 +76,7 @@ const typeOptions = [
   "admin_notification",
 ];
 
-const formatDate = (value: string) =>
-  new Date(value).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const formatDate = (value: string) => formatISTDateTimeWithLabel(value);
 
 const statusBadgeClass = (status: NotificationLog["status"]) => {
   if (status === "failed") return "badge-error";

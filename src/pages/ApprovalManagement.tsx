@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Link } from "react-router-dom";
+import { formatISTDateTimeWithLabel } from "@/utils/time";
 
 // ─── Types ───
 interface OTPLog {
@@ -390,7 +391,7 @@ const ApprovalManagement: React.FC = () => {
   };
 
   // ─── Helpers ───
-  const formatDate = (date: string) => new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const formatDate = (date: string) => formatISTDateTimeWithLabel(date);
   const getTypeBadge = (type: string) => { switch (type) { case "login": return "badge-default"; case "discount": return "badge-warning"; case "master_activation": return "badge-success"; default: return "badge-default"; } };
   const getTypeLabel = (type: string) => { switch (type) { case "login": return "Login"; case "discount": return "Discount"; case "master_activation": return "Master"; default: return type; } };
   const getStatusBadge = (status: string) => { switch (status) { case "pending": return "badge-warning"; case "approved": return "badge-success"; case "expired": return "badge-error"; default: return "badge-default"; } };

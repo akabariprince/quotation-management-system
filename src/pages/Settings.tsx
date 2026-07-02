@@ -7,6 +7,7 @@ import {
   syncWhatsAppConfig,
   updateSetting,
 } from "@/lib/api/settings";
+import { formatISTDateTimeWithLabel } from "@/utils/time";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -840,7 +841,7 @@ const Settings: React.FC = () => {
               <p><span className="text-muted-foreground">Sent Today:</span> {whatsAppConfig.sentToday ?? "—"}</p>
               <p><span className="text-muted-foreground">Remaining Quota:</span> {whatsAppConfig.remainingQuota ?? "—"}</p>
               <p><span className="text-muted-foreground">Daily Limit:</span> {whatsAppConfig.dailyLimit ?? "—"}</p>
-              <p><span className="text-muted-foreground">Last Synced:</span> {whatsAppConfig.syncedAt ? new Date(whatsAppConfig.syncedAt).toLocaleString("en-IN") : "—"}</p>
+              <p><span className="text-muted-foreground">Last Synced:</span> {whatsAppConfig.syncedAt ? formatISTDateTimeWithLabel(whatsAppConfig.syncedAt) : "—"}</p>
             </div>
           </div>
         </div>
