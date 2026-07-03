@@ -452,6 +452,8 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   const { hasPermission } = useAuth();
   const navigate = useNavigate();
   const canSendToCustomer = hasPermission("project:send_customer");
+  const canShowCustomerDelivery =
+    projectStatus === "approved" && canSendToCustomer;
   const [sendToCustomerEmail, setSendToCustomerEmail] = useState(false);
   const [sendToCustomerWhatsApp, setSendToCustomerWhatsApp] = useState(false);
   const [subject, setSubject] = useState("");
@@ -462,10 +464,10 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   useEffect(() => {
     if (isOpen && project) {
       setSendToCustomerEmail(
-        canSendToCustomer && emailEnabled && Boolean(customer?.email),
+        canShowCustomerDelivery && emailEnabled && Boolean(customer?.email),
       );
       setSendToCustomerWhatsApp(
-        canSendToCustomer &&
+        canShowCustomerDelivery &&
           whatsappEnabled &&
           Boolean(customer?.mobile) &&
           Boolean(customer?.whatsappVerified),
@@ -480,7 +482,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
       setSent(false);
     }
   }, [
-    canSendToCustomer,
+    canShowCustomerDelivery,
     customer?.email,
     customer?.mobile,
     customer?.whatsappVerified,
@@ -605,8 +607,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             )}
 
-            {projectStatus === "approved" &&
-              canSendToCustomer &&
+            {canShowCustomerDelivery &&
               (emailEnabled || whatsappEnabled) && (
                 <div className="rounded-md border border-border p-2 space-y-2">
                   <div className="flex items-center justify-between">
