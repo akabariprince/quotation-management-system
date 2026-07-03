@@ -460,6 +460,10 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const customerChannels = [
+    sendToCustomerEmail && customer?.email ? "Email" : null,
+    sendToCustomerWhatsApp && customer?.mobile ? "WhatsApp" : null,
+  ].filter(Boolean) as string[];
 
   useEffect(() => {
     if (isOpen && project) {
@@ -539,7 +543,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
           <div className="flex items-center gap-2">
             <div>
               <h2 className="text-sm font-semibold leading-none">
-                {sent ? "Notification Sent!" : "Send Project Notification"}
+                {sent ? "Notification Sent!" : "Send Project"}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {project.projectNo || project.quotationNo}
@@ -567,14 +571,10 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 Admin users were notified on enabled channels.
               </p>
             )}
-            {emailEnabled && sendToCustomerEmail && customer?.email && (
+            {customerChannels.length > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                and to customer email <strong>{customer.email}</strong>
-              </p>
-            )}
-            {whatsappEnabled && sendToCustomerWhatsApp && customer?.mobile && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                and to customer WhatsApp <strong>{customer.mobile}</strong>
+                Customer notified by{" "}
+                <strong>{customerChannels.join(" + ")}</strong>.
               </p>
             )}
             <div className="flex gap-2 justify-center mt-4">
@@ -607,87 +607,86 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             )}
 
-            {canShowCustomerDelivery &&
-              (emailEnabled || whatsappEnabled) && (
-                <div className="rounded-md border border-border p-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">
-                        Customer Delivery Options
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Choose the enabled channels for the customer.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1">
-                      <span
-                        className={`text-[10px] font-medium px-1.5 py-0.5 ${
-                          customer?.emailVerified
-                            ? "text-green-700 bg-green-100"
-                            : "text-amber-700 bg-amber-100"
-                        }`}
-                      >
-                        {customer?.emailVerified
-                          ? "Email Verified"
-                          : "Email Not Verified"}
-                      </span>
-                      <span
-                        className={`text-[10px] font-medium px-1.5 py-0.5 ${
-                          customer?.whatsappVerified
-                            ? "text-green-700 bg-green-100"
-                            : "text-amber-700 bg-amber-100"
-                        }`}
-                      >
-                        {customer?.whatsappVerified
-                          ? "WhatsApp Verified"
-                          : "WhatsApp Not Verified"}
-                      </span>
-                    </div>
+            {canShowCustomerDelivery && (emailEnabled || whatsappEnabled) && (
+              <div className="rounded-md border border-border p-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">
+                      Customer Delivery Options
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Choose the enabled channels for the customer.
+                    </p>
                   </div>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {emailEnabled && (
-                      <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
-                        <Checkbox
-                          id="sendToCustomerEmail"
-                          checked={sendToCustomerEmail}
-                          onCheckedChange={(checked) =>
-                            setSendToCustomerEmail(checked as boolean)
-                          }
-                          disabled={sending || !customer?.email}
-                        />
-                        <span>
-                          <p className="text-xs font-semibold">Email</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {customer?.email || "No email address on file"}
-                          </p>
-                        </span>
-                      </label>
-                    )}
-                    {whatsappEnabled && (
-                      <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
-                        <Checkbox
-                          id="sendToCustomerWhatsApp"
-                          checked={sendToCustomerWhatsApp}
-                          onCheckedChange={(checked) =>
-                            setSendToCustomerWhatsApp(checked as boolean)
-                          }
-                          disabled={
-                            sending ||
-                            !customer?.mobile ||
-                            !customer?.whatsappVerified
-                          }
-                        />
-                        <span>
-                          <p className="text-xs font-semibold">WhatsApp</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {customer?.mobile || "No mobile number on file"}
-                          </p>
-                        </span>
-                      </label>
-                    )}
+                  <div className="flex flex-wrap items-center gap-1">
+                    <span
+                      className={`text-[10px] font-medium px-1.5 py-0.5 ${
+                        customer?.emailVerified
+                          ? "text-green-700 bg-green-100"
+                          : "text-amber-700 bg-amber-100"
+                      }`}
+                    >
+                      {customer?.emailVerified
+                        ? "Email Verified"
+                        : "Email Not Verified"}
+                    </span>
+                    <span
+                      className={`text-[10px] font-medium px-1.5 py-0.5 ${
+                        customer?.whatsappVerified
+                          ? "text-green-700 bg-green-100"
+                          : "text-amber-700 bg-amber-100"
+                      }`}
+                    >
+                      {customer?.whatsappVerified
+                        ? "WhatsApp Verified"
+                        : "WhatsApp Not Verified"}
+                    </span>
                   </div>
                 </div>
-              )}
+                <div className="grid gap-2 md:grid-cols-2">
+                  {emailEnabled && (
+                    <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                      <Checkbox
+                        id="sendToCustomerEmail"
+                        checked={sendToCustomerEmail}
+                        onCheckedChange={(checked) =>
+                          setSendToCustomerEmail(checked as boolean)
+                        }
+                        disabled={sending || !customer?.email}
+                      />
+                      <span>
+                        <p className="text-xs font-semibold">Email</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {customer?.email || "No email address on file"}
+                        </p>
+                      </span>
+                    </label>
+                  )}
+                  {whatsappEnabled && (
+                    <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                      <Checkbox
+                        id="sendToCustomerWhatsApp"
+                        checked={sendToCustomerWhatsApp}
+                        onCheckedChange={(checked) =>
+                          setSendToCustomerWhatsApp(checked as boolean)
+                        }
+                        disabled={
+                          sending ||
+                          !customer?.mobile ||
+                          !customer?.whatsappVerified
+                        }
+                      />
+                      <span>
+                        <p className="text-xs font-semibold">WhatsApp</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {customer?.mobile || "No mobile number on file"}
+                        </p>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* {emailEnabled && (
               <div className="space-y-1">
@@ -1650,11 +1649,13 @@ const ProjectForm: React.FC = () => {
       toast.error("Please add at least one quotation");
       return;
     }
-    setSavedProject({
-      id: existingProject?.id || null,
-      projectNo: projectNo,
-      quotationNo: projectNo,
-    });
+    setSavedProject(
+      existingProject || {
+        id: existingProject?.id || null,
+        projectNo: projectNo,
+        quotationNo: projectNo,
+      },
+    );
     setProjectStatus(
       (existingProject?.status as
         | "draft"
@@ -1675,8 +1676,20 @@ const ProjectForm: React.FC = () => {
   ) => {
     const notificationType =
       existingProject?.status === "approved" ? "approved" : "sent";
-    const saved = await handleSaveProjectWithStatus(notificationType);
+    const saved =
+      isViewMode && existingProject
+        ? existingProject
+        : await handleSaveProjectWithStatus(notificationType);
     if (!saved) return false;
+
+    const sentChannels = [
+      sendToCustomerEmail ? "customer email" : null,
+      sendToCustomerWhatsApp ? "customer WhatsApp" : null,
+    ].filter(Boolean);
+    const successMessage =
+      sentChannels.length > 0
+        ? `Project notification sent to admin users and ${sentChannels.join(" + ")}`
+        : "Project notification sent to admin users";
 
     try {
       const res = await api.post(`/projects/${saved.id}/send-email`, {
@@ -1688,7 +1701,7 @@ const ProjectForm: React.FC = () => {
         userId: user?.id,
       });
       if (res.success) {
-        toast.success("Email sent successfully!");
+        toast.success(successMessage);
         setSavedProject(saved);
         return true;
       } else {
@@ -1702,7 +1715,10 @@ const ProjectForm: React.FC = () => {
   };
 
   const handlePreviewPDFFromModal = async () => {
-    const saved = await handleSaveProjectWithStatus("draft");
+    const saved =
+      isViewMode && existingProject
+        ? existingProject
+        : await handleSaveProjectWithStatus("draft");
     if (!saved) return;
     navigate(`/projects/${saved.id}/pdf`);
   };
@@ -2328,6 +2344,16 @@ const ProjectForm: React.FC = () => {
                 <div className="space-y-2 mt-5 pt-4 border-t border-border">
                   {isViewMode ? (
                     <>
+                      {hasPermission("project:send") && (
+                        <Button
+                          onClick={handleSaveAndSendClick}
+                          className="w-full btn-accent text-xs h-9"
+                          disabled={!customerId}
+                        >
+                          <Send className="h-3.5 w-3.5 mr-2" />
+                          Send Project
+                        </Button>
+                      )}
                       <Button
                         onClick={() => navigate(`/projects/${id}/pdf`)}
                         className="w-full btn-accent text-xs h-9"
