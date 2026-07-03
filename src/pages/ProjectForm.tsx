@@ -419,6 +419,7 @@ interface EmailSendModalProps {
   isOpen: boolean;
   onClose: () => void;
   project: any;
+  projectStatus: "draft" | "sent" | "approved" | "expired" | "rejected" | "po";
   customer: any;
   salesPerson: any;
   grandTotal: number;
@@ -438,6 +439,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
   isOpen,
   onClose,
   project,
+  projectStatus,
   customer,
   salesPerson,
   grandTotal,
@@ -603,7 +605,9 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             )}
 
-            {canSendToCustomer && (emailEnabled || whatsappEnabled) && (
+            {projectStatus === "approved" &&
+              canSendToCustomer &&
+              (emailEnabled || whatsappEnabled) && (
                 <div className="rounded-md border border-border p-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -684,7 +688,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                 </div>
               )}
 
-            {emailEnabled && (
+            {/* {emailEnabled && (
               <div className="space-y-1">
                 <Label htmlFor="emailSubject" className="text-xs">
                   Subject
@@ -697,7 +701,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
                   disabled={sending}
                 />
               </div>
-            )}
+            )} */}
 
             <div className="enterprise-card p-2 space-y-1.5">
               <h3 className="text-xs font-semibold mb-1.5">Project Summary</h3>
@@ -952,6 +956,9 @@ const ProjectForm: React.FC = () => {
   /* ── State ── */
   const [projectNo, setProjectNo] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [projectStatus, setProjectStatus] = useState<
+    "draft" | "sent" | "approved" | "expired" | "rejected" | "po"
+  >("draft");
   const [step, setStep] = useState<1 | 2>(1);
   const [customerId, setCustomerId] = useState("");
   const [salesPersonId, setSalesPersonId] = useState("");
@@ -1072,6 +1079,7 @@ const ProjectForm: React.FC = () => {
           setProjectName((p as any).projectName || "");
           setCustomerId(p.customerId);
           setSalesPersonId(p.salesPersonId || "");
+          setProjectStatus(p.status);
           const pAny = p as any;
           if (pAny.deliveryAddress) {
             setDeliverySameAsBilling(false);
@@ -1535,7 +1543,7 @@ const ProjectForm: React.FC = () => {
   const grandTotal = subtotal - totalDiscount;
 
   /* ── Build Payload ── */
-  const buildPayload = (status: "draft" | "sent") => ({
+  const buildPayload = (status: "draft" | "sent" | "approved") => ({
     projectNo: projectNo,
     date: new Date().toISOString().split("T")[0],
     customerId,
@@ -1588,7 +1596,9 @@ const ProjectForm: React.FC = () => {
   });
 
   /* ── Save ── */
-  const handleSaveProjectWithStatus = async (status: "draft" | "sent") => {
+  const handleSaveProjectWithStatus = async (
+    status: "draft" | "sent" | "approved",
+  ) => {
     if (!customerId) {
       toast.error("Please select a customer");
       return null;
@@ -1609,6 +1619,7 @@ const ProjectForm: React.FC = () => {
         toast.success("Project created");
       }
       setSavedProject(saved);
+      setProjectStatus(saved.status || status);
       return saved;
     } catch (err: any) {
       toast.error(err.message || "Failed to save project");
@@ -1643,6 +1654,15 @@ const ProjectForm: React.FC = () => {
       projectNo: projectNo,
       quotationNo: projectNo,
     });
+    setProjectStatus(
+      (existingProject?.status as
+        | "draft"
+        | "sent"
+        | "approved"
+        | "expired"
+        | "rejected"
+        | "po") || "draft",
+    );
     setShowEmailModal(true);
   };
 
@@ -1652,7 +1672,9 @@ const ProjectForm: React.FC = () => {
     subject: string,
     message: string,
   ) => {
-    const saved = await handleSaveProjectWithStatus("sent");
+    const notificationType =
+      existingProject?.status === "approved" ? "approved" : "sent";
+    const saved = await handleSaveProjectWithStatus(notificationType);
     if (!saved) return false;
 
     try {
@@ -1661,7 +1683,7 @@ const ProjectForm: React.FC = () => {
         sendToCustomerWhatsApp,
         subject: subject.trim(),
         message: message.trim(),
-        type: "sent",
+        type: notificationType,
         userId: user?.id,
       });
       if (res.success) {
@@ -2350,7 +2372,7 @@ const ProjectForm: React.FC = () => {
                           ) : (
                             <>
                               <Send className="h-3.5 w-3.5 mr-2" /> Save & Send
-                              Email
+                              Project
                             </>
                           )}
                         </Button>
@@ -2400,6 +2422,7 @@ const ProjectForm: React.FC = () => {
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}
         project={savedProject}
+        projectStatus={projectStatus}
         customer={selectedCustomer}
         salesPerson={selectedSalesPerson}
         grandTotal={grandTotal}
