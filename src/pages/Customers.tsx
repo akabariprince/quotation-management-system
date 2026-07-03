@@ -152,13 +152,34 @@ const Customers: React.FC = () => {
   const totalCount = meta?.totalCount || 0;
 
   const states = [
-    "Himachal Pradesh", "Punjab", "Uttarakhand", "Uttar Pradesh",
-    "Haryana", "Rajasthan", "Andhra Pradesh", "Karnataka",
-    "Kerala", "Tamil Nadu", "Telangana", "Bihar",
-    "Jharkhand", "Odisha", "West Bengal", "Goa",
-    "Gujarat", "Maharashtra", "Madhya Pradesh", "Chhattisgarh",
-    "Arunachal Pradesh", "Assam", "Manipur", "Meghalaya",
-    "Mizoram", "Nagaland", "Sikkim", "Tripura",
+    "Himachal Pradesh",
+    "Punjab",
+    "Uttarakhand",
+    "Uttar Pradesh",
+    "Haryana",
+    "Rajasthan",
+    "Andhra Pradesh",
+    "Karnataka",
+    "Kerala",
+    "Tamil Nadu",
+    "Telangana",
+    "Bihar",
+    "Jharkhand",
+    "Odisha",
+    "West Bengal",
+    "Goa",
+    "Gujarat",
+    "Maharashtra",
+    "Madhya Pradesh",
+    "Chhattisgarh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Sikkim",
+    "Tripura",
   ];
 
   const regions = ["North", "South", "East", "West", "Central", "North-East"];
@@ -363,37 +384,66 @@ const Customers: React.FC = () => {
                             <span className="font-medium text-foreground text-sm">
                               {customer.name}
                             </span>
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
-                                customer.whatsappVerified
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-amber-100 text-amber-700"
-                              }`}
-                            >
-                              {customer.whatsappVerified ? (
-                                <ShieldCheck className="h-2.5 w-2.5" />
-                              ) : (
-                                <ShieldX className="h-2.5 w-2.5" />
-                              )}
-                              {customer.whatsappVerified ? "WA Verified" : "WA Not Verified"}
-                            </span>
                             {/* Small badge so salesperson knows which are theirs */}
-                            {!canManageAll && customer.createdBy === user?.id && (
-                              <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1 py-px rounded font-medium">
-                                Mine
-                              </span>
-                            )}
+                            {!canManageAll &&
+                              customer.createdBy === user?.id && (
+                                <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1 py-px rounded font-medium">
+                                  Mine
+                                </span>
+                              )}
                           </div>
                         </td>
-                        <td className="hidden md:table-cell px-3 py-1">
-                          <span className="font-medium text-foreground text-sm">
-                            {customer.mobile}{" "}
-                          </span>
-                          {customer.email && (
-                            <span className="font-medium text-foreground text-sm">
-                              · {customer.email}
-                            </span>
-                          )}
+                        <td className="hidden md:table-cell px-3 py-2 min-w-[320px]">
+                          <div className="flex flex-col gap-1">
+                            {/* Mobile */}
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                  customer.whatsappVerified
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {customer.whatsappVerified ? (
+                                  <ShieldCheck className="h-3 w-3" />
+                                ) : (
+                                  <ShieldX className="h-3 w-3" />
+                                )}
+                                WA
+                              </span>
+
+                              <span className="font-medium text-sm text-foreground">
+                                {customer.mobile || "—"}
+                              </span>
+                            </div>
+
+                            {/* Email */}
+                            {customer.email && (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                    customer.emailVerified
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-amber-100 text-amber-700"
+                                  }`}
+                                >
+                                  {customer.emailVerified ? (
+                                    <ShieldCheck className="h-3 w-3" />
+                                  ) : (
+                                    <ShieldX className="h-3 w-3" />
+                                  )}
+                                  Email
+                                </span>
+
+                                <span
+                                  className="min-w-0 flex-1 truncate text-sm text-muted-foreground"
+                                  title={customer.email}
+                                >
+                                  {customer.email}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="hidden lg:table-cell px-3 py-1">
                           <span className="text-sm flex items-center gap-1">
@@ -669,6 +719,22 @@ const Customers: React.FC = () => {
                       <Mail className="h-3 w-3 text-muted-foreground" />
                       {selectedCustomer.email || "—"}
                     </p>
+                    <span
+                      className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        selectedCustomer.emailVerified
+                          ? "bg-green-100 text-green-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {selectedCustomer.emailVerified ? (
+                        <ShieldCheck className="h-3 w-3" />
+                      ) : (
+                        <ShieldX className="h-3 w-3" />
+                      )}
+                      {selectedCustomer.emailVerified
+                        ? "Email Verified"
+                        : "Email Not Verified"}
+                    </span>
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs text-muted-foreground">GSTIN</p>

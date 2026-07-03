@@ -58,6 +58,7 @@ export interface ProjectDetail {
     name: string;
     mobile: string;
     whatsappVerified?: boolean;
+    emailVerified?: boolean;
     email: string | null;
     address: string | null;
     gstin: string | null;
@@ -95,12 +96,16 @@ export interface Project {
     name: string;
     mobile: string;
     whatsappVerified?: boolean;
+    emailVerified?: boolean;
     email: string | null;
     city: string | null;
     state: string | null;
   };
   whatsappSent?: boolean;
   whatsappStatus?: string | null;
+  customerNotificationSent?: boolean;
+  customerEmailSent?: boolean;
+  customerWhatsAppSent?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

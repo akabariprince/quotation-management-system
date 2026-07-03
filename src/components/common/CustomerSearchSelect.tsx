@@ -129,7 +129,7 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
     <div>
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="px-3 py-2 animate-pulse">
-          <div className="h-3.5 bg-muted rounded w-3/4" />
+          <div className="h-3.5 bg-muted  w-3/4" />
         </div>
       ))}
     </div>
@@ -152,6 +152,25 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
     return label;
   };
 
+  const renderBadge = (
+    verified: boolean | undefined,
+    verifiedShort: string,
+    notVerifiedShort: string
+  ) => (
+    <span
+      className={`inline-flex items-center gap-1  px-1.5 py-px text-[10px] font-medium ${
+        verified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+      }`}
+    >
+      {verified ? (
+        <ShieldCheck className="h-2.5 w-2.5" />
+      ) : (
+        <ShieldX className="h-2.5 w-2.5" />
+      )}
+      {verified ? verifiedShort : notVerifiedShort}
+    </span>
+  );
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* ── Trigger ── */}
@@ -162,24 +181,22 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
           style={txtStyle}
         >
           {selectedCustomer ? (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 py-1">
               <span className="truncate" style={txtStyle}>
                 {customerLabel(selectedCustomer)}
               </span>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
-                  selectedCustomer.whatsappVerified
-                    ? "bg-green-100 text-green-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                {selectedCustomer.whatsappVerified ? (
-                  <ShieldCheck className="h-2.5 w-2.5" />
-                ) : (
-                  <ShieldX className="h-2.5 w-2.5" />
+              {/* <div className="flex flex-wrap items-center gap-1">
+                {renderBadge(
+                  selectedCustomer.emailVerified,
+                  "Email Verified",
+                  "Email Not Verified"
                 )}
-                {selectedCustomer.whatsappVerified ? "WA Verified" : "WA Not Verified"}
-              </span>
+                {renderBadge(
+                  selectedCustomer.whatsappVerified,
+                  "WA Verified",
+                  "WA Not Verified"
+                )}
+              </div> */}
             </div>
           ) : (
             <span
@@ -261,24 +278,22 @@ const CustomerSearchSelect: React.FC<CustomerSearchSelectProps> = ({
                 className="w-full text-left px-3 py-2 flex items-center gap-2 bg-white"
                 style={txtStyle}
               >
-                <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate" style={txtStyle}>
                     {customerLabel(customer)}
                   </span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
-                      customer.whatsappVerified
-                        ? "bg-green-100 text-green-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {customer.whatsappVerified ? (
-                      <ShieldCheck className="h-2.5 w-2.5" />
-                    ) : (
-                      <ShieldX className="h-2.5 w-2.5" />
+                  <div className="flex flex-wrap items-center gap-1">
+                    {renderBadge(
+                      customer.emailVerified,
+                      "Email Verified",
+                      "Email Not Verified"
                     )}
-                    {customer.whatsappVerified ? "WA Verified" : "WA Not Verified"}
-                  </span>
+                    {renderBadge(
+                      customer.whatsappVerified,
+                      "WA Verified",
+                      "WA Not Verified"
+                    )}
+                  </div>
                 </div>
                 {value === customer.id && (
                   <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />

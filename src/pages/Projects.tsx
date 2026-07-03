@@ -16,8 +16,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CheckCircle,
-  MessageSquare,
-  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/hooks/useProjects";
@@ -203,6 +201,36 @@ const Projects: React.FC = () => {
     }
   };
 
+  const getProjectStage = (project: any) => {
+    const customerChannels = [
+      project.customerEmailSent ? "Email" : null,
+      project.customerWhatsAppSent ? "WhatsApp" : null,
+    ].filter(Boolean);
+    const customerDeliveryLabel =
+      customerChannels.length > 0
+        ? `Sent to Customer (${customerChannels.join(" + ")})`
+        : null;
+
+    switch (project.status) {
+      case "draft":
+        return "Project Created";
+      case "sent":
+        return customerDeliveryLabel || "Waiting for Approval";
+      case "approved":
+        return customerDeliveryLabel
+          ? `Approved + ${customerDeliveryLabel}`
+          : "Approved";
+      case "po":
+        return "PO Converted";
+      case "rejected":
+        return "Rejected";
+      case "expired":
+        return "Expired";
+      default:
+        return "In Progress";
+    }
+  };
+
   const totalPages = meta?.totalPages || 1;
   const totalCount = meta?.totalCount || 0;
   const hasActiveFilters = searchTerm || statusFilter !== "all";
@@ -291,7 +319,7 @@ const Projects: React.FC = () => {
 
       {/* Projects Table */}
       {loading ? (
-        <TableSkeleton columns={7} rows={PAGE_SIZE} />
+        <TableSkeleton columns={8} rows={PAGE_SIZE} />
       ) : (
         <div className="enterprise-card overflow-hidden mt-1">
           <div className="table-container">
@@ -312,6 +340,9 @@ const Projects: React.FC = () => {
                   <th className="hidden sm:table-cell px-3 py-1.5 text-xs">
                     Status
                   </th>
+                  <th className="hidden md:table-cell px-3 py-1.5 text-xs">
+                    Stage
+                  </th>
                   <th className="px-3 py-1.5 text-xs w-28">Actions</th>
                 </tr>
               </thead>
@@ -319,7 +350,7 @@ const Projects: React.FC = () => {
                 {projects.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center text-muted-foreground py-8 text-sm"
                     >
                       <FileText className="h-6 w-6 mx-auto mb-1 opacity-50" />
@@ -374,23 +405,16 @@ const Projects: React.FC = () => {
                         {formatCurrency(project.grandTotalWithGst)}
                       </td>
                       <td className="hidden sm:table-cell px-3 py-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={getStatusBadge(project.status)}>
-                            {project.status === "po"
-                              ? ("Purchase Order").toUpperCase()
-                              : project.status.toUpperCase()}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium ${
-                              project.whatsappSent
-                                ? "bg-green-100 text-green-700"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            <MessageCircle className="h-2.5 w-2.5" />
-                            {project.whatsappSent ? "WA Project Sent" : "WA Not Sent"}
-                          </span>
-                        </div>
+                        <span className={getStatusBadge(project.status)}>
+                          {project.status === "po"
+                            ? ("Purchase Order").toUpperCase()
+                            : project.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="hidden md:table-cell px-3 py-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-medium text-orange-700">
+                          {getProjectStage(project)}
+                        </span>
                       </td>
                       <td className="px-3 py-1">
                         <div className="flex items-center gap-0.5">

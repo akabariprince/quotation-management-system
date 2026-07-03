@@ -19,6 +19,8 @@ import {
   Pencil,
   FolderOpen,
   Search,
+  ShieldCheck,
+  ShieldOff,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, ProjectDetail } from "@/hooks/useProjects";
@@ -126,7 +128,8 @@ const normalizeSelectionValues = (
     .map((value) => ({
       ...value,
       value:
-        (value.value || value.label || "").toString().trim() || DEFAULT_SELECTION_VALUE,
+        (value.value || value.label || "").toString().trim() ||
+        DEFAULT_SELECTION_VALUE,
     }));
 
   while (normalized.length < slotCount) {
@@ -197,8 +200,12 @@ const hasSavedSelectionValues = (selections?: ProjectSelection[]) =>
   Array.isArray(selections) &&
   selections.some((selection) =>
     (selection.values || []).some((value) => {
-      const resolvedValue = (value?.value || value?.label || "").toString().trim();
-      return resolvedValue.length > 0 && resolvedValue !== DEFAULT_SELECTION_VALUE;
+      const resolvedValue = (value?.value || value?.label || "")
+        .toString()
+        .trim();
+      return (
+        resolvedValue.length > 0 && resolvedValue !== DEFAULT_SELECTION_VALUE
+      );
     }),
   );
 
@@ -213,7 +220,9 @@ const buildItemSelections = (
     }));
   }
 
-  const selectedVariantName = (item.selectedVariantName || "").trim().toUpperCase();
+  const selectedVariantName = (item.selectedVariantName || "")
+    .trim()
+    .toUpperCase();
   const allowableSelections = allSelections.filter((selection) => {
     if (selection.status !== "active") return false;
     if (selection.type === "general") return true;
@@ -238,7 +247,9 @@ const buildItemSelections = (
       return {
         selectionId: selection.id,
         selectionName: selection.name,
-        selectionCode: normalizeSelectionCode(selection.name || selection.category),
+        selectionCode: normalizeSelectionCode(
+          selection.name || selection.category,
+        ),
         values: normalizeSelectionValues(currentSelection?.values),
       };
     });
@@ -438,6 +449,7 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
 }) => {
   const { hasPermission } = useAuth();
   const navigate = useNavigate();
+  const canSendToCustomer = hasPermission("project:send_customer");
   const [sendToCustomerEmail, setSendToCustomerEmail] = useState(false);
   const [sendToCustomerWhatsApp, setSendToCustomerWhatsApp] = useState(false);
   const [subject, setSubject] = useState("");
@@ -447,8 +459,15 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
 
   useEffect(() => {
     if (isOpen && project) {
-      setSendToCustomerEmail(emailEnabled && Boolean(customer?.email));
-      setSendToCustomerWhatsApp(false);
+      setSendToCustomerEmail(
+        canSendToCustomer && emailEnabled && Boolean(customer?.email),
+      );
+      setSendToCustomerWhatsApp(
+        canSendToCustomer &&
+          whatsappEnabled &&
+          Boolean(customer?.mobile) &&
+          Boolean(customer?.whatsappVerified),
+      );
       setSubject(
         `Quotation ${project.projectNo || project.quotationNo || ""} - Ecstatics Spaces India`,
       );
@@ -458,7 +477,18 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
       setSending(false);
       setSent(false);
     }
-  }, [customer?.email, emailEnabled, grandTotal, isOpen, project, salesPerson?.name]);
+  }, [
+    canSendToCustomer,
+    customer?.email,
+    customer?.mobile,
+    customer?.whatsappVerified,
+    emailEnabled,
+    grandTotal,
+    isOpen,
+    project,
+    salesPerson?.name,
+    whatsappEnabled,
+  ]);
 
   const handleSendEmail = async () => {
     if (emailEnabled && sendToCustomerEmail && !customer?.email) {
@@ -528,6 +558,11 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
             <p className="text-xs text-muted-foreground">
               Notification processed for enabled channel(s).
             </p>
+            {(emailEnabled || whatsappEnabled) && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Admin users were notified on enabled channels.
+              </p>
+            )}
             {emailEnabled && sendToCustomerEmail && customer?.email && (
               <p className="text-xs text-muted-foreground mt-0.5">
                 and to customer email <strong>{customer.email}</strong>
@@ -568,87 +603,100 @@ const EmailSendModal: React.FC<EmailSendModalProps> = ({
               </div>
             )}
 
-            {hasPermission("project:send_customer") && (emailEnabled || whatsappEnabled) && (
-              <div className="rounded-md border border-border p-2 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">
-                      Customer Delivery Options
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Choose the enabled channels for the customer.
-                    </p>
+            {canSendToCustomer && (emailEnabled || whatsappEnabled) && (
+                <div className="rounded-md border border-border p-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">
+                        Customer Delivery Options
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Choose the enabled channels for the customer.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.5 ${
+                          customer?.emailVerified
+                            ? "text-green-700 bg-green-100"
+                            : "text-amber-700 bg-amber-100"
+                        }`}
+                      >
+                        {customer?.emailVerified
+                          ? "Email Verified"
+                          : "Email Not Verified"}
+                      </span>
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.5 ${
+                          customer?.whatsappVerified
+                            ? "text-green-700 bg-green-100"
+                            : "text-amber-700 bg-amber-100"
+                        }`}
+                      >
+                        {customer?.whatsappVerified
+                          ? "WhatsApp Verified"
+                          : "WhatsApp Not Verified"}
+                      </span>
+                    </div>
                   </div>
-                  <span
-                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                      customer?.whatsappVerified
-                        ? "text-green-700 bg-green-100"
-                        : "text-amber-700 bg-amber-100"
-                    }`}
-                  >
-                    {customer?.whatsappVerified
-                      ? "WhatsApp Verified"
-                      : "WhatsApp Not Verified"}
-                  </span>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {emailEnabled && (
+                      <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                        <Checkbox
+                          id="sendToCustomerEmail"
+                          checked={sendToCustomerEmail}
+                          onCheckedChange={(checked) =>
+                            setSendToCustomerEmail(checked as boolean)
+                          }
+                          disabled={sending || !customer?.email}
+                        />
+                        <span>
+                          <p className="text-xs font-semibold">Email</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {customer?.email || "No email address on file"}
+                          </p>
+                        </span>
+                      </label>
+                    )}
+                    {whatsappEnabled && (
+                      <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                        <Checkbox
+                          id="sendToCustomerWhatsApp"
+                          checked={sendToCustomerWhatsApp}
+                          onCheckedChange={(checked) =>
+                            setSendToCustomerWhatsApp(checked as boolean)
+                          }
+                          disabled={
+                            sending ||
+                            !customer?.mobile ||
+                            !customer?.whatsappVerified
+                          }
+                        />
+                        <span>
+                          <p className="text-xs font-semibold">WhatsApp</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {customer?.mobile || "No mobile number on file"}
+                          </p>
+                        </span>
+                      </label>
+                    )}
+                  </div>
                 </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {emailEnabled && (
-                    <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
-                      <Checkbox
-                        id="sendToCustomerEmail"
-                        checked={sendToCustomerEmail}
-                        onCheckedChange={(checked) =>
-                          setSendToCustomerEmail(checked as boolean)
-                        }
-                        disabled={sending || !customer?.email}
-                      />
-                      <span>
-                        <p className="text-xs font-semibold">Email</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {customer?.email || "No email address on file"}
-                        </p>
-                      </span>
-                    </label>
-                  )}
-                  {whatsappEnabled && (
-                    <label className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
-                      <Checkbox
-                        id="sendToCustomerWhatsApp"
-                        checked={sendToCustomerWhatsApp}
-                        onCheckedChange={(checked) =>
-                          setSendToCustomerWhatsApp(checked as boolean)
-                        }
-                        disabled={
-                          sending ||
-                          !customer?.mobile ||
-                          !customer?.whatsappVerified
-                        }
-                      />
-                      <span>
-                        <p className="text-xs font-semibold">WhatsApp</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {customer?.mobile || "No mobile number on file"}
-                        </p>
-                      </span>
-                    </label>
-                  )}
-                </div>
-              </div>
-            )}
+              )}
 
             {emailEnabled && (
-            <div className="space-y-1">
-              <Label htmlFor="emailSubject" className="text-xs">
-                Subject
-              </Label>
-              <Input
-                id="emailSubject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="h-8 text-sm"
-                disabled={sending}
-              />
-            </div>
+              <div className="space-y-1">
+                <Label htmlFor="emailSubject" className="text-xs">
+                  Subject
+                </Label>
+                <Input
+                  id="emailSubject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="h-8 text-sm"
+                  disabled={sending}
+                />
+              </div>
             )}
 
             <div className="enterprise-card p-2 space-y-1.5">
@@ -845,11 +893,20 @@ const ProjectForm: React.FC = () => {
   const { user, hasPermission } = useAuth();
   const api = useApi();
 
-  const [existingProject, setExistingProject] = useState<ProjectDetail | null>(null);
+  const [existingProject, setExistingProject] = useState<ProjectDetail | null>(
+    null,
+  );
   const [pageLoading, setPageLoading] = useState(true);
 
-  const isViewMode = id ? (!pathname.includes("/edit/") || ["approved", "po", "rejected"].includes(existingProject?.status as any)) : false;
-  const requiredPermission = isViewMode ? "project:view" : (id ? "project:edit" : "project:create");
+  const isViewMode = id
+    ? !pathname.includes("/edit/") ||
+      ["approved", "po", "rejected"].includes(existingProject?.status as any)
+    : false;
+  const requiredPermission = isViewMode
+    ? "project:view"
+    : id
+      ? "project:edit"
+      : "project:create";
 
   useEffect(() => {
     // Only verify permission after existingProject is potentially loaded to get correct status
@@ -1048,7 +1105,8 @@ const ProjectForm: React.FC = () => {
                 totalWithGst: Number(item.totalWithGst) || 0,
                 images: item.images || [],
                 selections: item.selections || [],
-                selectedVariantId: item.selectedVariantId || item.quotation?.variantId || null,
+                selectedVariantId:
+                  item.selectedVariantId || item.quotation?.variantId || null,
                 selectedVariantName:
                   item.selectedVariantName ||
                   item.selectedVariant?.name ||
@@ -1066,7 +1124,9 @@ const ProjectForm: React.FC = () => {
                 specialNote: item.specialNote || "",
               });
 
-              const hydratedSelections = hasSavedSelectionValues(item.selections)
+              const hydratedSelections = hasSavedSelectionValues(
+                item.selections,
+              )
                 ? item.selections
                 : buildItemSelections(normalizedItem, selections);
 
@@ -1120,14 +1180,14 @@ const ProjectForm: React.FC = () => {
 
   const billingAddressString = selectedCustomer
     ? [
-      selectedCustomer.address,
-      (selectedCustomer as any).landmark,
-      selectedCustomer.city,
-      selectedCustomer.state,
-      (selectedCustomer as any).pincode,
-    ]
-      .filter(Boolean)
-      .join(", ")
+        selectedCustomer.address,
+        (selectedCustomer as any).landmark,
+        selectedCustomer.city,
+        selectedCustomer.state,
+        (selectedCustomer as any).pincode,
+      ]
+        .filter(Boolean)
+        .join(", ")
     : "";
 
   /* ── Recalculate Item ── */
@@ -1164,10 +1224,15 @@ const ProjectForm: React.FC = () => {
 
     const selectionFieldMatch = field.match(/^(.*)::(\d+)$/);
     const selectionSlot = selectionFieldMatch
-      ? { selectionId: selectionFieldMatch[1], slotIndex: Number(selectionFieldMatch[2]) }
+      ? {
+          selectionId: selectionFieldMatch[1],
+          slotIndex: Number(selectionFieldMatch[2]),
+        }
       : null;
     const matchingSelection = selectionSlot
-      ? selections.find((selection) => selection.id === selectionSlot.selectionId)
+      ? selections.find(
+          (selection) => selection.id === selectionSlot.selectionId,
+        )
       : selections.find((selection) => selection.id === field);
 
     setItems((prev) =>
@@ -1218,7 +1283,10 @@ const ProjectForm: React.FC = () => {
             ...item,
             selections: item.selections.map((selection) =>
               selection.selectionId === field
-                ? { ...selection, values: normalizeSelectionValues([{ value }]) }
+                ? {
+                    ...selection,
+                    values: normalizeSelectionValues([{ value }]),
+                  }
                 : selection,
             ),
           });
@@ -1306,8 +1374,7 @@ const ProjectForm: React.FC = () => {
     }
 
     const isWithinAuthorizedRange =
-      validDiscount >= discountRange.min &&
-      validDiscount <= discountRange.max;
+      validDiscount >= discountRange.min && validDiscount <= discountRange.max;
 
     if (isWithinAuthorizedRange) {
       updateItem(itemId, "discountPercent", validDiscount);
@@ -1382,7 +1449,11 @@ const ProjectForm: React.FC = () => {
       fabricId: null,
       fabricName: null,
       selectedVariantId: (quotation as any).variantId || filterVariant || null,
-      selectedVariantName: activeVariants.find((variant) => variant.id === ((quotation as any).variantId || filterVariant))?.name || null,
+      selectedVariantName:
+        activeVariants.find(
+          (variant) =>
+            variant.id === ((quotation as any).variantId || filterVariant),
+        )?.name || null,
       basePrice: quotation.basePrice,
       discountPercent,
       discountAmount,
@@ -1630,7 +1701,9 @@ const ProjectForm: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() =>
-              step === 2 && !existingProject ? setStep(1) : navigate("/projects")
+              step === 2 && !existingProject
+                ? setStep(1)
+                : navigate("/projects")
             }
             className="p-1 hover:bg-muted rounded transition-colors"
           >
@@ -1638,10 +1711,18 @@ const ProjectForm: React.FC = () => {
           </button>
           <div>
             <h1 className="text-sm font-semibold leading-none">
-              {existingProject ? (isViewMode ? `View Project ${existingProject.projectNo}` : `Edit ${existingProject.projectNo}`) : "Create Project"}
+              {existingProject
+                ? isViewMode
+                  ? `View Project ${existingProject.projectNo}`
+                  : `Edit ${existingProject.projectNo}`
+                : "Create Project"}
             </h1>
             <p className="text-muted-foreground text-xs">
-              {existingProject ? (isViewMode ? "View project details" : "Update project details") : `New Project: ${projectNo}`}
+              {existingProject
+                ? isViewMode
+                  ? "View project details"
+                  : "Update project details"
+                : `New Project: ${projectNo}`}
             </p>
           </div>
         </div>
@@ -1653,7 +1734,9 @@ const ProjectForm: React.FC = () => {
             onClick={() => navigate("/projects")}
           >
             <ArrowLeft className="h-3 w-3" />
-            <span className="hidden sm:inline text-white">Back to Projects</span>
+            <span className="hidden sm:inline text-white">
+              Back to Projects
+            </span>
           </Button>
           <Button
             variant="outline"
@@ -1662,7 +1745,9 @@ const ProjectForm: React.FC = () => {
             onClick={() => navigate("/dashboard")}
           >
             <ArrowLeft className="h-3 w-3" />
-            <span className="hidden sm:inline text-white">Back to Dashboard</span>
+            <span className="hidden sm:inline text-white">
+              Back to Dashboard
+            </span>
           </Button>
         </div>
       </div>
@@ -1673,17 +1758,27 @@ const ProjectForm: React.FC = () => {
           <div className="enterprise-card p-3">
             <h2 className="text-xs font-semibold mb-2">Company Details</h2>
             <div className="bg-muted/50 rounded-md p-3 text-sm">
-              <p className="font-semibold text-sm">Ecstatics Spaces India Pvt. Ltd.</p>
-              <p className="text-xs text-muted-foreground">3120, Ganga Trueno, Airport Road, Viman Nagar, Pune</p>
-              <p className="text-xs text-muted-foreground">GST No: 27AAFCE9942B1ZM</p>
-              <p className="text-xs text-muted-foreground">(+91) 7066466060 | info@esipl.in</p>
+              <p className="font-semibold text-sm">
+                Ecstatics Spaces India Pvt. Ltd.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                3120, Ganga Trueno, Airport Road, Viman Nagar, Pune
+              </p>
+              <p className="text-xs text-muted-foreground">
+                GST No: 27AAFCE9942B1ZM
+              </p>
+              <p className="text-xs text-muted-foreground">
+                (+91) 7066466060 | info@esipl.in
+              </p>
             </div>
           </div>
 
           <div className="enterprise-card p-3">
             <h2 className="text-xs font-semibold mb-2">Project Details</h2>
             <div className="space-y-1">
-              <Label htmlFor="projectName" className="text-xs">Project Name</Label>
+              <Label htmlFor="projectName" className="text-xs">
+                Project Name
+              </Label>
               <Input
                 id="projectName"
                 value={projectName}
@@ -1737,7 +1832,9 @@ const ProjectForm: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {salesPersons.map((sp) => (
-                      <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
+                      <SelectItem key={sp.id} value={sp.id}>
+                        {sp.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1745,81 +1842,126 @@ const ProjectForm: React.FC = () => {
             </div>
 
             {selectedCustomer && (
-              <div className="mt-3 space-y-2">
-                <div className="bg-muted/50 rounded-md p-3 text-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Customer Details</span>
-                    {!isViewMode && (
-                      <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
-                        onClick={() => navigate(`/customers/edit/${selectedCustomer.id}`)}>
-                        <Edit className="h-2.5 w-2.5" /> Edit Customer
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Name</p>
-                      <p className="font-medium text-sm">{selectedCustomer.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Contact</p>
-                      <p className="font-medium text-sm">{selectedCustomer.mobile}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">GSTIN</p>
-                      <p className="font-medium font-mono text-sm">{selectedCustomer.gstin || "—"}</p>
-                    </div>
-                  </div>
+              <div className="bg-muted/50 rounded-lg border p-4 text-sm mt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Customer Details
+                  </span>
+
+                  {!isViewMode && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-[11px] h-7 px-2"
+                      onClick={() =>
+                        navigate(`/customers/edit/${selectedCustomer.id}`)
+                      }
+                    >
+                      <Edit className="h-3 w-3" />
+                      Edit Customer
+                    </Button>
+                  )}
                 </div>
 
-                <div className="bg-blue-50/50 dark:bg-blue-950/10 rounded-md p-3 text-sm border border-blue-200/30">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-blue-600" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">Billing Address</span>
-                  </div>
-                  <p className="font-medium text-sm">{billingAddressString || "No billing address on file"}</p>
-                </div>
-
-                <div className="bg-green-50/50 dark:bg-green-950/10 rounded-md p-3 text-sm border border-green-200/30">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-green-600" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Delivery Address</span>
-                    </div>
-                    {!isViewMode && (
-                      <Button variant="ghost" size="sm" className="gap-1 text-[11px] h-6 px-2"
-                        onClick={() => setShowDeliveryEditor(!showDeliveryEditor)}>
-                        <Edit className="h-2.5 w-2.5" />
-                        {showDeliveryEditor ? "Close" : deliverySameAsBilling ? "Add Different Address" : "Edit"}
-                      </Button>
-                    )}
-                  </div>
-                  {!showDeliveryEditor && (
-                    <p className="font-medium text-sm">
-                      {deliverySameAsBilling
-                        ? "Same as billing address"
-                        : [deliveryAddr.address, deliveryAddr.landmark, deliveryAddr.city, deliveryAddr.state, deliveryAddr.pincode]
-                          .filter(Boolean).join(", ") || "Not specified"}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                  {/* Name */}
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Customer Name
                     </p>
-                  )}
-                  {showDeliveryEditor && (
-                    <DeliveryAddressEditor
-                      deliverySameAsBilling={deliverySameAsBilling}
-                      onToggleSame={(checked) => {
-                        setDeliverySameAsBilling(checked);
-                        if (checked) setDeliveryAddr({ address: "", landmark: "", city: "", state: "", pincode: "" });
-                      }}
-                      deliveryAddr={deliveryAddr}
-                      onChangeField={(field, value) => setDeliveryAddr((prev) => ({ ...prev, [field]: value }))}
-                      billingAddress={billingAddressString}
-                    />
-                  )}
+                    <p className="font-semibold text-sm">
+                      {selectedCustomer.name}
+                    </p>
+                  </div>
+
+                  {/* GSTIN */}
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                      GSTIN
+                    </p>
+                    <p className="font-medium font-mono text-sm break-all">
+                      {selectedCustomer.gstin || "—"}
+                    </p>
+                  </div>
+
+                  {/* Mobile */}
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Mobile Number
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex w-[90px] shrink-0 items-center justify-center gap-1 p-1 text-[10px] font-medium ${
+                          selectedCustomer.whatsappVerified
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {selectedCustomer.whatsappVerified ? (
+                          <>
+                            <ShieldCheck className="h-3 w-3" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <ShieldOff className="h-3 w-3" />
+                            Not Verified
+                          </>
+                        )}
+                      </span>
+
+                      <span className="font-medium text-sm">
+                        {selectedCustomer.mobile || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Email Address
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex w-[90px] shrink-0 items-center justify-center gap-1  p-1 text-[10px] font-medium ${
+                          selectedCustomer.emailVerified
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {selectedCustomer.emailVerified ? (
+                          <>
+                            <ShieldCheck className="h-3 w-3" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <ShieldOff className="h-3 w-3" />
+                            Not Verified
+                          </>
+                        )}
+                      </span>
+
+                      <span
+                        className="min-w-0 flex-1 truncate text-sm font-medium"
+                        title={selectedCustomer.email || ""}
+                      >
+                        {selectedCustomer.email || "—"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          <Button onClick={handleNextStep} className="btn-accent gap-1 h-7 text-xs px-3" disabled={!customerId}>
+          <Button
+            onClick={handleNextStep}
+            className="btn-accent gap-1 h-7 text-xs px-3"
+            disabled={!customerId}
+          >
             Next <ChevronRight className="h-3 w-3" />
           </Button>
         </div>
@@ -1832,25 +1974,43 @@ const ProjectForm: React.FC = () => {
             <div className="flex items-center justify-between px-3 py-2">
               <div className="flex items-center gap-4 min-w-0 overflow-hidden">
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Customer</p>
-                  <p className="font-semibold text-xs truncate">{selectedCustomer?.name}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Customer
+                  </p>
+                  <p className="font-semibold text-xs truncate">
+                    {selectedCustomer?.name}
+                  </p>
                 </div>
                 <div className="hidden sm:block min-w-0 border-l border-border pl-4">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contact</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Contact
+                  </p>
                   <p className="text-xs truncate">{selectedCustomer?.mobile}</p>
                 </div>
                 <div className="hidden md:block min-w-0 border-l border-border pl-4">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">GSTIN</p>
-                  <p className="text-xs font-mono truncate">{selectedCustomer?.gstin || "—"}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    GSTIN
+                  </p>
+                  <p className="text-xs font-mono truncate">
+                    {selectedCustomer?.gstin || "—"}
+                  </p>
                 </div>
                 <div className="hidden lg:block min-w-0 border-l border-border pl-4">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Sales Manager</p>
-                  <p className="text-xs truncate">{selectedSalesPerson?.name || "—"}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Sales Manager
+                  </p>
+                  <p className="text-xs truncate">
+                    {selectedSalesPerson?.name || "—"}
+                  </p>
                 </div>
                 <div className="hidden xl:block min-w-0 border-l border-border pl-4">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Delivery</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Delivery
+                  </p>
                   <p className="text-xs truncate">
-                    {deliverySameAsBilling ? "Same as billing" : deliveryAddr.city || deliveryAddr.address || "Custom"}
+                    {deliverySameAsBilling
+                      ? "Same as billing"
+                      : deliveryAddr.city || deliveryAddr.address || "Custom"}
                   </p>
                 </div>
               </div>
@@ -1915,10 +2075,7 @@ const ProjectForm: React.FC = () => {
                       </Select>
 
                       {/* Type — independent, shows ALL active */}
-                      <Select
-                        value={filterType}
-                        onValueChange={setFilterType}
-                      >
+                      <Select value={filterType} onValueChange={setFilterType}>
                         <SelectTrigger className="h-9 text-xs">
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
@@ -1990,7 +2147,9 @@ const ProjectForm: React.FC = () => {
                                 className="btn-accent gap-2 flex-shrink-0 h-10"
                               >
                                 <Plus className="h-4 w-4" />
-                                <span className="hidden sm:inline text-white">Add Cart</span>
+                                <span className="hidden sm:inline text-white">
+                                  Add Cart
+                                </span>
                               </Button>
                             </>
                           ) : (
@@ -2052,10 +2211,11 @@ const ProjectForm: React.FC = () => {
                       <button
                         key={item.id}
                         onClick={() => scrollToItem(item.id)}
-                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${highlightedItemId === item.id
-                          ? "bg-primary/5 border-l-2 border-l-primary"
-                          : "hover:bg-muted/60"
-                          }`}
+                        className={`w-full text-left px-2.5 py-2 transition-all text-xs flex items-center gap-2 border-b border-border/50 last:border-b-0 ${
+                          highlightedItemId === item.id
+                            ? "bg-primary/5 border-l-2 border-l-primary"
+                            : "hover:bg-muted/60"
+                        }`}
                       >
                         <span className="w-5 h-5 rounded-full bg-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 text-white">
                           {item.itemNumber || i + 1}

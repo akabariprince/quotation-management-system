@@ -8,7 +8,11 @@ export interface Customer {
   whatsappVerified?: boolean;
   whatsappVerifiedAt?: string | null;
   whatsappVerifiedMobile?: string | null;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
+  emailVerifiedEmail?: string | null;
   verificationOtpLogId?: string | null;
+  emailVerificationOtpLogId?: string | null;
   email: string | null;
   address: string | null;
   gstin: string | null;
@@ -168,6 +172,26 @@ export const useCustomers = () => {
     [post],
   );
 
+  const requestCustomerEmailOTP = useCallback(
+    async (email: string) => {
+      const res = await post("/customers/email-otp/request", { email });
+      return res.data;
+    },
+    [post],
+  );
+
+  const verifyCustomerEmailOTP = useCallback(
+    async (email: string, otp: string, otpLogId: string) => {
+      const res = await post("/customers/email-otp/verify", {
+        email,
+        otp,
+        otpLogId,
+      });
+      return res.data;
+    },
+    [post],
+  );
+
   return {
     customers,
     meta,
@@ -181,5 +205,7 @@ export const useCustomers = () => {
     searchCustomers,
     requestCustomerMobileOTP,
     verifyCustomerMobileOTP,
+    requestCustomerEmailOTP,
+    verifyCustomerEmailOTP,
   };
 };

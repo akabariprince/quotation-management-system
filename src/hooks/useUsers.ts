@@ -9,6 +9,9 @@ export interface SystemUser {
   whatsappVerified: boolean;
   whatsappVerifiedAt: string | null;
   whatsappVerifiedMobile: string | null;
+  emailVerified: boolean;
+  emailVerifiedAt: string | null;
+  emailVerifiedEmail: string | null;
   roleId: string;
   isActive: boolean;
   lastLogin: string | null;
@@ -88,6 +91,7 @@ export const useUsers = () => {
       password: string;
       mobile?: string | null;
       verificationOtpLogId?: string | null;
+      emailVerificationOtpLogId?: string | null;
       roleId: string;
       isActive?: boolean;
     }) => {
@@ -106,6 +110,7 @@ export const useUsers = () => {
         password?: string;
         mobile?: string | null;
         verificationOtpLogId?: string | null;
+        emailVerificationOtpLogId?: string | null;
         roleId?: string;
         isActive?: boolean;
       },
@@ -136,6 +141,26 @@ export const useUsers = () => {
     [post],
   );
 
+  const requestUserEmailOTP = useCallback(
+    async (email: string) => {
+      const res = await post("/users/email-otp/request", { email });
+      return res.data;
+    },
+    [post],
+  );
+
+  const verifyUserEmailOTP = useCallback(
+    async (email: string, otp: string, otpLogId: string) => {
+      const res = await post("/users/email-otp/verify", {
+        email,
+        otp,
+        otpLogId,
+      });
+      return res.data;
+    },
+    [post],
+  );
+
   const deleteUser = useCallback(
     async (id: string) => {
       await del(`/users/${id}`);
@@ -153,6 +178,8 @@ export const useUsers = () => {
     updateUser,
     requestUserMobileOTP,
     verifyUserMobileOTP,
+    requestUserEmailOTP,
+    verifyUserEmailOTP,
     deleteUser,
   };
 };

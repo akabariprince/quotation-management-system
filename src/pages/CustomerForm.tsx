@@ -1,17 +1,7 @@
 // src/pages/CustomerForm.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Save,
-  MapPin,
-  Truck,
-  Check,
-  MessageSquare,
-  ShieldCheck,
-  ShieldX,
-  Loader2,
-} from "lucide-react";
+import { ArrowLeft, Save, MapPin, Truck, Check } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import VerificationField from "@/components/common/VerificationField";
 
 const FormSkeleton = () => (
   <div className="space-y-3 animate-pulse">
@@ -48,7 +39,10 @@ const FormSkeleton = () => (
         <Skeleton className="h-4 w-28 mb-3" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className={i >= 5 ? "md:col-span-2 lg:col-span-3" : ""}>
+            <div
+              key={i}
+              className={i >= 5 ? "md:col-span-2 lg:col-span-3" : ""}
+            >
               <Skeleton className="h-3 w-20 mb-1" />
               <Skeleton className="h-8 w-full rounded" />
             </div>
@@ -87,12 +81,34 @@ const FormSkeleton = () => (
 );
 
 const states = [
-  "Himachal Pradesh", "Punjab", "Uttarakhand", "Uttar Pradesh", "Haryana", "Rajasthan",
-  "Andhra Pradesh", "Karnataka", "Kerala", "Tamil Nadu", "Telangana",
-  "Bihar", "Jharkhand", "Odisha", "West Bengal",
-  "Goa", "Gujarat", "Maharashtra",
-  "Madhya Pradesh", "Chhattisgarh",
-  "Arunachal Pradesh", "Assam", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Tripura",
+  "Himachal Pradesh",
+  "Punjab",
+  "Uttarakhand",
+  "Uttar Pradesh",
+  "Haryana",
+  "Rajasthan",
+  "Andhra Pradesh",
+  "Karnataka",
+  "Kerala",
+  "Tamil Nadu",
+  "Telangana",
+  "Bihar",
+  "Jharkhand",
+  "Odisha",
+  "West Bengal",
+  "Goa",
+  "Gujarat",
+  "Maharashtra",
+  "Madhya Pradesh",
+  "Chhattisgarh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Sikkim",
+  "Tripura",
 ];
 
 const regions = ["North", "South", "East", "West", "Central", "North-East"];
@@ -122,6 +138,8 @@ const CustomerForm: React.FC = () => {
     updateCustomer,
     requestCustomerMobileOTP,
     verifyCustomerMobileOTP,
+    requestCustomerEmailOTP,
+    verifyCustomerEmailOTP,
   } = useCustomers();
 
   const requiredPermission = id ? "customer:edit" : "customer:create";
@@ -139,8 +157,20 @@ const CustomerForm: React.FC = () => {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [mobileOtp, setMobileOtp] = useState("");
   const [mobileOtpLogId, setMobileOtpLogId] = useState<string | null>(null);
+  const [verifiedMobileOtpLogId, setVerifiedMobileOtpLogId] = useState<
+    string | null
+  >(null);
   const [verifiedMobile, setVerifiedMobile] = useState<string | null>(null);
   const [whatsAppVerified, setWhatsAppVerified] = useState(false);
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailOtpLogId, setEmailOtpLogId] = useState<string | null>(null);
+  const [verifiedEmailOtpLogId, setVerifiedEmailOtpLogId] = useState<
+    string | null
+  >(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -180,7 +210,8 @@ const CustomerForm: React.FC = () => {
               state: customer.state || "",
               region: customer.region || "",
               pincode: (customer as any).pincode || "",
-              deliverySameAsBilling: (customer as any).deliverySameAsBilling !== false,
+              deliverySameAsBilling:
+                (customer as any).deliverySameAsBilling !== false,
               deliveryAddress: (customer as any).deliveryAddress || "",
               deliveryLandmark: (customer as any).deliveryLandmark || "",
               deliveryCity: (customer as any).deliveryCity || "",
@@ -189,6 +220,8 @@ const CustomerForm: React.FC = () => {
             });
             setWhatsAppVerified(Boolean(customer.whatsappVerified));
             setVerifiedMobile(customer.whatsappVerifiedMobile || null);
+            setEmailVerified(Boolean(customer.emailVerified));
+            setVerifiedEmail(customer.emailVerifiedEmail || null);
           } else {
             toast.error("Customer not found");
             navigate("/customers");
@@ -205,12 +238,26 @@ const CustomerForm: React.FC = () => {
 
   const handleChange = (field: string, value: any) => {
     if (field === "mobile") {
-      const digitsOnly = String(value || "").replace(/\D/g, "").slice(0, 10);
+      const digitsOnly = String(value || "")
+        .replace(/\D/g, "")
+        .slice(0, 10);
       const nextMobile = normalizeMobile(digitsOnly);
       if (verifiedMobile && nextMobile !== verifiedMobile) {
         setWhatsAppVerified(false);
+        setVerifiedMobileOtpLogId(null);
       }
       setFormData((prev) => ({ ...prev, [field]: digitsOnly }));
+      return;
+    }
+    if (field === "email") {
+      const nextEmail = String(value || "")
+        .trim()
+        .toLowerCase();
+      if (verifiedEmail && nextEmail !== verifiedEmail) {
+        setEmailVerified(false);
+        setVerifiedEmailOtpLogId(null);
+      }
+      setFormData((prev) => ({ ...prev, [field]: value }));
       return;
     }
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -221,7 +268,13 @@ const CustomerForm: React.FC = () => {
       ...prev,
       deliverySameAsBilling: checked,
       ...(checked
-        ? { deliveryAddress: "", deliveryLandmark: "", deliveryCity: "", deliveryState: "", deliveryPincode: "" }
+        ? {
+            deliveryAddress: "",
+            deliveryLandmark: "",
+            deliveryCity: "",
+            deliveryState: "",
+            deliveryPincode: "",
+          }
         : {}),
     }));
   };
@@ -233,9 +286,12 @@ const CustomerForm: React.FC = () => {
     }
     setSendingOtp(true);
     try {
-      const response = await requestCustomerMobileOTP(normalizeMobile(formData.mobile));
+      const response = await requestCustomerMobileOTP(
+        normalizeMobile(formData.mobile),
+      );
       setMobileOtpLogId(response.otpLogId);
       setWhatsAppVerified(false);
+      setVerifiedMobileOtpLogId(null);
       setMobileOtp("");
       toast.success(`WhatsApp OTP sent to ${response.mobile}`);
     } catch (err: any) {
@@ -263,12 +319,80 @@ const CustomerForm: React.FC = () => {
       );
       setVerifiedMobile(response.verifiedMobile);
       setWhatsAppVerified(true);
+      setVerifiedMobileOtpLogId(response.otpLogId);
+      setMobileOtpLogId(null);
+      setMobileOtp("");
       toast.success("WhatsApp mobile verified");
     } catch (err: any) {
       toast.error(err.message || "Failed to verify OTP");
     } finally {
       setVerifyingOtp(false);
     }
+  };
+
+  const handleSendEmailOTP = async () => {
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      toast.error("Please enter a valid email address first");
+      return;
+    }
+    setSendingEmailOtp(true);
+    try {
+      const response = await requestCustomerEmailOTP(normalizedEmail);
+      setEmailOtpLogId(response.otpLogId);
+      setEmailVerified(false);
+      setVerifiedEmailOtpLogId(null);
+      setEmailOtp("");
+      toast.success(`Email OTP sent to ${response.email}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send email OTP");
+    } finally {
+      setSendingEmailOtp(false);
+    }
+  };
+
+  const handleVerifyEmailOTP = async () => {
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    if (!emailOtpLogId) {
+      toast.error("Request OTP first");
+      return;
+    }
+    if (emailOtp.trim().length !== 6) {
+      toast.error("Enter the 6-digit OTP");
+      return;
+    }
+    setVerifyingEmailOtp(true);
+    try {
+      const response = await verifyCustomerEmailOTP(
+        normalizedEmail,
+        emailOtp,
+        emailOtpLogId,
+      );
+      setVerifiedEmail(response.verifiedEmail);
+      setEmailVerified(true);
+      setVerifiedEmailOtpLogId(response.otpLogId);
+      setEmailOtpLogId(null);
+      setEmailOtp("");
+      toast.success("Email verified");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify email OTP");
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
+  const resetMobileFlow = () => {
+    setWhatsAppVerified(false);
+    setMobileOtpLogId(null);
+    setMobileOtp("");
+    setVerifiedMobileOtpLogId(null);
+  };
+
+  const resetEmailFlow = () => {
+    setEmailVerified(false);
+    setEmailOtpLogId(null);
+    setEmailOtp("");
+    setVerifiedEmailOtpLogId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -294,14 +418,21 @@ const CustomerForm: React.FC = () => {
     setSaving(true);
     try {
       const normalizedFormMobile = normalizeMobile(formData.mobile);
+      const normalizedFormEmail = formData.email.trim().toLowerCase();
       const payload: any = {
         name: formData.name,
         mobile: normalizedFormMobile,
         verificationOtpLogId:
           whatsAppVerified &&
           verifiedMobile === normalizedFormMobile &&
-          mobileOtpLogId
-            ? mobileOtpLogId
+          verifiedMobileOtpLogId
+            ? verifiedMobileOtpLogId
+            : null,
+        emailVerificationOtpLogId:
+          emailVerified &&
+          verifiedEmail === normalizedFormEmail &&
+          verifiedEmailOtpLogId
+            ? verifiedEmailOtpLogId
             : null,
         email: formData.email || null,
         contactPerson: formData.contactPerson || null,
@@ -313,11 +444,21 @@ const CustomerForm: React.FC = () => {
         region: formData.region || null,
         pincode: formData.pincode || null,
         deliverySameAsBilling: formData.deliverySameAsBilling,
-        deliveryAddress: formData.deliverySameAsBilling ? null : formData.deliveryAddress || null,
-        deliveryLandmark: formData.deliverySameAsBilling ? null : formData.deliveryLandmark || null,
-        deliveryCity: formData.deliverySameAsBilling ? null : formData.deliveryCity || null,
-        deliveryState: formData.deliverySameAsBilling ? null : formData.deliveryState || null,
-        deliveryPincode: formData.deliverySameAsBilling ? null : formData.deliveryPincode || null,
+        deliveryAddress: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryAddress || null,
+        deliveryLandmark: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryLandmark || null,
+        deliveryCity: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryCity || null,
+        deliveryState: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryState || null,
+        deliveryPincode: formData.deliverySameAsBilling
+          ? null
+          : formData.deliveryPincode || null,
       };
 
       if (id) {
@@ -365,7 +506,9 @@ const CustomerForm: React.FC = () => {
             onClick={() => navigate("/customers")}
           >
             <ArrowLeft className="h-3 w-3" />
-            <span className="hidden sm:inline text-white">Back to Customers</span>
+            <span className="hidden sm:inline text-white">
+              Back to Customers
+            </span>
           </Button>
           <Button
             variant="outline"
@@ -374,7 +517,9 @@ const CustomerForm: React.FC = () => {
             onClick={() => navigate("/dashboard")}
           >
             <ArrowLeft className="h-3 w-3" />
-            <span className="hidden sm:inline text-white">Back to Dashboard</span>
+            <span className="hidden sm:inline text-white">
+              Back to Dashboard
+            </span>
           </Button>
         </div>
       </div>
@@ -388,7 +533,9 @@ const CustomerForm: React.FC = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="name" className="text-xs">Customer Name *</Label>
+              <Label htmlFor="name" className="text-xs">
+                Customer Name *
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -399,7 +546,9 @@ const CustomerForm: React.FC = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="contactPerson" className="text-xs">Contact Person</Label>
+              <Label htmlFor="contactPerson" className="text-xs">
+                Contact Person
+              </Label>
               <Input
                 id="contactPerson"
                 value={formData.contactPerson}
@@ -408,101 +557,68 @@ const CustomerForm: React.FC = () => {
                 className="h-8 text-sm"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="mobile" className="text-xs">Mobile Number *</Label>
-              <div className="flex h-8 overflow-hidden rounded-md border border-input bg-background">
-                <div className="flex items-center border-r border-input bg-muted px-2 text-xs font-medium text-muted-foreground">
-                  +91
-                </div>
-                <Input
-                  id="mobile"
-                  value={formData.mobile}
-                  onChange={(e) => handleChange("mobile", e.target.value)}
-                  placeholder="XXXXXXXXXX"
-                  required
-                  maxLength={10}
-                  inputMode="numeric"
-                  className="h-full border-0 text-sm focus-visible:ring-0"
-                />
-              </div>
-              <div className="pt-1 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`inline-flex h-7 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      whatsAppVerified
-                        ? "bg-green-100 text-green-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {whatsAppVerified ? (
-                      <ShieldCheck className="h-3 w-3" />
-                    ) : (
-                      <ShieldX className="h-3 w-3" />
-                    )}
-                    {whatsAppVerified
-                      ? "WhatsApp Verified"
-                      : "WhatsApp Not Verified"}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={handleSendMobileOTP}
-                    disabled={sendingOtp}
-                  >
-                    {sendingOtp ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <MessageSquare className="h-3 w-3" />
-                    )}
-                    Send OTP
-                  </Button>
-                </div>
-                {mobileOtpLogId && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={mobileOtp}
-                      onChange={(e) => setMobileOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="Enter OTP"
-                      className="h-8 text-sm max-w-[120px]"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 text-xs"
-                      onClick={handleVerifyMobileOTP}
-                      disabled={verifyingOtp}
-                    >
-                      {verifyingOtp ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Check className="h-3 w-3" />
-                      )}
-                      Verify OTP
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="email" className="text-xs">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
+            <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 gap-3">
+              <VerificationField
+                label="Mobile Number"
+                required
+                value={formData.mobile}
+                onChange={(value) => handleChange("mobile", value)}
+                placeholder="XXXXXXXXXX"
+                maxLength={10}
+                inputMode="numeric"
+                prefix="+91"
+                verified={whatsAppVerified}
+                verifiedLabel="WhatsApp Verified"
+                unverifiedLabel="WhatsApp Not Verified"
+                otpLogId={mobileOtpLogId}
+                otpValue={mobileOtp}
+                onOtpChange={setMobileOtp}
+                onSendOtp={handleSendMobileOTP}
+                onVerifyOtp={handleVerifyMobileOTP}
+                onResetFlow={resetMobileFlow}
+                sendingOtp={sendingOtp}
+                verifyingOtp={verifyingOtp}
+                sendButtonLabel="Send OTP"
+                resendButtonLabel="Send Again"
+                isValueValid={formData.mobile.length === 10}
+              />
+              <VerificationField
+                label="Email Address"
                 value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
+                onChange={(value) => handleChange("email", value)}
                 placeholder="customer@example.com"
-                className="h-8 text-sm"
+                type="email"
+                verified={emailVerified}
+                verifiedLabel="Email Verified"
+                unverifiedLabel="Email Not Verified"
+                otpLogId={emailOtpLogId}
+                otpValue={emailOtp}
+                onOtpChange={setEmailOtp}
+                onSendOtp={handleSendEmailOTP}
+                onVerifyOtp={handleVerifyEmailOTP}
+                onResetFlow={resetEmailFlow}
+                sendingOtp={sendingEmailOtp}
+                verifyingOtp={verifyingEmailOtp}
+                sendButtonLabel="Send OTP"
+                resendButtonLabel="Send Again"
+                isValueValid={
+                  !formData.email ||
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                    formData.email.trim().toLowerCase(),
+                  )
+                }
               />
             </div>
             <div className="space-y-1 md:col-span-2 lg:col-span-2">
-              <Label htmlFor="gstin" className="text-xs">GSTIN</Label>
+              <Label htmlFor="gstin" className="text-xs">
+                GSTIN
+              </Label>
               <Input
                 id="gstin"
                 value={formData.gstin}
-                onChange={(e) => handleChange("gstin", e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  handleChange("gstin", e.target.value.toUpperCase())
+                }
                 placeholder="27AAFCS1234M1ZM"
                 maxLength={15}
                 className="h-8 text-sm font-mono"
@@ -519,7 +635,9 @@ const CustomerForm: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1 md:col-span-2 lg:col-span-3">
-              <Label htmlFor="address" className="text-xs">Address Line *</Label>
+              <Label htmlFor="address" className="text-xs">
+                Address Line *
+              </Label>
               <Input
                 id="address"
                 value={formData.address}
@@ -529,7 +647,9 @@ const CustomerForm: React.FC = () => {
               />
             </div>
             <div className="space-y-1 md:col-span-2 lg:col-span-3">
-              <Label htmlFor="landmark" className="text-xs">Near / Landmark</Label>
+              <Label htmlFor="landmark" className="text-xs">
+                Near / Landmark
+              </Label>
               <Input
                 id="landmark"
                 value={formData.landmark}
@@ -539,7 +659,9 @@ const CustomerForm: React.FC = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="city" className="text-xs">City</Label>
+              <Label htmlFor="city" className="text-xs">
+                City
+              </Label>
               <Input
                 id="city"
                 value={formData.city}
@@ -549,18 +671,29 @@ const CustomerForm: React.FC = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="state" className="text-xs">State</Label>
-              <Select value={formData.state} onValueChange={(v) => handleChange("state", v)}>
+              <Label htmlFor="state" className="text-xs">
+                State
+              </Label>
+              <Select
+                value={formData.state}
+                onValueChange={(v) => handleChange("state", v)}
+              >
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
-                  {states.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                  {states.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pincode" className="text-xs">Pincode</Label>
+              <Label htmlFor="pincode" className="text-xs">
+                Pincode
+              </Label>
               <Input
                 id="pincode"
                 value={formData.pincode}
@@ -571,13 +704,22 @@ const CustomerForm: React.FC = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="region" className="text-xs">Region</Label>
-              <Select value={formData.region} onValueChange={(v) => handleChange("region", v)}>
+              <Label htmlFor="region" className="text-xs">
+                Region
+              </Label>
+              <Select
+                value={formData.region}
+                onValueChange={(v) => handleChange("region", v)}
+              >
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Select region" />
                 </SelectTrigger>
                 <SelectContent>
-                  {regions.map((r) => (<SelectItem key={r} value={r}>{r}</SelectItem>))}
+                  {regions.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -596,7 +738,9 @@ const CustomerForm: React.FC = () => {
             <Checkbox
               id="deliverySameAsBilling"
               checked={formData.deliverySameAsBilling}
-              onCheckedChange={(checked) => handleDeliverySameToggle(checked as boolean)}
+              onCheckedChange={(checked) =>
+                handleDeliverySameToggle(checked as boolean)
+              }
             />
             <Label
               htmlFor="deliverySameAsBilling"
@@ -610,27 +754,37 @@ const CustomerForm: React.FC = () => {
           {!formData.deliverySameAsBilling && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="deliveryAddress" className="text-xs">Address Line</Label>
+                <Label htmlFor="deliveryAddress" className="text-xs">
+                  Address Line
+                </Label>
                 <Input
                   id="deliveryAddress"
                   value={formData.deliveryAddress}
-                  onChange={(e) => handleChange("deliveryAddress", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("deliveryAddress", e.target.value)
+                  }
                   placeholder="Delivery street address"
                   className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="deliveryLandmark" className="text-xs">Near / Landmark</Label>
+                <Label htmlFor="deliveryLandmark" className="text-xs">
+                  Near / Landmark
+                </Label>
                 <Input
                   id="deliveryLandmark"
                   value={formData.deliveryLandmark}
-                  onChange={(e) => handleChange("deliveryLandmark", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("deliveryLandmark", e.target.value)
+                  }
                   placeholder="Near landmark"
                   className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="deliveryCity" className="text-xs">City</Label>
+                <Label htmlFor="deliveryCity" className="text-xs">
+                  City
+                </Label>
                 <Input
                   id="deliveryCity"
                   value={formData.deliveryCity}
@@ -640,22 +794,35 @@ const CustomerForm: React.FC = () => {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="deliveryState" className="text-xs">State</Label>
-                <Select value={formData.deliveryState} onValueChange={(v) => handleChange("deliveryState", v)}>
+                <Label htmlFor="deliveryState" className="text-xs">
+                  State
+                </Label>
+                <Select
+                  value={formData.deliveryState}
+                  onValueChange={(v) => handleChange("deliveryState", v)}
+                >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
-                    {states.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                    {states.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="deliveryPincode" className="text-xs">Pincode</Label>
+                <Label htmlFor="deliveryPincode" className="text-xs">
+                  Pincode
+                </Label>
                 <Input
                   id="deliveryPincode"
                   value={formData.deliveryPincode}
-                  onChange={(e) => handleChange("deliveryPincode", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("deliveryPincode", e.target.value)
+                  }
                   placeholder="411014"
                   maxLength={6}
                   className="h-8 text-sm"
@@ -666,9 +833,17 @@ const CustomerForm: React.FC = () => {
 
           {formData.deliverySameAsBilling && formData.address && (
             <div className="bg-muted/30 rounded-md p-2 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground mb-0.5">Delivery will use billing address:</p>
+              <p className="font-medium text-foreground mb-0.5">
+                Delivery will use billing address:
+              </p>
               <p>
-                {[formData.address, formData.landmark, formData.city, formData.state, formData.pincode]
+                {[
+                  formData.address,
+                  formData.landmark,
+                  formData.city,
+                  formData.state,
+                  formData.pincode,
+                ]
                   .filter(Boolean)
                   .join(", ")}
               </p>
@@ -686,7 +861,11 @@ const CustomerForm: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button type="submit" className="btn-accent h-7 text-xs px-3" disabled={saving}>
+          <Button
+            type="submit"
+            className="btn-accent h-7 text-xs px-3"
+            disabled={saving}
+          >
             {saving ? (
               <div className="flex items-center gap-1">
                 <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
