@@ -443,7 +443,7 @@ const Projects: React.FC = () => {
                               <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           )}
-                          {hasPermission("project:edit") && !["approved", "po", "rejected"].includes(project.status) && (
+                          {hasPermission("project:edit") && !["po", "rejected"].includes(project.status) && (
                             <button
                               onClick={() =>
                                 navigate(`/projects/edit/${project.id}`)
