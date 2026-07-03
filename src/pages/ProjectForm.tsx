@@ -900,7 +900,7 @@ const ProjectForm: React.FC = () => {
 
   const isViewMode = id
     ? !pathname.includes("/edit/") ||
-      ["approved", "po", "rejected"].includes(existingProject?.status as any)
+      ["po", "rejected"].includes(existingProject?.status as any)
     : false;
   const requiredPermission = isViewMode
     ? "project:view"
